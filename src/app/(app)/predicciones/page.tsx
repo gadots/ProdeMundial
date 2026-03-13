@@ -1,34 +1,35 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { TopBar } from "@/components/nav";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MOCK_MATCHES, MOCK_MY_PREDICTIONS } from "@/lib/mock-data";
-import { PHASE_LABELS, PHASE_POINTS, Phase, Match } from "@/lib/types";
-import { canUseJoker } from "@/lib/scoring";
-import { Save, Zap, Lock, Check } from "lucide-react";
+import { MOCK_MATCHES, MOCK_MY_PREDICTIONS, MOCK_MY_TOKENS } from "@/lib/mock-data";
+import { PHASE_LABELS, PHASE_POINTS, Phase, Match, MultiplierToken, TokenMultiplier } from "@/lib/types";
+import { maxPointsForMatch, streakBonusPoints } from "@/lib/scoring";
+import { Save, Lock, Check, Flame } from "lucide-react";
 
 const PHASE_ORDER: Phase[] = [
   "GROUP", "ROUND_OF_32", "ROUND_OF_16", "QUARTER_FINAL", "SEMI_FINAL", "FINAL"
 ];
 
-function ScoreInput({
-  value,
-  onChange,
-  disabled,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  disabled?: boolean;
-}) {
+// Current user's streak (in production comes from DB)
+const MY_STREAK = 4;
+const STREAK_BONUS = streakBonusPoints(MY_STREAK);
+
+// -------------------------------------------------------
+// Token state at page level — tracks which match each token is on
+// -------------------------------------------------------
+interface TokenAssignment {
+  matchId: string;
+  multiplier: TokenMultiplier;
+}
+
+function ScoreInput({ value, onChange, disabled }: { value: string; onChange: (v: string) => void; disabled?: boolean }) {
   return (
     <input
-      type="number"
-      min="0"
-      max="20"
-      value={value}
+      type="number" min="0" max="20" value={value}
       onChange={(e) => onChange(e.target.value)}
       disabled={disabled}
       className="h-12 w-12 rounded-xl border border-white/15 bg-white/5 text-center text-xl font-black text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all disabled:opacity-40"
@@ -36,27 +37,99 @@ function ScoreInput({
   );
 }
 
-function MatchPredictionCard({ match }: { match: Match }) {
+function TokenPicker({
+  tokens,
+  activeMultiplier,
+  onSelect,
+  disabled,
+}: {
+  tokens: MultiplierToken[];
+  activeMultiplier: TokenMultiplier;
+  onSelect: (m: TokenMultiplier) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <span className="text-[10px] text-white/30 mr-0.5">Token:</span>
+      {/* No token option */}
+      <button
+        onClick={() => onSelect(1)}
+        disabled={disabled}
+        className={`rounded-lg px-2 py-1.5 text-xs font-semibold border transition-all ${
+          activeMultiplier === 1
+            ? "bg-white/15 border-white/30 text-white"
+            : "bg-white/5 border-white/10 text-white/30 hover:border-white/20 hover:text-white/60"
+        } ${disabled ? "opacity-40 cursor-not-allowed" : ""}`}
+      >
+        —
+      </button>
+      {tokens.map((token) => {
+        const isUsedElsewhere = !!token.usedOnMatchId;
+        const isActive = activeMultiplier === token.multiplier;
+        return (
+          <button
+            key={token.multiplier}
+            onClick={() => !isUsedElsewhere && onSelect(token.multiplier)}
+            disabled={disabled || (isUsedElsewhere && !isActive)}
+            title={isUsedElsewhere && !isActive ? `Ya usado en otro partido` : token.label}
+            className={`relative flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-bold border transition-all ${
+              isActive
+                ? `${token.color}`
+                : isUsedElsewhere
+                ? "opacity-25 cursor-not-allowed bg-white/5 border-white/10 text-white/30"
+                : `hover:${token.color} bg-white/5 border-white/10 text-white/40 hover:opacity-80`
+            } ${disabled ? "opacity-40 cursor-not-allowed" : ""}`}
+          >
+            <span>{token.emoji}</span>
+            <span>{token.label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function MatchPredictionCard({
+  match,
+  tokens,
+  onTokenChange,
+}: {
+  match: Match;
+  tokens: MultiplierToken[];
+  onTokenChange: (matchId: string, prev: TokenMultiplier, next: TokenMultiplier) => void;
+}) {
   const existing = MOCK_MY_PREDICTIONS[match.id];
   const [home, setHome] = useState(existing?.homeGoals?.toString() ?? "");
   const [away, setAway] = useState(existing?.awayGoals?.toString() ?? "");
-  const [joker, setJoker] = useState(existing?.jokerUsed ?? false);
+  const [multiplier, setMultiplier] = useState<TokenMultiplier>(existing?.multiplier ?? 1);
   const [saved, setSaved] = useState(!!existing);
 
   const isFinished = match.status === "FINISHED";
   const isLive = match.status === "LIVE";
   const locked = isFinished || isLive;
   const pts = PHASE_POINTS[match.phase];
-  const jokerEligible = canUseJoker(match.phase);
   const canSave = home !== "" && away !== "" && !locked;
 
-  const handleSave = async () => {
+  // Build tokens with usedOnMatchId relative to THIS match
+  const localTokens: MultiplierToken[] = tokens.map((t) => ({
+    ...t,
+    // If a token is used on THIS match, show it as active (not blocked)
+    usedOnMatchId: t.usedOnMatchId === match.id ? undefined : t.usedOnMatchId,
+  }));
+
+  const handleTokenSelect = (next: TokenMultiplier) => {
+    const prev = multiplier;
+    setMultiplier(next);
+    setSaved(false);
+    onTokenChange(match.id, prev, next);
+  };
+
+  const handleSave = () => {
     if (!canSave) return;
-    // In production: call Supabase to upsert prediction
     setSaved(true);
   };
 
-  const potentialPts = joker ? pts.exact * 2 : pts.exact;
+  const potential = maxPointsForMatch(match.phase, multiplier) + (MY_STREAK >= 3 && !locked ? STREAK_BONUS : 0);
 
   return (
     <Card className={`overflow-hidden transition-all ${locked ? "opacity-70" : "hover:border-green-500/20"}`}>
@@ -74,40 +147,31 @@ function MatchPredictionCard({ match }: { match: Match }) {
               </span>
             )}
           </div>
-          <span className="text-xs font-bold text-green-400">
-            hasta {potentialPts} pts
-          </span>
+          <span className="text-xs font-bold text-green-400">hasta {potential} pts</span>
         </div>
 
-        {/* Teams */}
+        {/* Teams + inputs */}
         <div className="flex items-center gap-3 mb-4">
-          {/* Home team */}
           <div className="flex flex-1 items-center gap-2">
             <span className="text-2xl">{match.homeTeam.flag}</span>
             <p className="text-sm font-bold text-white leading-tight">{match.homeTeam.name}</p>
           </div>
-
-          {/* Score inputs */}
           <div className="flex items-center gap-2 shrink-0">
             <ScoreInput value={home} onChange={setHome} disabled={locked} />
             <span className="text-white/30 font-bold text-lg">-</span>
             <ScoreInput value={away} onChange={setAway} disabled={locked} />
           </div>
-
-          {/* Away team */}
           <div className="flex flex-1 items-center gap-2 justify-end">
             <p className="text-sm font-bold text-white leading-tight text-right">{match.awayTeam.name}</p>
             <span className="text-2xl">{match.awayTeam.flag}</span>
           </div>
         </div>
 
-        {/* Actual result if finished */}
+        {/* Actual result */}
         {locked && (
           <div className="mb-3 flex items-center justify-center gap-3 rounded-xl bg-white/5 py-2">
             <span className="text-xs text-white/40">Resultado:</span>
-            <span className="text-sm font-black text-white">
-              {match.homeScore} - {match.awayScore}
-            </span>
+            <span className="text-sm font-black text-white">{match.homeScore} - {match.awayScore}</span>
             {existing?.pointsEarned !== undefined && (
               <Badge variant={existing.pointsEarned > 0 ? "default" : "secondary"}>
                 {existing.pointsEarned > 0 ? `+${existing.pointsEarned} pts` : "0 pts"}
@@ -116,38 +180,28 @@ function MatchPredictionCard({ match }: { match: Match }) {
           </div>
         )}
 
-        {/* Joker + Save row */}
+        {/* Token picker + Save */}
         {!locked && (
-          <div className="flex items-center gap-2">
-            {jokerEligible && (
-              <button
-                onClick={() => setJoker(!joker)}
-                className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold transition-all border ${
-                  joker
-                    ? "bg-yellow-500/20 border-yellow-500/40 text-yellow-300"
-                    : "bg-white/5 border-white/10 text-white/40 hover:text-white/70"
-                }`}
-              >
-                <Zap className="h-3 w-3" />
-                Comodín {joker ? "activo" : ""}
-              </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <TokenPicker
+              tokens={localTokens}
+              activeMultiplier={multiplier}
+              onSelect={handleTokenSelect}
+              disabled={locked}
+            />
+            {MY_STREAK >= 3 && (
+              <span className="flex items-center gap-1 text-[10px] text-orange-400">
+                <Flame className="h-3 w-3" />+{STREAK_BONUS} racha
+              </span>
             )}
             <Button
               onClick={handleSave}
               disabled={!canSave}
               size="sm"
               className="ml-auto"
-              variant={saved && !joker ? "secondary" : "default"}
+              variant={saved ? "secondary" : "default"}
             >
-              {saved ? (
-                <>
-                  <Check className="h-3.5 w-3.5" /> Guardado
-                </>
-              ) : (
-                <>
-                  <Save className="h-3.5 w-3.5" /> Guardar
-                </>
-              )}
+              {saved ? <><Check className="h-3.5 w-3.5" /> Guardado</> : <><Save className="h-3.5 w-3.5" /> Guardar</>}
             </Button>
           </div>
         )}
@@ -159,20 +213,36 @@ function MatchPredictionCard({ match }: { match: Match }) {
 export default function PrediccionesPage() {
   const [activePhase, setActivePhase] = useState<Phase>("GROUP");
 
-  const matchesByPhase = MOCK_MATCHES.filter((m) => m.phase === activePhase);
-  const availablePhases = PHASE_ORDER.filter((p) =>
-    MOCK_MATCHES.some((m) => m.phase === p)
-  );
+  // Global token state — persists across all match cards in this session
+  const [tokens, setTokens] = useState<MultiplierToken[]>(MOCK_MY_TOKENS);
 
-  const pendingCount = MOCK_MATCHES.filter(
-    (m) => m.status === "SCHEDULED" && !MOCK_MY_PREDICTIONS[m.id]
-  ).length;
+  const handleTokenChange = useCallback((matchId: string, prev: TokenMultiplier, next: TokenMultiplier) => {
+    setTokens((current) =>
+      current.map((t) => {
+        // Release the old assignment on this match
+        if (t.multiplier === prev && t.usedOnMatchId === matchId) {
+          return { ...t, usedOnMatchId: undefined };
+        }
+        // Assign the new token to this match
+        if (t.multiplier === next && next !== 1) {
+          return { ...t, usedOnMatchId: matchId };
+        }
+        return t;
+      })
+    );
+  }, []);
+
+  const matchesByPhase = MOCK_MATCHES.filter((m) => m.phase === activePhase);
+  const availablePhases = PHASE_ORDER.filter((p) => MOCK_MATCHES.some((m) => m.phase === p));
+  const pendingCount = MOCK_MATCHES.filter((m) => m.status === "SCHEDULED" && !MOCK_MY_PREDICTIONS[m.id]).length;
+
+  const tokensLeft = tokens.filter((t) => !t.usedOnMatchId && !t.decayed);
 
   return (
     <div>
       <TopBar
         title="Predicciones"
-        subtitle={pendingCount > 0 ? `${pendingCount} partidos pendientes` : "Todo cargado ✓"}
+        subtitle={pendingCount > 0 ? `${pendingCount} pendientes` : "Todo cargado ✓"}
       />
 
       {/* Phase tabs */}
@@ -180,7 +250,6 @@ export default function PrediccionesPage() {
         <div className="mx-auto max-w-lg overflow-x-auto">
           <div className="flex gap-1 p-3 min-w-max">
             {availablePhases.map((phase) => {
-              const phasePts = PHASE_POINTS[phase];
               const isActive = activePhase === phase;
               const matchCount = MOCK_MATCHES.filter((m) => m.phase === phase).length;
               return (
@@ -188,16 +257,14 @@ export default function PrediccionesPage() {
                   key={phase}
                   onClick={() => setActivePhase(phase)}
                   className={`flex flex-col items-center gap-0.5 rounded-xl px-3 py-2 text-xs transition-all whitespace-nowrap ${
-                    isActive
-                      ? "bg-green-600 text-white"
-                      : "bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/80"
+                    isActive ? "bg-green-600 text-white" : "bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/80"
                   }`}
                 >
                   <span className="font-semibold text-[11px]">
-                    {phase === "GROUP" ? "Grupos" : PHASE_LABELS[phase].replace(" de ", "\nde ")}
+                    {phase === "GROUP" ? "Grupos" : PHASE_LABELS[phase].split(" ")[0]}
                   </span>
                   <span className={`text-[10px] ${isActive ? "text-green-200" : "text-white/30"}`}>
-                    {matchCount}P · {phasePts.exact}pts
+                    {matchCount}P · {PHASE_POINTS[phase].exact}pts
                   </span>
                 </button>
               );
@@ -206,36 +273,80 @@ export default function PrediccionesPage() {
         </div>
       </div>
 
-      {/* Point explanation banner */}
-      <div className="mx-auto max-w-lg px-4 py-3">
-        <div className="rounded-xl bg-white/5 border border-white/10 p-3 flex items-center gap-3">
-          <div className="shrink-0 text-center">
-            <p className="text-lg font-black text-white">{PHASE_POINTS[activePhase].exact}</p>
-            <p className="text-[9px] text-white/40 leading-tight">pts exacto</p>
+      {/* Token status bar */}
+      <div className="mx-auto max-w-lg px-4 pt-3">
+        <div className="rounded-xl bg-white/5 border border-white/10 p-3">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-semibold text-white/70">Mis tokens multiplicadores</p>
+            {tokensLeft.length > 0 && (
+              <span className="text-[10px] text-orange-400">
+                ¡Caducan al final de Grupos!
+              </span>
+            )}
           </div>
-          <div className="h-8 w-px bg-white/10" />
-          <div className="shrink-0 text-center">
+          <div className="flex gap-2 flex-wrap">
+            {tokens.map((t) => (
+              <div
+                key={t.multiplier}
+                className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 border text-xs font-bold ${
+                  t.decayed
+                    ? "opacity-30 bg-white/5 border-white/10 text-white/40 line-through"
+                    : t.usedOnMatchId
+                    ? `opacity-60 ${t.color}`
+                    : t.color
+                }`}
+              >
+                <span>{t.emoji}</span>
+                <span>{t.label}</span>
+                {t.usedOnMatchId && !t.decayed && (
+                  <span className="text-[9px] opacity-70">en uso</span>
+                )}
+                {t.decayed && <span className="text-[9px]">caducó</span>}
+                {!t.usedOnMatchId && !t.decayed && (
+                  <span className="h-1.5 w-1.5 rounded-full bg-current animate-pulse" />
+                )}
+              </div>
+            ))}
+          </div>
+          <p className="text-[10px] text-white/30 mt-2">
+            Usá cada token en un partido para multiplicar tus puntos. Los no usados caducan tras la fase de grupos.
+          </p>
+        </div>
+      </div>
+
+      {/* Points legend */}
+      <div className="mx-auto max-w-lg px-4 pt-2">
+        <div className="rounded-xl bg-white/5 border border-white/10 p-3 flex items-center gap-3 flex-wrap">
+          <div className="text-center">
+            <p className="text-lg font-black text-white">{PHASE_POINTS[activePhase].exact}</p>
+            <p className="text-[9px] text-white/40">exacto</p>
+          </div>
+          <div className="h-6 w-px bg-white/10" />
+          <div className="text-center">
             <p className="text-lg font-black text-white">{PHASE_POINTS[activePhase].winner}</p>
-            <p className="text-[9px] text-white/40 leading-tight">pts ganador</p>
+            <p className="text-[9px] text-white/40">ganador</p>
           </div>
           {PHASE_POINTS[activePhase].draw > 0 && (
             <>
-              <div className="h-8 w-px bg-white/10" />
-              <div className="shrink-0 text-center">
+              <div className="h-6 w-px bg-white/10" />
+              <div className="text-center">
                 <p className="text-lg font-black text-white">{PHASE_POINTS[activePhase].draw}</p>
-                <p className="text-[9px] text-white/40 leading-tight">pts empate</p>
+                <p className="text-[9px] text-white/40">empate</p>
               </div>
             </>
           )}
-          {canUseJoker(activePhase) && (
+          <div className="h-6 w-px bg-white/10" />
+          <div className="flex items-center gap-1.5 text-xs">
+            <span className="text-blue-400 font-bold">⚡2x</span>
+            <span className="text-orange-400 font-bold">🔥3x</span>
+            <span className="text-purple-400 font-bold">💥5x</span>
+          </div>
+          {MY_STREAK >= 3 && (
             <>
-              <div className="h-8 w-px bg-white/10" />
-              <div className="flex items-center gap-1 text-yellow-400">
-                <Zap className="h-3.5 w-3.5" />
-                <div>
-                  <p className="text-xs font-bold leading-tight">Comodín disponible</p>
-                  <p className="text-[9px] text-white/40">duplica tus pts</p>
-                </div>
+              <div className="h-6 w-px bg-white/10" />
+              <div className="flex items-center gap-1 text-xs text-orange-400">
+                <Flame className="h-3.5 w-3.5" />
+                <span className="font-bold">+{STREAK_BONUS} racha</span>
               </div>
             </>
           )}
@@ -243,7 +354,7 @@ export default function PrediccionesPage() {
       </div>
 
       {/* Match list */}
-      <div className="mx-auto max-w-lg space-y-3 px-4 pb-6">
+      <div className="mx-auto max-w-lg space-y-3 px-4 py-3 pb-6">
         {matchesByPhase.length === 0 ? (
           <div className="py-12 text-center text-white/30">
             <p className="text-4xl mb-2">📅</p>
@@ -251,7 +362,12 @@ export default function PrediccionesPage() {
           </div>
         ) : (
           matchesByPhase.map((match) => (
-            <MatchPredictionCard key={match.id} match={match} />
+            <MatchPredictionCard
+              key={match.id}
+              match={match}
+              tokens={tokens}
+              onTokenChange={handleTokenChange}
+            />
           ))
         )}
       </div>

@@ -1,4 +1,4 @@
-import { Phase, PHASE_POINTS } from "./types";
+import { Phase, PHASE_POINTS, TokenMultiplier } from "./types";
 
 interface ScoreResult {
   points: number;
@@ -6,8 +6,9 @@ interface ScoreResult {
 }
 
 /**
- * Calculates points for a prediction given the actual result.
- * Applies joker multiplier (x2) if used.
+ * Calculates points for a prediction.
+ * multiplier = 1 (no token), 2, 3 or 5.
+ * Also applies streak bonus if applicable.
  */
 export function calculatePoints(
   predictedHome: number,
@@ -15,56 +16,64 @@ export function calculatePoints(
   actualHome: number,
   actualAway: number,
   phase: Phase,
-  jokerUsed: boolean
+  multiplier: TokenMultiplier = 1,
+  streakBonus: number = 0
 ): ScoreResult {
   const phasePoints = PHASE_POINTS[phase];
-  let points = 0;
+  let base = 0;
   let reason = "";
 
   const predictedWinner = Math.sign(predictedHome - predictedAway);
   const actualWinner = Math.sign(actualHome - actualAway);
 
   if (predictedHome === actualHome && predictedAway === actualAway) {
-    points = phasePoints.exact;
+    base = phasePoints.exact;
     reason = "Resultado exacto";
   } else if (predictedWinner === actualWinner) {
     if (actualWinner === 0) {
-      points = phasePoints.draw;
+      base = phasePoints.draw;
       reason = "Empate correcto";
     } else {
-      points = phasePoints.winner;
+      base = phasePoints.winner;
       reason = "Ganador correcto";
     }
   } else {
     return { points: 0, reason: "Sin puntos" };
   }
 
-  if (jokerUsed) {
-    points *= 2;
-    reason += " (Comodín x2)";
+  let points = base * multiplier;
+  if (multiplier > 1) reason += ` (Token ${multiplier}x)`;
+
+  if (streakBonus > 0 && base > 0) {
+    points += streakBonus;
+    reason += ` +${streakBonus} bonus racha`;
   }
 
   return { points, reason };
 }
 
 /**
- * Returns the maximum possible points for a match in a given phase.
+ * Returns max possible points for a match in a given phase with a given token.
  */
-export function maxPointsForMatch(phase: Phase, jokerUsed: boolean): number {
-  const base = PHASE_POINTS[phase].exact;
-  return jokerUsed ? base * 2 : base;
+export function maxPointsForMatch(phase: Phase, multiplier: TokenMultiplier = 1): number {
+  return PHASE_POINTS[phase].exact * multiplier;
 }
 
 /**
- * Phases where joker can be used (only knockout rounds).
+ * Streak bonus: 3 in a row → +2 on next; 5 in a row → +5 on next.
  */
-export const JOKER_PHASES: Phase[] = [
-  "ROUND_OF_16",
-  "QUARTER_FINAL",
-  "SEMI_FINAL",
-  "FINAL",
-];
+export function streakBonusPoints(streak: number): number {
+  if (streak >= 5) return 5;
+  if (streak >= 3) return 2;
+  return 0;
+}
 
-export function canUseJoker(phase: Phase): boolean {
-  return JOKER_PHASES.includes(phase);
+/**
+ * Tokens can be used on any match (no phase restriction).
+ * They decay (become 1x) if group stage ends without being used.
+ */
+export const GROUP_STAGE_END_DATE = new Date("2026-06-26T23:59:00Z");
+
+export function isGroupStageOver(): boolean {
+  return new Date() > GROUP_STAGE_END_DATE;
 }

@@ -30,7 +30,7 @@ export interface Team {
   id: string;
   name: string;
   shortName: string;
-  flag: string; // emoji flag
+  flag: string;
 }
 
 export interface Match {
@@ -39,13 +39,36 @@ export interface Match {
   awayTeam: Team;
   phase: Phase;
   group?: string;
-  date: string; // ISO string
+  date: string;
   status: MatchStatus;
   homeScore?: number;
   awayScore?: number;
   venue?: string;
 }
 
+// -------------------------------------------------------
+// MULTIPLIER TOKENS  (2x / 3x / 5x)
+// -------------------------------------------------------
+export type TokenMultiplier = 1 | 2 | 3 | 5;
+
+export interface MultiplierToken {
+  multiplier: TokenMultiplier;
+  label: string;
+  emoji: string;
+  color: string;
+  usedOnMatchId?: string;
+  decayed: boolean;
+}
+
+export const INITIAL_TOKENS: Omit<MultiplierToken, "usedOnMatchId" | "decayed">[] = [
+  { multiplier: 2, label: "2x", emoji: "⚡", color: "text-blue-400 border-blue-500/40 bg-blue-500/10" },
+  { multiplier: 3, label: "3x", emoji: "🔥", color: "text-orange-400 border-orange-500/40 bg-orange-500/10" },
+  { multiplier: 5, label: "5x", emoji: "💥", color: "text-purple-400 border-purple-500/40 bg-purple-500/10" },
+];
+
+// -------------------------------------------------------
+// PREDICTIONS
+// -------------------------------------------------------
 export interface Prediction {
   id: string;
   userId: string;
@@ -53,21 +76,48 @@ export interface Prediction {
   prodeId: string;
   homeGoals: number;
   awayGoals: number;
-  jokerUsed: boolean;
+  multiplier: TokenMultiplier;
   pointsEarned?: number;
 }
 
-export interface SpecialPredictions {
-  userId: string;
-  prodeId: string;
-  champion?: string; // team id
-  finalist?: string;
-  thirdPlace?: string;
-  topScorer?: string;
-  mostGoalsCountry?: string;
-  locked: boolean;
+// -------------------------------------------------------
+// WILDCARD CHALLENGES
+// -------------------------------------------------------
+export type WildcardType = "PICK_TEAM" | "NUMERIC" | "YES_NO";
+
+export interface WildcardChallenge {
+  id: string;
+  title: string;
+  description: string;
+  type: WildcardType;
+  phase: Phase | "ALL";
+  points: number;
+  deadline: string;
+  correctAnswer?: string;
+  status: "OPEN" | "CLOSED" | "GRADED";
+  weekLabel: string;
 }
 
+export interface WildcardAnswer {
+  challengeId: string;
+  userId: string;
+  answer: string;
+  submittedAt: string;
+  pointsEarned?: number;
+}
+
+// -------------------------------------------------------
+// HOT STREAK
+// -------------------------------------------------------
+export interface StreakInfo {
+  current: number;
+  best: number;
+  bonusNext: number;
+}
+
+// -------------------------------------------------------
+// MEMBER / PRODE
+// -------------------------------------------------------
 export interface Member {
   id: string;
   displayName: string;
@@ -76,7 +126,8 @@ export interface Member {
   pointsPerPhase: Record<Phase, number>;
   rank: number;
   previousRank?: number;
-  jokersLeft: Record<Phase, number>;
+  tokens: MultiplierToken[];
+  streak: StreakInfo;
 }
 
 export interface Prode {
@@ -89,11 +140,25 @@ export interface Prode {
   createdAt: string;
 }
 
+export interface SpecialPredictions {
+  userId: string;
+  prodeId: string;
+  champion?: string;
+  finalist?: string;
+  thirdPlace?: string;
+  topScorer?: string;
+  mostGoalsCountry?: string;
+  locked: boolean;
+}
+
 export type NotificationType =
   | "MATCH_STARTING"
   | "RESULT_CONFIRMED"
   | "LEADERBOARD_CHANGE"
-  | "PREDICTIONS_CLOSING";
+  | "PREDICTIONS_CLOSING"
+  | "WILDCARD_AVAILABLE"
+  | "STREAK_BONUS"
+  | "TOKEN_EXPIRING";
 
 export interface Notification {
   id: string;

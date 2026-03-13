@@ -2,15 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, List, Trophy, Settings, Star, Bell } from "lucide-react";
+import { Home, List, Trophy, Settings, Target, Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { href: "/dashboard", icon: Home, label: "Inicio" },
-  { href: "/predicciones", icon: List, label: "Predecir" },
-  { href: "/tabla", icon: Trophy, label: "Tabla" },
-  { href: "/predicciones/especiales", icon: Star, label: "Especiales" },
-  { href: "/grupo", icon: Settings, label: "Grupo" },
+  { href: "/dashboard",   icon: Home,   label: "Inicio"    },
+  { href: "/predicciones", icon: List,   label: "Predecir"  },
+  { href: "/tabla",       icon: Trophy, label: "Tabla"     },
+  { href: "/desafios",    icon: Target, label: "Desafíos"  },
+  { href: "/grupo",       icon: Settings, label: "Grupo"   },
 ];
 
 export function BottomNav() {

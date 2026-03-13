@@ -313,3 +313,278 @@ begin
   end loop;
 end;
 $$;
+
+
+-- ============================================================
+-- Migration: Tokens, Wildcards, Streaks
+-- ============================================================
+
+-- -------------------------------------------------------
+-- Update predictions: replace joker_used with multiplier
+-- -------------------------------------------------------
+alter table public.predictions
+  add column if not exists multiplier int not null default 1 check (multiplier in (1, 2, 3, 5));
+
+-- Keep joker_used for backwards compat but migrate data
+update public.predictions set multiplier = 2 where joker_used = true and multiplier = 1;
+
+-- -------------------------------------------------------
+-- MULTIPLIER TOKENS (one row per token per user per prode)
+-- -------------------------------------------------------
+create table if not exists public.multiplier_tokens (
+  id              uuid primary key default gen_random_uuid(),
+  user_id         uuid not null references public.profiles(id) on delete cascade,
+  prode_id        uuid not null references public.prodes(id) on delete cascade,
+  multiplier      int not null check (multiplier in (2, 3, 5)),
+  used_on_match   uuid references public.matches(id),
+  decayed         boolean not null default false,
+  created_at      timestamptz default now() not null,
+  updated_at      timestamptz default now() not null,
+  unique (user_id, prode_id, multiplier)
+);
+
+alter table public.multiplier_tokens enable row level security;
+
+create policy "Members can view tokens in their prodes"
+  on public.multiplier_tokens for select
+  using (
+    exists (
+      select 1 from public.prode_members pm
+      where pm.prode_id = multiplier_tokens.prode_id
+        and pm.user_id = auth.uid()
+    )
+  );
+
+create policy "Users can manage their own tokens"
+  on public.multiplier_tokens for all
+  using (user_id = auth.uid())
+  with check (user_id = auth.uid());
+
+-- Auto-assign 3 tokens when a user joins a prode
+create or replace function public.assign_tokens_on_join()
+returns trigger language plpgsql security definer as $$
+begin
+  insert into public.multiplier_tokens (user_id, prode_id, multiplier)
+  values
+    (new.user_id, new.prode_id, 2),
+    (new.user_id, new.prode_id, 3),
+    (new.user_id, new.prode_id, 5)
+  on conflict (user_id, prode_id, multiplier) do nothing;
+  return new;
+end;
+$$;
+
+create or replace trigger on_prode_member_added
+  after insert on public.prode_members
+  for each row execute procedure public.assign_tokens_on_join();
+
+-- -------------------------------------------------------
+-- HOT STREAK (one row per user per prode)
+-- -------------------------------------------------------
+create table if not exists public.streaks (
+  id              uuid primary key default gen_random_uuid(),
+  user_id         uuid not null references public.profiles(id) on delete cascade,
+  prode_id        uuid not null references public.prodes(id) on delete cascade,
+  current_streak  int not null default 0,
+  best_streak     int not null default 0,
+  updated_at      timestamptz default now() not null,
+  unique (user_id, prode_id)
+);
+
+alter table public.streaks enable row level security;
+
+create policy "Members can view streaks in their prodes"
+  on public.streaks for select
+  using (
+    exists (
+      select 1 from public.prode_members pm
+      where pm.prode_id = streaks.prode_id
+        and pm.user_id = auth.uid()
+    )
+  );
+
+create policy "Streaks are updated by server functions only"
+  on public.streaks for all
+  using (user_id = auth.uid());
+
+-- -------------------------------------------------------
+-- WILDCARD CHALLENGES
+-- -------------------------------------------------------
+create table if not exists public.wildcard_challenges (
+  id           uuid primary key default gen_random_uuid(),
+  prode_id     uuid references public.prodes(id) on delete cascade,  -- null = global
+  title        text not null,
+  description  text,
+  type         text not null check (type in ('PICK_TEAM', 'NUMERIC', 'YES_NO')),
+  phase        text check (phase in ('GROUP','ROUND_OF_32','ROUND_OF_16','QUARTER_FINAL','SEMI_FINAL','FINAL','ALL')),
+  points       int not null default 10,
+  deadline     timestamptz not null,
+  correct_answer text,
+  status       text not null default 'OPEN' check (status in ('OPEN', 'CLOSED', 'GRADED')),
+  week_label   text not null default '',
+  created_at   timestamptz default now() not null
+);
+
+alter table public.wildcard_challenges enable row level security;
+
+create policy "Everyone can read wildcard challenges"
+  on public.wildcard_challenges for select using (true);
+
+create policy "Only admins can create wildcard challenges"
+  on public.wildcard_challenges for insert
+  with check (
+    exists (
+      select 1 from public.prodes p
+      where p.id = wildcard_challenges.prode_id
+        and p.admin_id = auth.uid()
+    )
+  );
+
+-- -------------------------------------------------------
+-- WILDCARD ANSWERS
+-- -------------------------------------------------------
+create table if not exists public.wildcard_answers (
+  id              uuid primary key default gen_random_uuid(),
+  challenge_id    uuid not null references public.wildcard_challenges(id) on delete cascade,
+  user_id         uuid not null references public.profiles(id) on delete cascade,
+  answer          text not null,
+  points_earned   int,
+  submitted_at    timestamptz default now() not null,
+  unique (challenge_id, user_id)
+);
+
+alter table public.wildcard_answers enable row level security;
+
+create policy "Users can view all answers after challenge closes"
+  on public.wildcard_answers for select
+  using (
+    user_id = auth.uid()
+    or exists (
+      select 1 from public.wildcard_challenges wc
+      where wc.id = wildcard_answers.challenge_id
+        and wc.status in ('CLOSED', 'GRADED')
+    )
+  );
+
+create policy "Users can submit their own answers"
+  on public.wildcard_answers for insert
+  with check (
+    user_id = auth.uid()
+    and exists (
+      select 1 from public.wildcard_challenges wc
+      where wc.id = wildcard_answers.challenge_id
+        and wc.status = 'OPEN'
+        and wc.deadline > now()
+    )
+  );
+
+create policy "Users can update their own answers while open"
+  on public.wildcard_answers for update
+  using (
+    user_id = auth.uid()
+    and exists (
+      select 1 from public.wildcard_challenges wc
+      where wc.id = wildcard_answers.challenge_id
+        and wc.status = 'OPEN'
+        and wc.deadline > now()
+    )
+  );
+
+-- -------------------------------------------------------
+-- Update calculate_match_points to use multiplier instead of joker_used
+-- -------------------------------------------------------
+create or replace function public.calculate_match_points(p_match_id uuid)
+returns void language plpgsql security definer as $$
+declare
+  m   public.matches%rowtype;
+  rec record;
+  pts int;
+  predicted_winner int;
+  actual_winner    int;
+  streak_rec record;
+  streak_bonus int;
+begin
+  select * into m from public.matches where id = p_match_id;
+  if m.home_score is null or m.away_score is null then return; end if;
+
+  actual_winner := sign(m.home_score - m.away_score);
+
+  for rec in
+    select * from public.predictions where match_id = p_match_id
+  loop
+    pts := 0;
+    predicted_winner := sign(rec.home_goals - rec.away_goals);
+
+    -- Exact result
+    if rec.home_goals = m.home_score and rec.away_goals = m.away_score then
+      pts := case m.phase
+        when 'GROUP'         then 3
+        when 'ROUND_OF_32'   then 6
+        when 'ROUND_OF_16'   then 10
+        when 'QUARTER_FINAL' then 18
+        when 'SEMI_FINAL'    then 30
+        when 'FINAL'         then 50
+        else 3
+      end;
+    -- Correct winner/draw
+    elsif predicted_winner = actual_winner then
+      if actual_winner = 0 then
+        pts := case m.phase when 'GROUP' then 2 else 0 end;
+      else
+        pts := case m.phase
+          when 'GROUP'         then 1
+          when 'ROUND_OF_32'   then 2
+          when 'ROUND_OF_16'   then 4
+          when 'QUARTER_FINAL' then 6
+          when 'SEMI_FINAL'    then 10
+          when 'FINAL'         then 20
+          else 1
+        end;
+      end if;
+    end if;
+
+    -- Apply token multiplier (1 = no token)
+    pts := pts * coalesce(rec.multiplier, 1);
+
+    -- Apply streak bonus
+    streak_bonus := 0;
+    select * into streak_rec from public.streaks
+      where user_id = rec.user_id and prode_id = rec.prode_id;
+    if found then
+      if streak_rec.current_streak >= 5 then streak_bonus := 5;
+      elsif streak_rec.current_streak >= 3 then streak_bonus := 2;
+      end if;
+    end if;
+    if pts > 0 then pts := pts + streak_bonus; end if;
+
+    -- Update prediction
+    update public.predictions set points_earned = pts, updated_at = now()
+      where id = rec.id;
+
+    -- Upsert into scores
+    insert into public.scores (user_id, prode_id, phase, points, updated_at)
+      values (rec.user_id, rec.prode_id, m.phase, pts, now())
+      on conflict (user_id, prode_id, phase)
+      do update set points = public.scores.points + pts, updated_at = now();
+
+    -- Update streak
+    if pts > 0 then
+      insert into public.streaks (user_id, prode_id, current_streak, best_streak)
+        values (rec.user_id, rec.prode_id, 1, 1)
+        on conflict (user_id, prode_id)
+        do update set
+          current_streak = public.streaks.current_streak + 1,
+          best_streak    = greatest(public.streaks.best_streak, public.streaks.current_streak + 1),
+          updated_at     = now();
+    else
+      insert into public.streaks (user_id, prode_id, current_streak, best_streak)
+        values (rec.user_id, rec.prode_id, 0, 0)
+        on conflict (user_id, prode_id)
+        do update set
+          current_streak = 0,
+          updated_at     = now();
+    end if;
+
+  end loop;
+end;
+$$;
