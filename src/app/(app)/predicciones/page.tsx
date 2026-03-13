@@ -10,6 +10,8 @@ import { PHASE_LABELS, PHASE_POINTS, Phase, Match, MultiplierToken, TokenMultipl
 import { maxPointsForMatch, streakBonusPoints } from "@/lib/scoring";
 import { Save, Lock, Check, Flame, HelpCircle, X } from "lucide-react";
 
+const MODULE_LOAD_TIME = Date.now();
+
 const PHASE_ORDER: Phase[] = [
   "GROUP", "ROUND_OF_32", "ROUND_OF_16", "QUARTER_FINAL", "SEMI_FINAL", "FINAL"
 ];
@@ -315,7 +317,7 @@ export default function PrediccionesPage() {
   const allPending = MOCK_MATCHES.filter((m) => m.status === "SCHEDULED" && !MOCK_MY_PREDICTIONS[m.id]);
   // Urgentes: pendientes que vencen en < 24h
   const allUrgent = allPending.filter((m) => {
-    const diff = new Date(m.date).getTime() - Date.now();
+    const diff = new Date(m.date).getTime() - MODULE_LOAD_TIME;
     return diff > 0 && diff < 86400000;
   });
 
