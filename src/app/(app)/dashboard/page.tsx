@@ -119,7 +119,7 @@ function MatchCard({ match }: { match: (typeof MOCK_MATCHES)[0] }) {
 export default function DashboardPage() {
   const me = MOCK_PRODE.members.find((m) => m.id === "u1")!;
   const leader = MOCK_PRODE.members[0];
-  const upcoming = MOCK_MATCHES.filter((m) => m.status === "SCHEDULED").slice(0, 3);
+  const upcoming = MOCK_MATCHES.filter((m) => m.status === "SCHEDULED").slice(0, 4);
   const live = MOCK_MATCHES.filter((m) => m.status === "LIVE");
   const gap = leader.totalPoints - me.totalPoints;
 
@@ -139,85 +139,116 @@ export default function DashboardPage() {
         showNotification
       />
 
-      <div className="mx-auto max-w-lg space-y-5 px-4 py-5">
+      {/* Layout: 1 col mobile, 2 col desktop */}
+      <div className="px-4 py-5 lg:grid lg:grid-cols-[2fr_3fr] lg:gap-6 lg:items-start lg:max-w-5xl lg:mx-auto">
 
-        {/* Mi posición */}
-        <Card className="overflow-hidden">
-          <div className="bg-gradient-to-br from-green-600/20 to-blue-600/10 p-5">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-xs text-white/40 mb-0.5">Tu posición</p>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-4xl font-black text-white">#{me.rank}</span>
-                  {me.previousRank && me.rank < me.previousRank && (
-                    <span className="flex items-center gap-0.5 text-xs text-green-400">
-                      <TrendingUp className="h-3 w-3" />
-                      {me.previousRank - me.rank}
-                    </span>
-                  )}
+        {/* Columna izquierda: posición + alerts */}
+        <div className="space-y-4 mb-5 lg:mb-0">
+
+          {/* Mi posición */}
+          <Card className="overflow-hidden">
+            <div className="bg-gradient-to-br from-green-600/20 to-blue-600/10 p-5">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-xs text-white/40 mb-0.5">Tu posición</p>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-4xl font-black text-white">#{me.rank}</span>
+                    {me.previousRank && me.rank < me.previousRank && (
+                      <span className="flex items-center gap-0.5 text-xs text-green-400">
+                        <TrendingUp className="h-3 w-3" />
+                        {me.previousRank - me.rank}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-white/30 mt-1">de {MOCK_PRODE.members.length} participantes</p>
                 </div>
-                <p className="text-xs text-white/30 mt-1">de {MOCK_PRODE.members.length} participantes</p>
+                <div className="text-right">
+                  <p className="text-xs text-white/40 mb-0.5">Puntos</p>
+                  <p className="text-3xl font-black text-white">{me.totalPoints}</p>
+                </div>
               </div>
-              <div className="text-right">
-                <p className="text-xs text-white/40 mb-0.5">Puntos</p>
-                <p className="text-3xl font-black text-white">{me.totalPoints}</p>
-              </div>
+              {me.rank > 1 && (
+                <div className="mt-4 rounded-xl bg-black/20 p-3">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-xs text-white/40">vs. líder</span>
+                    <span className="text-xs font-bold text-orange-400">−{gap} pts</span>
+                  </div>
+                  <div className="h-1 rounded-full bg-white/10">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-orange-500 to-yellow-400"
+                      style={{ width: `${Math.max(5, (me.totalPoints / leader.totalPoints) * 100)}%` }}
+                    />
+                  </div>
+                  <p className="text-[10px] text-white/30 mt-2">
+                    La final sola vale hasta {remainingPotential} pts — cualquiera puede ganar
+                  </p>
+                </div>
+              )}
             </div>
-            {me.rank > 1 && (
-              <div className="mt-4 rounded-xl bg-black/20 p-3">
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-xs text-white/40">vs. líder</span>
-                  <span className="text-xs font-bold text-orange-400">−{gap} pts</span>
-                </div>
-                <div className="h-1 rounded-full bg-white/10">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-orange-500 to-yellow-400"
-                    style={{ width: `${Math.max(5, (me.totalPoints / leader.totalPoints) * 100)}%` }}
-                  />
-                </div>
-                <p className="text-[10px] text-white/30 mt-2">
-                  La final sola vale hasta {remainingPotential} pts — cualquiera puede ganar
-                </p>
-              </div>
-            )}
-          </div>
-        </Card>
+          </Card>
 
-        {/* Alert chips */}
-        {hasAlerts && (
-          <div className="flex flex-wrap gap-2">
-            {streak.current >= 1 && (
-              <span className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ${
-                streak.current >= 5
-                  ? "bg-orange-500/20 text-orange-300 border border-orange-500/30"
-                  : streak.current >= 3
-                  ? "bg-orange-500/15 text-orange-400 border border-orange-500/20"
-                  : "bg-white/8 text-white/50 border border-white/10"
-              }`}>
-                🔥 Racha {streak.current}
-                {streakBonus > 0 && <span className="opacity-70"> · +{streakBonus}pts</span>}
-              </span>
-            )}
-            {tokensAvailable.length > 0 && (
-              <Link href="/predicciones">
-                <span className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 hover:border-yellow-500/40 transition-colors cursor-pointer">
-                  {tokensAvailable.map((t) => t.emoji).join("")} {tokensAvailable.length} sin usar
-                  <ChevronRight className="h-3 w-3" />
+          {/* Alert chips */}
+          {hasAlerts && (
+            <div className="flex flex-wrap gap-2">
+              {streak.current >= 1 && (
+                <span className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ${
+                  streak.current >= 5
+                    ? "bg-orange-500/20 text-orange-300 border border-orange-500/30"
+                    : streak.current >= 3
+                    ? "bg-orange-500/15 text-orange-400 border border-orange-500/20"
+                    : "bg-white/8 text-white/50 border border-white/10"
+                }`}>
+                  🔥 Racha {streak.current}
+                  {streakBonus > 0 && <span className="opacity-70"> · +{streakBonus}pts</span>}
                 </span>
-              </Link>
-            )}
-            {openWildcards.length > 0 && (
-              <Link href="/desafios">
-                <span className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold bg-purple-500/10 text-purple-400 border border-purple-500/20 hover:border-purple-500/40 transition-colors cursor-pointer">
-                  🎯 {openWildcards.length} desafío{openWildcards.length > 1 ? "s" : ""}
-                  <ChevronRight className="h-3 w-3" />
-                </span>
-              </Link>
-            )}
-          </div>
-        )}
+              )}
+              {tokensAvailable.length > 0 && (
+                <Link href="/predicciones">
+                  <span className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 hover:border-yellow-500/40 transition-colors cursor-pointer">
+                    {tokensAvailable.map((t) => t.emoji).join("")} {tokensAvailable.length} sin usar
+                    <ChevronRight className="h-3 w-3" />
+                  </span>
+                </Link>
+              )}
+              {openWildcards.length > 0 && (
+                <Link href="/desafios">
+                  <span className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold bg-purple-500/10 text-purple-400 border border-purple-500/20 hover:border-purple-500/40 transition-colors cursor-pointer">
+                    🎯 {openWildcards.length} desafío{openWildcards.length > 1 ? "s" : ""}
+                    <ChevronRight className="h-3 w-3" />
+                  </span>
+                </Link>
+              )}
+            </div>
+          )}
 
-        {/* Partidos */}
+          {/* Accesos rápidos — solo desktop */}
+          <div className="hidden lg:grid grid-cols-2 gap-3">
+            <Link href="/predicciones/especiales">
+              <Card className="overflow-hidden hover:border-yellow-500/30 transition-colors">
+                <div className="flex items-center gap-3 p-4">
+                  <span className="text-xl">⭐</span>
+                  <div>
+                    <p className="text-sm font-semibold text-white leading-tight">Especiales</p>
+                    <p className="text-xs text-white/40">Campeón, goleador…</p>
+                  </div>
+                </div>
+              </Card>
+            </Link>
+            <Link href="/desafios">
+              <Card className="overflow-hidden hover:border-purple-500/30 transition-colors">
+                <div className="flex items-center gap-3 p-4">
+                  <span className="text-xl">🎯</span>
+                  <div>
+                    <p className="text-sm font-semibold text-white leading-tight">Desafíos</p>
+                    <p className="text-xs text-white/40">Wildcards semanales</p>
+                  </div>
+                </div>
+              </Card>
+            </Link>
+          </div>
+        </div>
+
+        {/* Columna derecha: partidos */}
         <section>
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-bold text-white">

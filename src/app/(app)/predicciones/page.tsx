@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { MOCK_MATCHES, MOCK_MY_PREDICTIONS, MOCK_MY_TOKENS } from "@/lib/mock-data";
 import { PHASE_LABELS, PHASE_POINTS, Phase, Match, MultiplierToken, TokenMultiplier } from "@/lib/types";
 import { maxPointsForMatch, streakBonusPoints } from "@/lib/scoring";
-import { Save, Lock, Check, Flame, HelpCircle, X } from "lucide-react";
+import { Save, Lock, Check, Flame, HelpCircle, X, Star } from "lucide-react";
+import Link from "next/link";
 
 const PHASE_ORDER: Phase[] = [
   "GROUP", "ROUND_OF_32", "ROUND_OF_16", "QUARTER_FINAL", "SEMI_FINAL", "FINAL"
@@ -285,9 +286,9 @@ export default function PrediccionesPage() {
         subtitle={pendingCount > 0 ? `${pendingCount} pendientes` : "Todo cargado ✓"}
       />
 
-      {/* Phase tabs + legend button */}
+      {/* Phase tabs + Especiales + legend button */}
       <div className="sticky top-[57px] z-30 border-b border-white/10 bg-[#0a1628]/95 backdrop-blur-lg">
-        <div className="mx-auto max-w-lg flex items-center gap-2 px-3 py-3">
+        <div className="flex items-center gap-2 px-3 py-3">
           <div className="flex gap-1 overflow-x-auto flex-1 min-w-0">
             {availablePhases.map((phase) => {
               const isActive = activePhase === phase;
@@ -310,13 +311,22 @@ export default function PrediccionesPage() {
               );
             })}
           </div>
-          <button
-            onClick={() => setShowLegend(true)}
-            className="shrink-0 flex items-center justify-center h-8 w-8 rounded-xl bg-white/5 border border-white/10 text-white/40 hover:text-white/70 hover:border-white/20 transition-all"
-            title="Ver tabla de puntos"
-          >
-            <HelpCircle className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <Link
+              href="/predicciones/especiales"
+              className="flex items-center gap-1 rounded-xl px-2.5 py-2 text-xs font-semibold bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 hover:border-yellow-500/40 transition-all whitespace-nowrap"
+            >
+              <Star className="h-3 w-3" />
+              Especiales
+            </Link>
+            <button
+              onClick={() => setShowLegend(true)}
+              className="flex items-center justify-center h-8 w-8 rounded-xl bg-white/5 border border-white/10 text-white/40 hover:text-white/70 hover:border-white/20 transition-all"
+              title="Ver tabla de puntos"
+            >
+              <HelpCircle className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       </div>
 
