@@ -2,20 +2,11 @@
 
 import { useState } from "react";
 import { TopBar } from "@/components/nav";
-import { Card, CardContent } from "@/components/ui/card";
-import { MOCK_PRODE } from "@/lib/mock-data";
+import { MOCK_PRODE, MOCK_POINTS_TODAY } from "@/lib/mock-data";
 import { PHASE_LABELS, Phase } from "@/lib/types";
-import { streakBonusPoints } from "@/lib/scoring";
-import { TrendingUp, TrendingDown, Minus, Flame } from "lucide-react";
 
 const PHASE_ORDER: Phase[] = [
   "GROUP", "ROUND_OF_16", "QUARTER_FINAL", "SEMI_FINAL", "FINAL"
-];
-
-const RANK_COLORS = [
-  "from-yellow-400/30 to-yellow-600/10 border-yellow-500/30",
-  "from-slate-300/20 to-slate-500/10 border-slate-400/20",
-  "from-orange-400/20 to-orange-600/10 border-orange-500/20",
 ];
 
 export default function TablaPage() {
@@ -28,26 +19,30 @@ export default function TablaPage() {
   };
 
   const sortedByView = [...members].sort((a, b) => getMemberScore(b) - getMemberScore(a));
-  const maxPoints = getMemberScore(sortedByView[0]) || 1;
 
   return (
     <div>
-      <TopBar title="Tabla de Posiciones" subtitle={MOCK_PRODE.name} />
+      <TopBar title="Posiciones" subtitle={MOCK_PRODE.name} />
 
-      {/* View selector */}
+      {/* Selector de vista */}
       <div className="sticky top-[57px] z-30 border-b border-white/10 bg-[#0a1628]/95 backdrop-blur-lg">
-        <div className="mx-auto max-w-lg overflow-x-auto">
-          <div className="flex gap-1 p-3 min-w-max">
+        <div className="overflow-x-auto">
+          <div className="flex gap-1.5 p-3 min-w-max items-center">
+            {/* General — destacado */}
             <button
               onClick={() => setView("total")}
-              className={`rounded-xl px-4 py-2 text-xs font-semibold transition-all ${
+              className={`rounded-xl px-5 py-2 text-sm font-bold transition-all ${
                 view === "total"
-                  ? "bg-green-600 text-white"
-                  : "bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/70"
+                  ? "bg-green-600 text-white shadow-lg shadow-green-900/30"
+                  : "bg-white/8 text-white/60 hover:bg-white/12 hover:text-white/80"
               }`}
             >
               General
             </button>
+
+            {/* Separador visual */}
+            <span className="h-5 w-px bg-white/10 mx-0.5" />
+
             {PHASE_ORDER.map((phase) => {
               const hasPoints = members.some((m) => (m.pointsPerPhase[phase] ?? 0) > 0);
               if (!hasPoints) return null;
@@ -55,10 +50,10 @@ export default function TablaPage() {
                 <button
                   key={phase}
                   onClick={() => setView(phase)}
-                  className={`rounded-xl px-3 py-2 text-xs font-semibold transition-all whitespace-nowrap ${
+                  className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition-all whitespace-nowrap ${
                     view === phase
-                      ? "bg-green-600 text-white"
-                      : "bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/70"
+                      ? "bg-white/15 text-white border border-white/20"
+                      : "bg-white/5 text-white/40 hover:bg-white/8 hover:text-white/60"
                   }`}
                 >
                   {phase === "GROUP" ? "Grupos" : PHASE_LABELS[phase].split(" ")[0]}
@@ -69,11 +64,11 @@ export default function TablaPage() {
         </div>
       </div>
 
-      {/* Prize banner */}
+      {/* Premio */}
       {MOCK_PRODE.prizeDescription && (
-        <div className="mx-auto max-w-lg px-4 pt-4">
+        <div className="px-4 pt-4">
           <div className="flex items-center gap-3 rounded-2xl bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 p-3">
-            <span className="text-2xl">🏆</span>
+            <span className="text-xl">🏆</span>
             <div>
               <p className="text-xs text-yellow-400 font-semibold">Premio al ganador</p>
               <p className="text-sm text-white/80">{MOCK_PRODE.prizeDescription}</p>
@@ -82,131 +77,90 @@ export default function TablaPage() {
         </div>
       )}
 
-      {/* Leaderboard */}
-      <div className="mx-auto max-w-lg space-y-2 px-4 py-4 pb-6">
+      {/* Tabla */}
+      <div className="pb-6">
+        {/* Encabezado */}
+        <div className="flex items-center gap-2 px-4 pt-4 pb-2 border-b border-white/8 text-[10px] text-white/30 font-semibold uppercase tracking-wider">
+          <div className="w-7 shrink-0" />
+          <div className="w-8 shrink-0" />
+          <div className="flex-1">Jugador</div>
+          {view === "total" && (
+            <div className="w-14 text-right shrink-0">Hoy</div>
+          )}
+          <div className="w-10 text-right shrink-0">Cambio</div>
+          <div className="w-16 text-right shrink-0">Puntos</div>
+        </div>
+
         {sortedByView.map((member, idx) => {
           const score = getMemberScore(member);
           const rankChange = member.previousRank ? member.previousRank - member.rank : 0;
           const isMe = member.id === "u1";
-          const barWidth = (score / maxPoints) * 100;
-          const streakBonus = streakBonusPoints(member.streak.current);
-          const tokensLeft = member.tokens.filter((t) => !t.usedOnMatchId && !t.decayed).length;
+          const todayPts = MOCK_POINTS_TODAY[member.id] ?? 0;
 
           return (
-            <Card
+            <div
               key={member.id}
-              className={`overflow-hidden transition-all ${
-                idx < 3
-                  ? `bg-gradient-to-r ${RANK_COLORS[idx]}`
-                  : isMe
-                  ? "border-green-500/30 bg-green-500/5"
-                  : ""
+              className={`flex items-center gap-2 px-4 py-3 border-b border-white/5 transition-colors ${
+                isMe ? "bg-green-500/5" : ""
               }`}
             >
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  {/* Rank */}
-                  <div className="w-8 text-center shrink-0">
-                    {idx === 0 ? <span className="text-xl">🥇</span>
-                    : idx === 1 ? <span className="text-xl">🥈</span>
-                    : idx === 2 ? <span className="text-xl">🥉</span>
-                    : <span className="text-base font-black text-white/50">#{idx + 1}</span>}
-                  </div>
+              {/* Medalla / número */}
+              <div className="w-7 shrink-0 text-center">
+                {idx === 0 ? <span className="text-base">🥇</span>
+                : idx === 1 ? <span className="text-base">🥈</span>
+                : idx === 2 ? <span className="text-base">🥉</span>
+                : <span className="text-xs font-bold text-white/30">#{idx + 1}</span>}
+              </div>
 
-                  {/* Avatar */}
-                  <div className="relative shrink-0">
-                    <div className="h-10 w-10 rounded-full overflow-hidden bg-white/10 flex items-center justify-center">
-                      {member.avatarUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={member.avatarUrl} alt={member.displayName} className="h-full w-full object-cover" />
-                      ) : (
-                        <span className="text-lg">{member.displayName[0]}</span>
-                      )}
-                    </div>
-                    {isMe && (
-                      <span className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-green-500 border-2 border-[#0a1628]" />
-                    )}
-                  </div>
-
-                  {/* Name + bar */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1 flex-wrap">
-                      <p className={`text-sm font-bold leading-tight truncate ${isMe ? "text-green-300" : "text-white"}`}>
-                        {member.displayName}
-                        {isMe && <span className="ml-1 text-[10px] text-green-500">(vos)</span>}
-                      </p>
-
-                      {/* Rank change */}
-                      {view === "total" && (
-                        rankChange > 0 ? (
-                          <span className="flex items-center gap-0.5 text-[10px] text-green-400 shrink-0">
-                            <TrendingUp className="h-3 w-3" />{rankChange}
-                          </span>
-                        ) : rankChange < 0 ? (
-                          <span className="flex items-center gap-0.5 text-[10px] text-red-400 shrink-0">
-                            <TrendingDown className="h-3 w-3" />{Math.abs(rankChange)}
-                          </span>
-                        ) : (
-                          <Minus className="h-3 w-3 text-white/20 shrink-0" />
-                        )
-                      )}
-
-                      {/* Streak badge */}
-                      {member.streak.current >= 3 && (
-                        <span className={`flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-bold shrink-0 ${
-                          member.streak.current >= 5
-                            ? "bg-orange-500/30 text-orange-300"
-                            : "bg-orange-500/15 text-orange-400"
-                        }`}>
-                          <Flame className="h-2.5 w-2.5" />
-                          {member.streak.current}
-                          {streakBonus > 0 && ` +${streakBonus}`}
-                        </span>
-                      )}
-
-                      {/* Token dots */}
-                      {tokensLeft > 0 && (
-                        <span className="flex gap-0.5 shrink-0">
-                          {member.tokens.filter((t) => !t.usedOnMatchId && !t.decayed).map((t) => (
-                            <span key={t.multiplier} className="text-[10px]">{t.emoji}</span>
-                          ))}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Points bar */}
-                    <div className="h-1.5 rounded-full bg-white/10">
-                      <div
-                        className={`h-full rounded-full transition-all ${
-                          idx === 0 ? "bg-yellow-400" : isMe ? "bg-green-400" : "bg-white/40"
-                        }`}
-                        style={{ width: `${barWidth}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Score */}
-                  <div className="text-right shrink-0">
-                    <p className="text-xl font-black text-white">{score}</p>
-                    <p className="text-[10px] text-white/30">pts</p>
-                  </div>
+              {/* Avatar */}
+              <div className="relative w-8 h-8 shrink-0">
+                <div className="h-8 w-8 rounded-full overflow-hidden bg-white/10 flex items-center justify-center">
+                  {member.avatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={member.avatarUrl} alt={member.displayName} className="h-full w-full object-cover" />
+                  ) : (
+                    <span className="text-xs font-bold text-white/60">{member.displayName[0]}</span>
+                  )}
                 </div>
-
-                {/* Phase breakdown */}
-                {view === "total" && (
-                  <div className="mt-3 flex gap-3 border-t border-white/5 pt-2.5 flex-wrap">
-                    {PHASE_ORDER.filter((p) => (member.pointsPerPhase[p] ?? 0) > 0).map((p) => (
-                      <div key={p} className="text-center">
-                        <p className="text-[10px] text-white/30 leading-none">
-                          {p === "GROUP" ? "Grupos" : p === "ROUND_OF_16" ? "Octavos" : p === "QUARTER_FINAL" ? "Cuartos" : p === "SEMI_FINAL" ? "Semis" : "Final"}
-                        </p>
-                        <p className="text-xs font-bold text-white/60">{member.pointsPerPhase[p]}</p>
-                      </div>
-                    ))}
-                  </div>
+                {isMe && (
+                  <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-green-500 border-2 border-[#0a1628]" />
                 )}
-              </CardContent>
-            </Card>
+              </div>
+
+              {/* Nombre */}
+              <div className="flex-1 min-w-0">
+                <p className={`text-sm font-semibold truncate ${isMe ? "text-green-300" : "text-white"}`}>
+                  {member.displayName}
+                  {isMe && <span className="ml-1 text-[10px] text-green-500/50">(vos)</span>}
+                </p>
+              </div>
+
+              {/* Puntos de hoy — solo en vista general */}
+              {view === "total" && (
+                <div className="w-14 text-right shrink-0">
+                  {todayPts > 0 ? (
+                    <span className="text-xs font-bold text-green-400">+{todayPts}</span>
+                  ) : (
+                    <span className="text-xs text-white/20">—</span>
+                  )}
+                </div>
+              )}
+
+              {/* Cambio de posición */}
+              <div className="w-10 text-right shrink-0">
+                {view === "total" && rankChange !== 0 && (
+                  <span className={`text-xs font-bold ${rankChange > 0 ? "text-green-400" : "text-red-400"}`}>
+                    {rankChange > 0 ? "↑" : "↓"}{Math.abs(rankChange)}
+                  </span>
+                )}
+              </div>
+
+              {/* Puntos */}
+              <div className="w-16 text-right shrink-0">
+                <p className={`text-sm font-black ${isMe ? "text-green-300" : "text-white"}`}>{score}</p>
+                <p className="text-[10px] text-white/30">pts</p>
+              </div>
+            </div>
           );
         })}
       </div>

@@ -8,23 +8,21 @@ import { Button } from "@/components/ui/button";
 import { MOCK_MATCHES, MOCK_MY_PREDICTIONS, MOCK_MY_TOKENS } from "@/lib/mock-data";
 import { PHASE_LABELS, PHASE_POINTS, Phase, Match, MultiplierToken, TokenMultiplier } from "@/lib/types";
 import { maxPointsForMatch, streakBonusPoints } from "@/lib/scoring";
-import { Save, Lock, Check, Flame } from "lucide-react";
+import { Save, Lock, Check, Flame, HelpCircle, X } from "lucide-react";
 
 const PHASE_ORDER: Phase[] = [
   "GROUP", "ROUND_OF_32", "ROUND_OF_16", "QUARTER_FINAL", "SEMI_FINAL", "FINAL"
 ];
 
-// Current user's streak (in production comes from DB)
+const PHASE_SHORT: Record<Phase, string> = {
+  GROUP: "Grupos", ROUND_OF_32: "Ronda 32", ROUND_OF_16: "Octavos",
+  QUARTER_FINAL: "Cuartos", SEMI_FINAL: "Semis", FINAL: "Final",
+};
+
 const MY_STREAK = 4;
 const STREAK_BONUS = streakBonusPoints(MY_STREAK);
 
-// -------------------------------------------------------
-// Token state at page level — tracks which match each token is on
-// -------------------------------------------------------
-interface TokenAssignment {
-  matchId: string;
-  multiplier: TokenMultiplier;
-}
+type FilterView = "all" | "pending" | "urgent";
 
 function ScoreInput({ value, onChange, disabled }: { value: string; onChange: (v: string) => void; disabled?: boolean }) {
   return (
@@ -38,10 +36,7 @@ function ScoreInput({ value, onChange, disabled }: { value: string; onChange: (v
 }
 
 function TokenPicker({
-  tokens,
-  activeMultiplier,
-  onSelect,
-  disabled,
+  tokens, activeMultiplier, onSelect, disabled,
 }: {
   tokens: MultiplierToken[];
   activeMultiplier: TokenMultiplier;
@@ -51,7 +46,6 @@ function TokenPicker({
   return (
     <div className="flex items-center gap-1.5">
       <span className="text-[10px] text-white/30 mr-0.5">Token:</span>
-      {/* No token option */}
       <button
         onClick={() => onSelect(1)}
         disabled={disabled}
@@ -90,9 +84,7 @@ function TokenPicker({
 }
 
 function MatchPredictionCard({
-  match,
-  tokens,
-  onTokenChange,
+  match, tokens, onTokenChange,
 }: {
   match: Match;
   tokens: MultiplierToken[];
@@ -110,10 +102,8 @@ function MatchPredictionCard({
   const pts = PHASE_POINTS[match.phase];
   const canSave = home !== "" && away !== "" && !locked;
 
-  // Build tokens with usedOnMatchId relative to THIS match
   const localTokens: MultiplierToken[] = tokens.map((t) => ({
     ...t,
-    // If a token is used on THIS match, show it as active (not blocked)
     usedOnMatchId: t.usedOnMatchId === match.id ? undefined : t.usedOnMatchId,
   }));
 
@@ -124,17 +114,11 @@ function MatchPredictionCard({
     onTokenChange(match.id, prev, next);
   };
 
-  const handleSave = () => {
-    if (!canSave) return;
-    setSaved(true);
-  };
-
   const potential = maxPointsForMatch(match.phase, multiplier) + (MY_STREAK >= 3 && !locked ? STREAK_BONUS : 0);
 
   return (
     <Card className={`overflow-hidden transition-all ${locked ? "opacity-70" : "hover:border-green-500/20"}`}>
       <CardContent className="p-4">
-        {/* Header */}
         <div className="mb-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Badge variant="phase" className="text-[10px]">
@@ -150,7 +134,6 @@ function MatchPredictionCard({
           <span className="text-xs font-bold text-green-400">hasta {potential} pts</span>
         </div>
 
-        {/* Teams + inputs */}
         <div className="flex items-center gap-3 mb-4">
           <div className="flex flex-1 items-center gap-2">
             <span className="text-2xl">{match.homeTeam.flag}</span>
@@ -167,7 +150,6 @@ function MatchPredictionCard({
           </div>
         </div>
 
-        {/* Actual result */}
         {locked && (
           <div className="mb-3 flex items-center justify-center gap-3 rounded-xl bg-white/5 py-2">
             <span className="text-xs text-white/40">Resultado:</span>
@@ -180,22 +162,16 @@ function MatchPredictionCard({
           </div>
         )}
 
-        {/* Token picker + Save */}
         {!locked && (
           <div className="flex flex-wrap items-center gap-2">
-            <TokenPicker
-              tokens={localTokens}
-              activeMultiplier={multiplier}
-              onSelect={handleTokenSelect}
-              disabled={locked}
-            />
+            <TokenPicker tokens={localTokens} activeMultiplier={multiplier} onSelect={handleTokenSelect} disabled={locked} />
             {MY_STREAK >= 3 && (
               <span className="flex items-center gap-1 text-[10px] text-orange-400">
                 <Flame className="h-3 w-3" />+{STREAK_BONUS} racha
               </span>
             )}
             <Button
-              onClick={handleSave}
+              onClick={() => { if (canSave) setSaved(true); }}
               disabled={!canSave}
               size="sm"
               className="ml-auto"
@@ -210,31 +186,144 @@ function MatchPredictionCard({
   );
 }
 
+function RulesModal({ onClose }: { onClose: () => void }) {
+  const phases = PHASE_ORDER.filter((p) => MOCK_MATCHES.some((m) => m.phase === p));
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center p-4 sm:items-center" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <div
+        className="relative w-full max-w-lg flex flex-col rounded-2xl bg-[#0d1f3c] border border-white/15 shadow-2xl"
+        style={{ maxHeight: "min(calc(100svh - 2rem), calc(100dvh - 2rem))" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="shrink-0 flex items-center justify-between px-5 py-4 border-b border-white/10 bg-[#0d1f3c] rounded-t-2xl">
+          <p className="text-sm font-bold text-white">Reglas de puntuación</p>
+          <button onClick={onClose} aria-label="Cerrar" className="text-white/40 hover:text-white transition-colors p-1 rounded-lg hover:bg-white/10">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="overflow-y-auto flex-1 min-h-0 p-5 space-y-4">
+          {/* Tabla por fase */}
+          <div>
+            <p className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-3">Puntos por fase</p>
+            <div className="rounded-xl overflow-hidden border border-white/10">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="bg-white/5 text-white/40">
+                    <th className="text-left px-3 py-2 font-semibold">Fase</th>
+                    <th className="text-center px-3 py-2 font-semibold">Exacto</th>
+                    <th className="text-center px-3 py-2 font-semibold">Ganador</th>
+                    <th className="text-center px-3 py-2 font-semibold">Empate</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {phases.map((phase) => {
+                    const pts = PHASE_POINTS[phase];
+                    return (
+                      <tr key={phase} className="text-white/80">
+                        <td className="px-3 py-2 font-medium">{PHASE_SHORT[phase]}</td>
+                        <td className="px-3 py-2 text-center font-black text-green-400">{pts.exact}</td>
+                        <td className="px-3 py-2 text-center font-bold">{pts.winner}</td>
+                        <td className="px-3 py-2 text-center">{pts.draw > 0 ? pts.draw : <span className="text-white/20">—</span>}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Tokens */}
+          <div>
+            <p className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-2">Tokens multiplicadores</p>
+            <div className="space-y-2">
+              {[
+                { emoji: "⚡", label: "2x", color: "text-blue-400", desc: "Multiplicá por 2 los puntos de un partido" },
+                { emoji: "🔥", label: "3x", color: "text-orange-400", desc: "Multiplicá por 3 los puntos de un partido" },
+                { emoji: "💥", label: "5x", color: "text-purple-400", desc: "Multiplicá por 5 los puntos de un partido" },
+              ].map((t) => (
+                <div key={t.label} className="flex items-center gap-3 rounded-xl bg-white/5 px-3 py-2">
+                  <span className={`text-sm font-black ${t.color} w-6`}>{t.emoji}{t.label}</span>
+                  <p className="text-xs text-white/60">{t.desc}</p>
+                </div>
+              ))}
+              <p className="text-[10px] text-white/30 px-1">Cada token se usa una sola vez. Los no usados caducan al final de la fase de grupos.</p>
+            </div>
+          </div>
+
+          {/* Racha */}
+          <div>
+            <p className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-2">Bonus de racha</p>
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-3 rounded-xl bg-orange-500/10 border border-orange-500/15 px-3 py-2">
+                <span className="text-sm">🔥🔥🔥</span>
+                <p className="text-xs text-orange-300">3 aciertos seguidos → <strong>+2 pts</strong> en el próximo</p>
+              </div>
+              <div className="flex items-center gap-3 rounded-xl bg-orange-500/15 border border-orange-500/20 px-3 py-2">
+                <span className="text-sm">🔥🔥🔥🔥🔥</span>
+                <p className="text-xs text-orange-300">5 aciertos seguidos → <strong>+5 pts</strong> en el próximo</p>
+              </div>
+              <p className="text-[10px] text-white/30 px-1">La racha se corta con cualquier predicción incorrecta.</p>
+            </div>
+          </div>
+
+          {/* Predicciones especiales */}
+          <div>
+            <p className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-2">Predicciones especiales</p>
+            <div className="rounded-xl bg-white/5 border border-white/10 overflow-hidden">
+              {[
+                { label: "Campeón", pts: 60, emoji: "🏆" },
+                { label: "Goleador", pts: 40, emoji: "⚽" },
+                { label: "Finalista", pts: 35, emoji: "🥈" },
+                { label: "Tercer puesto", pts: 25, emoji: "🥉" },
+                { label: "Más goles", pts: 20, emoji: "🎯" },
+              ].map((s, i, arr) => (
+                <div key={s.label} className={`flex items-center justify-between px-3 py-2.5 ${i < arr.length - 1 ? "border-b border-white/5" : ""}`}>
+                  <span className="text-xs text-white/70">{s.emoji} {s.label}</span>
+                  <span className="text-xs font-bold text-green-400">{s.pts} pts</span>
+                </div>
+              ))}
+            </div>
+            <p className="text-[10px] text-white/30 px-1 mt-1.5">Se cierran al inicio del torneo (11 jun 2026).</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function PrediccionesPage() {
   const [activePhase, setActivePhase] = useState<Phase>("GROUP");
-
-  // Global token state — persists across all match cards in this session
+  const [filterView, setFilterView] = useState<FilterView>("all");
+  const [showRules, setShowRules] = useState(false);
   const [tokens, setTokens] = useState<MultiplierToken[]>(MOCK_MY_TOKENS);
 
   const handleTokenChange = useCallback((matchId: string, prev: TokenMultiplier, next: TokenMultiplier) => {
     setTokens((current) =>
       current.map((t) => {
-        // Release the old assignment on this match
-        if (t.multiplier === prev && t.usedOnMatchId === matchId) {
-          return { ...t, usedOnMatchId: undefined };
-        }
-        // Assign the new token to this match
-        if (t.multiplier === next && next !== 1) {
-          return { ...t, usedOnMatchId: matchId };
-        }
+        if (t.multiplier === prev && t.usedOnMatchId === matchId) return { ...t, usedOnMatchId: undefined };
+        if (t.multiplier === next && next !== 1) return { ...t, usedOnMatchId: matchId };
         return t;
       })
     );
   }, []);
 
-  const matchesByPhase = MOCK_MATCHES.filter((m) => m.phase === activePhase);
   const availablePhases = PHASE_ORDER.filter((p) => MOCK_MATCHES.some((m) => m.phase === p));
-  const pendingCount = MOCK_MATCHES.filter((m) => m.status === "SCHEDULED" && !MOCK_MY_PREDICTIONS[m.id]).length;
+
+  // Pendientes: SCHEDULED sin predicción
+  const allPending = MOCK_MATCHES.filter((m) => m.status === "SCHEDULED" && !MOCK_MY_PREDICTIONS[m.id]);
+  // Urgentes: pendientes que vencen en < 24h
+  const allUrgent = allPending.filter((m) => {
+    const diff = new Date(m.date).getTime() - Date.now();
+    return diff > 0 && diff < 86400000;
+  });
+
+  // Partidos a mostrar según el filtro activo
+  const matchesToShow =
+    filterView === "pending" ? allPending :
+    filterView === "urgent"  ? allUrgent :
+    MOCK_MATCHES.filter((m) => m.phase === activePhase);
 
   const tokensLeft = tokens.filter((t) => !t.usedOnMatchId && !t.decayed);
 
@@ -242,126 +331,134 @@ export default function PrediccionesPage() {
     <div>
       <TopBar
         title="Predicciones"
-        subtitle={pendingCount > 0 ? `${pendingCount} pendientes` : "Todo cargado ✓"}
+        subtitle={allPending.length > 0 ? `${allPending.length} sin predecir` : "Todo cargado ✓"}
       />
 
-      {/* Phase tabs */}
+      {/* Filtros rápidos + tabs de fase */}
       <div className="sticky top-[57px] z-30 border-b border-white/10 bg-[#0a1628]/95 backdrop-blur-lg">
-        <div className="mx-auto max-w-lg overflow-x-auto">
-          <div className="flex gap-1 p-3 min-w-max">
-            {availablePhases.map((phase) => {
-              const isActive = activePhase === phase;
-              const matchCount = MOCK_MATCHES.filter((m) => m.phase === phase).length;
-              return (
-                <button
-                  key={phase}
-                  onClick={() => setActivePhase(phase)}
-                  className={`flex flex-col items-center gap-0.5 rounded-xl px-3 py-2 text-xs transition-all whitespace-nowrap ${
-                    isActive ? "bg-green-600 text-white" : "bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/80"
-                  }`}
-                >
-                  <span className="font-semibold text-[11px]">
-                    {phase === "GROUP" ? "Grupos" : PHASE_LABELS[phase].split(" ")[0]}
-                  </span>
-                  <span className={`text-[10px] ${isActive ? "text-green-200" : "text-white/30"}`}>
-                    {matchCount}P · {PHASE_POINTS[phase].exact}pts
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </div>
 
-      {/* Token status bar */}
-      <div className="mx-auto max-w-lg px-4 pt-3">
-        <div className="rounded-xl bg-white/5 border border-white/10 p-3">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs font-semibold text-white/70">Mis tokens multiplicadores</p>
-            {tokensLeft.length > 0 && (
-              <span className="text-[10px] text-orange-400">
-                ¡Caducan al final de Grupos!
+        {/* Fila 1: filtros de estado */}
+        <div className="flex gap-1.5 px-3 pt-2.5">
+          <button
+            onClick={() => setFilterView("all")}
+            className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition-all ${
+              filterView === "all" ? "bg-white/15 text-white" : "text-white/40 hover:text-white/60"
+            }`}
+          >
+            Todas
+          </button>
+          <button
+            onClick={() => setFilterView("pending")}
+            className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition-all ${
+              filterView === "pending"
+                ? "bg-orange-600 text-white"
+                : allPending.length > 0 ? "text-orange-400/80 hover:text-orange-300" : "text-white/30"
+            }`}
+          >
+            Pendientes
+            {allPending.length > 0 && (
+              <span className={`rounded-full px-1.5 text-[10px] font-bold ${filterView === "pending" ? "bg-white/20" : "bg-orange-500/20"}`}>
+                {allPending.length}
               </span>
             )}
+          </button>
+          <button
+            onClick={() => setFilterView("urgent")}
+            className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition-all ${
+              filterView === "urgent"
+                ? "bg-red-600 text-white"
+                : allUrgent.length > 0 ? "text-red-400/80 hover:text-red-300" : "text-white/30"
+            }`}
+          >
+            Urgentes
+            {allUrgent.length > 0 && (
+              <span className={`rounded-full px-1.5 text-[10px] font-bold ${filterView === "urgent" ? "bg-white/20" : "bg-red-500/20"}`}>
+                {allUrgent.length}
+              </span>
+            )}
+          </button>
+        </div>
+
+        {/* Fila 2: tabs de fase (solo en vista "todas") */}
+        {filterView === "all" && (
+          <div className="flex items-center gap-2 px-3 pb-2.5 pt-0">
+            <div className="flex gap-1 overflow-x-auto flex-1 min-w-0 pt-2 pb-1">
+              {availablePhases.map((phase) => {
+                const isActive = activePhase === phase;
+                const pendingCount = MOCK_MATCHES.filter((m) => m.phase === phase && m.status === "SCHEDULED" && !MOCK_MY_PREDICTIONS[m.id]).length;
+                return (
+                  <button
+                    key={phase}
+                    onClick={() => setActivePhase(phase)}
+                    className={`relative rounded-xl px-3 py-1.5 text-xs font-semibold transition-all whitespace-nowrap shrink-0 ${
+                      isActive ? "bg-green-600 text-white" : "bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/80"
+                    }`}
+                  >
+                    {PHASE_SHORT[phase]}
+                    {pendingCount > 0 && (
+                      <span className={`absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full text-[8px] font-bold flex items-center justify-center ${
+                        isActive ? "bg-white text-green-700" : "bg-orange-500 text-white"
+                      }`}>{pendingCount}</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+            <button
+              onClick={() => setShowRules(true)}
+              className="shrink-0 flex items-center justify-center h-8 w-8 rounded-xl bg-white/5 border border-white/10 text-white/40 hover:text-white/70 hover:border-white/20 transition-all"
+              title="Ver reglas completas"
+            >
+              <HelpCircle className="h-4 w-4" />
+            </button>
           </div>
-          <div className="flex gap-2 flex-wrap">
-            {tokens.map((t) => (
-              <div
-                key={t.multiplier}
-                className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 border text-xs font-bold ${
-                  t.decayed
-                    ? "opacity-30 bg-white/5 border-white/10 text-white/40 line-through"
-                    : t.usedOnMatchId
-                    ? `opacity-60 ${t.color}`
-                    : t.color
-                }`}
-              >
-                <span>{t.emoji}</span>
-                <span>{t.label}</span>
-                {t.usedOnMatchId && !t.decayed && (
-                  <span className="text-[9px] opacity-70">en uso</span>
-                )}
-                {t.decayed && <span className="text-[9px]">caducó</span>}
-                {!t.usedOnMatchId && !t.decayed && (
-                  <span className="h-1.5 w-1.5 rounded-full bg-current animate-pulse" />
-                )}
-              </div>
-            ))}
-          </div>
-          <p className="text-[10px] text-white/30 mt-2">
-            Usá cada token en un partido para multiplicar tus puntos. Los no usados caducan tras la fase de grupos.
-          </p>
+        )}
+      </div>
+
+      {/* Token status — compact */}
+      <div className="px-4 pt-3">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[11px] text-white/40 shrink-0">Mis tokens:</span>
+          {tokens.map((t) => (
+            <span
+              key={t.multiplier}
+              className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold border ${
+                t.decayed
+                  ? "opacity-25 bg-white/5 border-white/10 text-white/40 line-through"
+                  : t.usedOnMatchId
+                  ? `opacity-50 ${t.color}`
+                  : t.color
+              }`}
+            >
+              {t.emoji} {t.label}
+              {t.usedOnMatchId && !t.decayed && <span className="text-[9px] opacity-70">en uso</span>}
+              {t.decayed && <span className="text-[9px]">caducó</span>}
+              {!t.usedOnMatchId && !t.decayed && <span className="h-1 w-1 rounded-full bg-current animate-pulse" />}
+            </span>
+          ))}
+          {tokensLeft.length > 0 && (
+            <span className="text-[10px] text-orange-400/80 shrink-0">¡Caducan al final de Grupos!</span>
+          )}
         </div>
       </div>
 
-      {/* Points legend */}
-      <div className="mx-auto max-w-lg px-4 pt-2">
-        <div className="rounded-xl bg-white/5 border border-white/10 p-3 flex items-center gap-3 flex-wrap">
-          <div className="text-center">
-            <p className="text-lg font-black text-white">{PHASE_POINTS[activePhase].exact}</p>
-            <p className="text-[9px] text-white/40">exacto</p>
-          </div>
-          <div className="h-6 w-px bg-white/10" />
-          <div className="text-center">
-            <p className="text-lg font-black text-white">{PHASE_POINTS[activePhase].winner}</p>
-            <p className="text-[9px] text-white/40">ganador</p>
-          </div>
-          {PHASE_POINTS[activePhase].draw > 0 && (
-            <>
-              <div className="h-6 w-px bg-white/10" />
-              <div className="text-center">
-                <p className="text-lg font-black text-white">{PHASE_POINTS[activePhase].draw}</p>
-                <p className="text-[9px] text-white/40">empate</p>
-              </div>
-            </>
-          )}
-          <div className="h-6 w-px bg-white/10" />
-          <div className="flex items-center gap-1.5 text-xs">
-            <span className="text-blue-400 font-bold">⚡2x</span>
-            <span className="text-orange-400 font-bold">🔥3x</span>
-            <span className="text-purple-400 font-bold">💥5x</span>
-          </div>
-          {MY_STREAK >= 3 && (
-            <>
-              <div className="h-6 w-px bg-white/10" />
-              <div className="flex items-center gap-1 text-xs text-orange-400">
-                <Flame className="h-3.5 w-3.5" />
-                <span className="font-bold">+{STREAK_BONUS} racha</span>
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Match list */}
-      <div className="mx-auto max-w-lg space-y-3 px-4 py-3 pb-6">
-        {matchesByPhase.length === 0 ? (
+      {/* Lista de partidos */}
+      <div className="space-y-3 px-4 py-3 pb-6">
+        {matchesToShow.length === 0 ? (
           <div className="py-12 text-center text-white/30">
-            <p className="text-4xl mb-2">📅</p>
-            <p>Los partidos de esta fase aún no están definidos</p>
+            <p className="text-4xl mb-2">
+              {filterView === "pending" ? "✅" : filterView === "urgent" ? "⏰" : "📅"}
+            </p>
+            <p>
+              {filterView === "pending"
+                ? "¡Todo cargado! No te falta ninguna predicción"
+                : filterView === "urgent"
+                ? "No hay partidos que venzan en las próximas 24hs"
+                : "Los partidos de esta fase aún no están definidos"}
+            </p>
           </div>
         ) : (
-          matchesByPhase.map((match) => (
+          matchesToShow.map((match) => (
             <MatchPredictionCard
               key={match.id}
               match={match}
@@ -371,6 +468,8 @@ export default function PrediccionesPage() {
           ))
         )}
       </div>
+
+      {showRules && <RulesModal onClose={() => setShowRules(false)} />}
     </div>
   );
 }

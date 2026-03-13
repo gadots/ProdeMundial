@@ -201,3 +201,73 @@ export const MOCK_MY_WILDCARD_ANSWERS: Record<string, WildcardAnswer> = {
 
 export const CURRENT_USER_ID = "u1";
 export const CURRENT_USER_NAME = "Guido G.";
+
+// -------------------------------------------------------
+// ALL 48 WORLD CUP 2026 TEAMS
+// -------------------------------------------------------
+export const ALL_WC_TEAMS = [
+  // Anfitriones
+  { id: "USA", name: "EE.UU.",          shortName: "USA", flag: "🇺🇸" },
+  { id: "MEX", name: "México",           shortName: "MEX", flag: "🇲🇽" },
+  { id: "CAN", name: "Canadá",           shortName: "CAN", flag: "🇨🇦" },
+  // CONMEBOL
+  { id: "ARG", name: "Argentina",        shortName: "ARG", flag: "🇦🇷" },
+  { id: "BRA", name: "Brasil",           shortName: "BRA", flag: "🇧🇷" },
+  { id: "URU", name: "Uruguay",          shortName: "URU", flag: "🇺🇾" },
+  { id: "COL", name: "Colombia",         shortName: "COL", flag: "🇨🇴" },
+  { id: "ECU", name: "Ecuador",          shortName: "ECU", flag: "🇪🇨" },
+  { id: "VEN", name: "Venezuela",        shortName: "VEN", flag: "🇻🇪" },
+  // UEFA
+  { id: "ENG", name: "Inglaterra",       shortName: "ENG", flag: "🏴󠁧󠁢󠁥󠁮󠁧󠁿" },
+  { id: "FRA", name: "Francia",          shortName: "FRA", flag: "🇫🇷" },
+  { id: "ESP", name: "España",           shortName: "ESP", flag: "🇪🇸" },
+  { id: "GER", name: "Alemania",         shortName: "GER", flag: "🇩🇪" },
+  { id: "POR", name: "Portugal",         shortName: "POR", flag: "🇵🇹" },
+  { id: "NED", name: "Países Bajos",     shortName: "NED", flag: "🇳🇱" },
+  { id: "ITA", name: "Italia",           shortName: "ITA", flag: "🇮🇹" },
+  { id: "BEL", name: "Bélgica",          shortName: "BEL", flag: "🇧🇪" },
+  { id: "CRO", name: "Croacia",          shortName: "CRO", flag: "🇭🇷" },
+  { id: "POL", name: "Polonia",          shortName: "POL", flag: "🇵🇱" },
+  { id: "SUI", name: "Suiza",            shortName: "SUI", flag: "🇨🇭" },
+  { id: "AUT", name: "Austria",          shortName: "AUT", flag: "🇦🇹" },
+  { id: "SCO", name: "Escocia",          shortName: "SCO", flag: "🏴󠁧󠁢󠁳󠁣󠁴󠁿" },
+  { id: "SER", name: "Serbia",           shortName: "SER", flag: "🇷🇸" },
+  { id: "TUR", name: "Turquía",          shortName: "TUR", flag: "🇹🇷" },
+  { id: "DEN", name: "Dinamarca",        shortName: "DEN", flag: "🇩🇰" },
+  { id: "UKR", name: "Ucrania",          shortName: "UKR", flag: "🇺🇦" },
+  { id: "HUN", name: "Hungría",          shortName: "HUN", flag: "🇭🇺" },
+  // CAF
+  { id: "MAR", name: "Marruecos",        shortName: "MAR", flag: "🇲🇦" },
+  { id: "SEN", name: "Senegal",          shortName: "SEN", flag: "🇸🇳" },
+  { id: "CMR", name: "Camerún",          shortName: "CMR", flag: "🇨🇲" },
+  { id: "NGA", name: "Nigeria",          shortName: "NGA", flag: "🇳🇬" },
+  { id: "EGY", name: "Egipto",           shortName: "EGY", flag: "🇪🇬" },
+  { id: "CIV", name: "Costa de Marfil",  shortName: "CIV", flag: "🇨🇮" },
+  { id: "GHA", name: "Ghana",            shortName: "GHA", flag: "🇬🇭" },
+  { id: "TUN", name: "Túnez",            shortName: "TUN", flag: "🇹🇳" },
+  { id: "RSA", name: "Sudáfrica",        shortName: "RSA", flag: "🇿🇦" },
+  // AFC
+  { id: "JPN", name: "Japón",            shortName: "JPN", flag: "🇯🇵" },
+  { id: "KOR", name: "Corea del Sur",    shortName: "KOR", flag: "🇰🇷" },
+  { id: "IRN", name: "Irán",             shortName: "IRN", flag: "🇮🇷" },
+  { id: "AUS", name: "Australia",        shortName: "AUS", flag: "🇦🇺" },
+  { id: "SAU", name: "Arabia Saudita",   shortName: "SAU", flag: "🇸🇦" },
+  { id: "JOR", name: "Jordania",         shortName: "JOR", flag: "🇯🇴" },
+  { id: "IRQ", name: "Irak",             shortName: "IRQ", flag: "🇮🇶" },
+  { id: "UZB", name: "Uzbekistán",       shortName: "UZB", flag: "🇺🇿" },
+  // CONCACAF (no anfitriones)
+  { id: "CRC", name: "Costa Rica",       shortName: "CRC", flag: "🇨🇷" },
+  { id: "PAN", name: "Panamá",           shortName: "PAN", flag: "🇵🇦" },
+  { id: "JAM", name: "Jamaica",          shortName: "JAM", flag: "🇯🇲" },
+  // OFC
+  { id: "NZL", name: "Nueva Zelanda",    shortName: "NZL", flag: "🇳🇿" },
+];
+
+// Puntos ganados en las últimas 24h por usuario (mock)
+export const MOCK_POINTS_TODAY: Record<string, number> = {
+  u1: 5,
+  u2: 0,
+  u3: 3,
+  u4: 0,
+  u5: 2,
+};

@@ -201,7 +201,7 @@ export default function DesafiosPage() {
       />
 
       {/* Intro banner */}
-      <div className="mx-auto max-w-lg px-4 pt-4">
+      <div className="px-4 pt-4">
         <div className="rounded-2xl bg-gradient-to-br from-purple-600/15 to-blue-600/10 border border-purple-500/20 p-4">
           <div className="flex items-center gap-3 mb-2">
             <span className="text-3xl">🎯</span>
@@ -211,21 +211,18 @@ export default function DesafiosPage() {
             </div>
           </div>
           <p className="text-xs text-white/40 leading-relaxed">
-            Cada semana hay nuevos desafíos. Predicciones especiales que no tienen nada que ver con los resultados parciales — 
-            son sobre tendencias, goles totales, equipos sorpresa. Respondé antes del cierre para sumar puntos.
+            Cada semana hay nuevos desafíos sobre tendencias, goles totales y equipos sorpresa. Respondé antes del cierre para sumar puntos.
           </p>
         </div>
       </div>
 
       {/* Tab switcher */}
-      <div className="mx-auto max-w-lg px-4 pt-3">
-        <div className="flex gap-1 rounded-xl bg-white/5 p-1">
+      <div className="px-4 pt-3">
+        <div className="flex gap-1 rounded-xl bg-white/5 p-1 max-w-xs">
           <button
             onClick={() => setTab("open")}
             className={`flex-1 rounded-lg px-3 py-2 text-xs font-semibold transition-all ${
-              tab === "open"
-                ? "bg-purple-600 text-white"
-                : "text-white/40 hover:text-white/70"
+              tab === "open" ? "bg-purple-600 text-white" : "text-white/40 hover:text-white/70"
             }`}
           >
             Abiertos ({open.length})
@@ -233,9 +230,7 @@ export default function DesafiosPage() {
           <button
             onClick={() => setTab("closed")}
             className={`flex-1 rounded-lg px-3 py-2 text-xs font-semibold transition-all ${
-              tab === "closed"
-                ? "bg-purple-600 text-white"
-                : "text-white/40 hover:text-white/70"
+              tab === "closed" ? "bg-purple-600 text-white" : "text-white/40 hover:text-white/70"
             }`}
           >
             Cerrados ({closed.length})
@@ -243,20 +238,22 @@ export default function DesafiosPage() {
         </div>
       </div>
 
-      {/* Wildcard list */}
-      <div className="mx-auto max-w-lg space-y-3 px-4 py-3">
+      {/* Wildcard list — desktop grid */}
+      <div className="px-4 py-3">
         {display.length === 0 ? (
           <div className="py-12 text-center text-white/30">
             <p className="text-4xl mb-2">🗓️</p>
             <p>{tab === "open" ? "No hay desafíos abiertos por ahora" : "No hay desafíos cerrados aún"}</p>
           </div>
         ) : (
-          display.map((w) => <WildcardCard key={w.id} challenge={w} />)
+          <div className="grid gap-3 lg:grid-cols-2">
+            {display.map((w) => <WildcardCard key={w.id} challenge={w} />)}
+          </div>
         )}
       </div>
 
       {/* Link to especiales */}
-      <div className="mx-auto max-w-lg px-4 pb-6">
+      <div className="px-4 pb-6">
         <Link href="/predicciones/especiales">
           <Card className="overflow-hidden hover:border-yellow-500/30 transition-colors">
             <div className="flex items-center gap-4 p-4">

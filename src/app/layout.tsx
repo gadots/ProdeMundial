@@ -4,7 +4,11 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "ProdeMundial 2026",
   description: "El prode del Mundial 2026 con tus amigos",
-  icons: { icon: "/favicon.ico" },
+  appleWebApp: {
+    capable: true,
+    title: "ProdeMundial",
+    statusBarStyle: "black-translucent",
+  },
 };
 
 export const viewport: Viewport = {
