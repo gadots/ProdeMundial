@@ -129,21 +129,18 @@ export default function DashboardPage() {
   const streakBonus = streakBonusPoints(streak.current);
   const remainingPotential = 50 + 30 * 2 + 18;
 
-  const hasAlerts = streak.current >= 1 || tokensAvailable.length > 0 || openWildcards.length > 0;
-
   return (
     <div>
       <TopBar
-        title={MOCK_PRODE.name}
+        title="Dashboard"
         subtitle={`Hola, ${CURRENT_USER_NAME} 👋`}
         showNotification
       />
 
-      {/* Layout: 1 col mobile, 2 col desktop */}
       <div className="px-4 py-5 lg:grid lg:grid-cols-[2fr_3fr] lg:gap-6 lg:items-start lg:max-w-5xl lg:mx-auto">
 
-        {/* Columna izquierda: posición + alerts */}
-        <div className="space-y-4 mb-5 lg:mb-0">
+        {/* Columna izquierda */}
+        <div className="space-y-3 mb-5 lg:mb-0">
 
           {/* Mi posición */}
           <Card className="overflow-hidden">
@@ -187,44 +184,63 @@ export default function DashboardPage() {
             </div>
           </Card>
 
-          {/* Alert chips */}
-          {hasAlerts && (
-            <div className="flex flex-wrap gap-2">
-              {streak.current >= 1 && (
-                <span className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ${
-                  streak.current >= 5
-                    ? "bg-orange-500/20 text-orange-300 border border-orange-500/30"
-                    : streak.current >= 3
-                    ? "bg-orange-500/15 text-orange-400 border border-orange-500/20"
-                    : "bg-white/8 text-white/50 border border-white/10"
-                }`}>
-                  🔥 Racha {streak.current}
-                  {streakBonus > 0 && <span className="opacity-70"> · +{streakBonus}pts</span>}
-                </span>
-              )}
-              {tokensAvailable.length > 0 && (
-                <Link href="/predicciones">
-                  <span className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 hover:border-yellow-500/40 transition-colors cursor-pointer">
-                    {tokensAvailable.map((t) => t.emoji).join("")} {tokensAvailable.length} sin usar
-                    <ChevronRight className="h-3 w-3" />
-                  </span>
-                </Link>
-              )}
-              {openWildcards.length > 0 && (
-                <Link href="/desafios">
-                  <span className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold bg-purple-500/10 text-purple-400 border border-purple-500/20 hover:border-purple-500/40 transition-colors cursor-pointer">
-                    🎯 {openWildcards.length} desafío{openWildcards.length > 1 ? "s" : ""}
-                    <ChevronRight className="h-3 w-3" />
-                  </span>
-                </Link>
+          {/* Racha */}
+          {streak.current >= 1 && (
+            <div className={`flex items-center justify-between rounded-xl px-4 py-3 border ${
+              streak.current >= 5 ? "bg-orange-500/15 border-orange-500/25" :
+              streak.current >= 3 ? "bg-orange-500/10 border-orange-500/15" :
+              "bg-white/5 border-white/8"
+            }`}>
+              <div className="flex items-center gap-2">
+                <span className="text-base">🔥</span>
+                <div>
+                  <p className="text-sm font-semibold text-white">Racha de {streak.current}</p>
+                  {streakBonus > 0 && <p className="text-xs text-orange-400">Bonus activo</p>}
+                </div>
+              </div>
+              {streakBonus > 0 && (
+                <span className="text-sm font-bold text-orange-400">+{streakBonus} pts</span>
               )}
             </div>
           )}
 
+          {/* Tokens */}
+          {tokensAvailable.length > 0 && (
+            <Link href="/predicciones">
+              <div className="flex items-center justify-between rounded-xl px-4 py-3 bg-yellow-500/10 border border-yellow-500/15 hover:border-yellow-500/30 transition-colors">
+                <div className="flex items-center gap-2">
+                  <span className="text-base">{tokensAvailable.map((t) => t.emoji).join("")}</span>
+                  <div>
+                    <p className="text-sm font-semibold text-white">
+                      {tokensAvailable.length} token{tokensAvailable.length > 1 ? "s" : ""} sin usar
+                    </p>
+                    <p className="text-xs text-yellow-400/70">Caducan al final de Grupos</p>
+                  </div>
+                </div>
+                <ChevronRight className="h-4 w-4 text-yellow-400/50" />
+              </div>
+            </Link>
+          )}
+
+          {/* Desafíos — siempre visible */}
+          <Link href="/desafios">
+            <div className="flex items-center justify-between rounded-xl px-4 py-3 bg-purple-500/10 border border-purple-500/15 hover:border-purple-500/30 transition-colors">
+              <div className="flex items-center gap-2">
+                <span className="text-base">🎯</span>
+                <p className="text-sm font-semibold text-white">Desafíos</p>
+              </div>
+              {openWildcards.length > 0 ? (
+                <span className="text-sm font-bold text-purple-400">{openWildcards.length} pendiente{openWildcards.length > 1 ? "s" : ""}</span>
+              ) : (
+                <ChevronRight className="h-4 w-4 text-purple-400/50" />
+              )}
+            </div>
+          </Link>
+
           {/* Accesos rápidos — solo desktop */}
-          <div className="hidden lg:grid grid-cols-2 gap-3">
+          <div className="hidden lg:grid grid-cols-2 gap-3 pt-1">
             <Link href="/predicciones/especiales">
-              <Card className="overflow-hidden hover:border-yellow-500/30 transition-colors">
+              <Card className="hover:border-yellow-500/30 transition-colors">
                 <div className="flex items-center gap-3 p-4">
                   <span className="text-xl">⭐</span>
                   <div>
@@ -234,13 +250,13 @@ export default function DashboardPage() {
                 </div>
               </Card>
             </Link>
-            <Link href="/desafios">
-              <Card className="overflow-hidden hover:border-purple-500/30 transition-colors">
+            <Link href="/predicciones">
+              <Card className="hover:border-green-500/30 transition-colors">
                 <div className="flex items-center gap-3 p-4">
-                  <span className="text-xl">🎯</span>
+                  <span className="text-xl">⚽</span>
                   <div>
-                    <p className="text-sm font-semibold text-white leading-tight">Desafíos</p>
-                    <p className="text-xs text-white/40">Wildcards semanales</p>
+                    <p className="text-sm font-semibold text-white leading-tight">Predicciones</p>
+                    <p className="text-xs text-white/40">Predecí partidos</p>
                   </div>
                 </div>
               </Card>

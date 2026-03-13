@@ -7,11 +7,11 @@ import { Home, List, Trophy, Settings, Target, Bell, Star, X, LogOut } from "luc
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { href: "/dashboard",    icon: Home,     label: "Inicio"   },
-  { href: "/predicciones", icon: List,     label: "Predecir" },
-  { href: "/tabla",        icon: Trophy,   label: "Tabla"    },
-  { href: "/desafios",     icon: Target,   label: "Desafíos" },
-  { href: "/grupo",        icon: Settings, label: "Grupo"    },
+  { href: "/dashboard",    icon: Home,     label: "Dashboard"    },
+  { href: "/predicciones", icon: List,     label: "Predicciones" },
+  { href: "/tabla",        icon: Trophy,   label: "Posiciones"   },
+  { href: "/desafios",     icon: Target,   label: "Desafíos"     },
+  { href: "/grupo",        icon: Settings, label: "Config"       },
 ];
 
 const MOCK_NOTIFICATIONS = [

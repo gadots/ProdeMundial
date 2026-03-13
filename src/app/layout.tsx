@@ -4,7 +4,6 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "ProdeMundial 2026",
   description: "El prode del Mundial 2026 con tus amigos",
-  icons: { icon: "/favicon.ico" },
 };
 
 export const viewport: Viewport = {

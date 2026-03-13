@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { TopBar } from "@/components/nav";
-import { MOCK_PRODE } from "@/lib/mock-data";
+import { MOCK_PRODE, MOCK_POINTS_TODAY } from "@/lib/mock-data";
 import { PHASE_LABELS, Phase } from "@/lib/types";
 
 const PHASE_ORDER: Phase[] = [
@@ -22,22 +22,27 @@ export default function TablaPage() {
 
   return (
     <div>
-      <TopBar title="Tabla de Posiciones" subtitle={MOCK_PRODE.name} />
+      <TopBar title="Posiciones" subtitle={MOCK_PRODE.name} />
 
-      {/* View selector */}
+      {/* Selector de vista */}
       <div className="sticky top-[57px] z-30 border-b border-white/10 bg-[#0a1628]/95 backdrop-blur-lg">
         <div className="overflow-x-auto">
-          <div className="flex gap-1 p-3 min-w-max">
+          <div className="flex gap-1.5 p-3 min-w-max items-center">
+            {/* General — destacado */}
             <button
               onClick={() => setView("total")}
-              className={`rounded-xl px-4 py-2 text-xs font-semibold transition-all ${
+              className={`rounded-xl px-5 py-2 text-sm font-bold transition-all ${
                 view === "total"
-                  ? "bg-green-600 text-white"
-                  : "bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/70"
+                  ? "bg-green-600 text-white shadow-lg shadow-green-900/30"
+                  : "bg-white/8 text-white/60 hover:bg-white/12 hover:text-white/80"
               }`}
             >
               General
             </button>
+
+            {/* Separador visual */}
+            <span className="h-5 w-px bg-white/10 mx-0.5" />
+
             {PHASE_ORDER.map((phase) => {
               const hasPoints = members.some((m) => (m.pointsPerPhase[phase] ?? 0) > 0);
               if (!hasPoints) return null;
@@ -45,10 +50,10 @@ export default function TablaPage() {
                 <button
                   key={phase}
                   onClick={() => setView(phase)}
-                  className={`rounded-xl px-3 py-2 text-xs font-semibold transition-all whitespace-nowrap ${
+                  className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition-all whitespace-nowrap ${
                     view === phase
-                      ? "bg-green-600 text-white"
-                      : "bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/70"
+                      ? "bg-white/15 text-white border border-white/20"
+                      : "bg-white/5 text-white/40 hover:bg-white/8 hover:text-white/60"
                   }`}
                 >
                   {phase === "GROUP" ? "Grupos" : PHASE_LABELS[phase].split(" ")[0]}
@@ -59,9 +64,9 @@ export default function TablaPage() {
         </div>
       </div>
 
-      {/* Prize */}
+      {/* Premio */}
       {MOCK_PRODE.prizeDescription && (
-        <div className="px-4 pt-4 max-w-2xl">
+        <div className="px-4 pt-4">
           <div className="flex items-center gap-3 rounded-2xl bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 p-3">
             <span className="text-xl">🏆</span>
             <div>
@@ -74,25 +79,28 @@ export default function TablaPage() {
 
       {/* Tabla */}
       <div className="pb-6">
-        {/* Header de columnas */}
-        <div className="flex items-center gap-3 px-4 pt-4 pb-2 border-b border-white/8 text-[10px] text-white/30 font-semibold uppercase tracking-wider max-w-2xl">
+        {/* Encabezado */}
+        <div className="flex items-center gap-2 px-4 pt-4 pb-2 border-b border-white/8 text-[10px] text-white/30 font-semibold uppercase tracking-wider">
           <div className="w-7 shrink-0" />
           <div className="w-8 shrink-0" />
           <div className="flex-1">Jugador</div>
+          {view === "total" && (
+            <div className="w-14 text-right shrink-0">Hoy</div>
+          )}
           <div className="w-10 text-right shrink-0">Cambio</div>
           <div className="w-16 text-right shrink-0">Puntos</div>
         </div>
 
-        {/* Filas */}
         {sortedByView.map((member, idx) => {
           const score = getMemberScore(member);
           const rankChange = member.previousRank ? member.previousRank - member.rank : 0;
           const isMe = member.id === "u1";
+          const todayPts = MOCK_POINTS_TODAY[member.id] ?? 0;
 
           return (
             <div
               key={member.id}
-              className={`flex items-center gap-3 px-4 py-3 border-b border-white/5 transition-colors max-w-2xl ${
+              className={`flex items-center gap-2 px-4 py-3 border-b border-white/5 transition-colors ${
                 isMe ? "bg-green-500/5" : ""
               }`}
             >
@@ -126,6 +134,17 @@ export default function TablaPage() {
                   {isMe && <span className="ml-1 text-[10px] text-green-500/50">(vos)</span>}
                 </p>
               </div>
+
+              {/* Puntos de hoy — solo en vista general */}
+              {view === "total" && (
+                <div className="w-14 text-right shrink-0">
+                  {todayPts > 0 ? (
+                    <span className="text-xs font-bold text-green-400">+{todayPts}</span>
+                  ) : (
+                    <span className="text-xs text-white/20">—</span>
+                  )}
+                </div>
+              )}
 
               {/* Cambio de posición */}
               <div className="w-10 text-right shrink-0">
