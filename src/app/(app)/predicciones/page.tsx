@@ -193,7 +193,7 @@ function RulesModal({ onClose }: { onClose: () => void }) {
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <div
         className="relative w-full max-w-lg flex flex-col rounded-2xl bg-[#0d1f3c] border border-white/15 shadow-2xl"
-        style={{ maxHeight: "calc(100dvh - 2rem)" }}
+        style={{ maxHeight: "min(calc(100svh - 2rem), calc(100dvh - 2rem))" }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="shrink-0 flex items-center justify-between px-5 py-4 border-b border-white/10 bg-[#0d1f3c] rounded-t-2xl">
@@ -203,7 +203,7 @@ function RulesModal({ onClose }: { onClose: () => void }) {
           </button>
         </div>
 
-        <div className="overflow-y-auto flex-1 p-5 space-y-4">
+        <div className="overflow-y-auto flex-1 min-h-0 p-5 space-y-4">
           {/* Tabla por fase */}
           <div>
             <p className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-3">Puntos por fase</p>
@@ -381,8 +381,8 @@ export default function PrediccionesPage() {
 
         {/* Fila 2: tabs de fase (solo en vista "todas") */}
         {filterView === "all" && (
-          <div className="flex items-center gap-2 px-3 pb-2.5 pt-1">
-            <div className="flex gap-1 overflow-x-auto flex-1 min-w-0 pb-0.5">
+          <div className="flex items-center gap-2 px-3 pb-2.5 pt-0">
+            <div className="flex gap-1 overflow-x-auto flex-1 min-w-0 pt-2 pb-1">
               {availablePhases.map((phase) => {
                 const isActive = activePhase === phase;
                 const pendingCount = MOCK_MATCHES.filter((m) => m.phase === phase && m.status === "SCHEDULED" && !MOCK_MY_PREDICTIONS[m.id]).length;

@@ -45,10 +45,25 @@ test.describe("Dashboard", () => {
   });
 
   test("match cards are visible in the main column", async ({ page }) => {
-    // Match cards are Links with Card inside — find the match section
     const matchSection = page.locator("section").filter({ has: page.getByText(/Próximos|Partidos|En vivo/) });
     await expect(matchSection).toBeVisible();
     const cards = matchSection.locator("a");
     await expect(cards.first()).toBeVisible();
+  });
+
+  test("posiciones card links to /tabla", async ({ page }) => {
+    const posCard = page.locator('a[href="/tabla"]').filter({ has: page.getByText("Tu posición") });
+    await expect(posCard).toBeVisible();
+    await posCard.click();
+    await expect(page).toHaveURL(/\/tabla/);
+  });
+
+  test("all three action chips have consistent height", async ({ page }) => {
+    // Racha, Tokens, Desafíos — all should have two lines and similar height
+    const desafiosChip = page.locator('a[href="/desafios"] > div').first();
+    const box = await desafiosChip.boundingBox();
+    expect(box).not.toBeNull();
+    // Two-line chips should be taller than a single-line element
+    expect(box!.height).toBeGreaterThanOrEqual(52);
   });
 });

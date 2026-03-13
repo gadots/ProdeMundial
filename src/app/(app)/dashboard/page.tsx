@@ -143,7 +143,8 @@ export default function DashboardPage() {
         <div className="space-y-3 mb-5 lg:mb-0">
 
           {/* Mi posición */}
-          <Card className="overflow-hidden">
+          <Link href="/tabla" className="block">
+          <Card className="overflow-hidden hover:border-green-500/30 transition-colors">
             <div className="bg-gradient-to-br from-green-600/20 to-blue-600/10 p-5">
               <div className="flex items-start justify-between">
                 <div>
@@ -183,6 +184,7 @@ export default function DashboardPage() {
               )}
             </div>
           </Card>
+          </Link>
 
           {/* Racha */}
           {streak.current >= 1 && (
@@ -195,7 +197,7 @@ export default function DashboardPage() {
                 <span className="text-base">🔥</span>
                 <div>
                   <p className="text-sm font-semibold text-white">Racha de {streak.current}</p>
-                  {streakBonus > 0 && <p className="text-xs text-orange-400">Bonus activo</p>}
+                  <p className="text-xs text-orange-400/70">{streakBonus > 0 ? "Bonus activo" : "Seguí acertando"}</p>
                 </div>
               </div>
               {streakBonus > 0 && (
@@ -227,7 +229,10 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between rounded-xl px-4 py-3 bg-purple-500/10 border border-purple-500/15 hover:border-purple-500/30 transition-colors">
               <div className="flex items-center gap-2">
                 <span className="text-base">🎯</span>
-                <p className="text-sm font-semibold text-white">Desafíos</p>
+                <div>
+                  <p className="text-sm font-semibold text-white">Desafíos</p>
+                  <p className="text-xs text-purple-400/70">{openWildcards.length > 0 ? `${openWildcards.length} abierto${openWildcards.length > 1 ? "s" : ""}` : "Wildcards semanales"}</p>
+                </div>
               </div>
               {openWildcards.length > 0 ? (
                 <span className="text-sm font-bold text-purple-400">{openWildcards.length} pendiente{openWildcards.length > 1 ? "s" : ""}</span>
