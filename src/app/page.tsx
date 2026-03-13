@@ -18,13 +18,12 @@ export default function LandingPage() {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
 
-  const supabase = createClient();
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError("");
     setSuccess("");
+    const supabase = createClient();
 
     if (mode === "login") {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -64,7 +63,7 @@ export default function LandingPage() {
   const handleGoogle = async () => {
     setLoading(true);
     setError("");
-    const { error } = await supabase.auth.signInWithOAuth({
+    const { error } = await createClient().auth.signInWithOAuth({
       provider: "google",
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
@@ -84,7 +83,7 @@ export default function LandingPage() {
     }
     setLoading(true);
     setError("");
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    const { error } = await createClient().auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/auth/callback?next=/perfil`,
     });
     setLoading(false);

@@ -11,10 +11,9 @@ import { createClient } from "@/lib/supabase/client";
 
 export default function PerfilPage() {
   const me = MOCK_PRODE.members.find((m) => m.id === "u1")!;
-  const supabase = createClient();
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await createClient().auth.signOut();
     window.location.href = "/";
   };
 
