@@ -8,19 +8,15 @@ import { Button } from "@/components/ui/button";
 import { MOCK_MATCHES, MOCK_MY_PREDICTIONS, MOCK_MY_TOKENS } from "@/lib/mock-data";
 import { PHASE_LABELS, PHASE_POINTS, Phase, Match, MultiplierToken, TokenMultiplier } from "@/lib/types";
 import { maxPointsForMatch, streakBonusPoints } from "@/lib/scoring";
-import { Save, Lock, Check, Flame } from "lucide-react";
+import { Save, Lock, Check, Flame, HelpCircle, X } from "lucide-react";
 
 const PHASE_ORDER: Phase[] = [
   "GROUP", "ROUND_OF_32", "ROUND_OF_16", "QUARTER_FINAL", "SEMI_FINAL", "FINAL"
 ];
 
-// Current user's streak (in production comes from DB)
 const MY_STREAK = 4;
 const STREAK_BONUS = streakBonusPoints(MY_STREAK);
 
-// -------------------------------------------------------
-// Token state at page level — tracks which match each token is on
-// -------------------------------------------------------
 interface TokenAssignment {
   matchId: string;
   multiplier: TokenMultiplier;
@@ -51,7 +47,6 @@ function TokenPicker({
   return (
     <div className="flex items-center gap-1.5">
       <span className="text-[10px] text-white/30 mr-0.5">Token:</span>
-      {/* No token option */}
       <button
         onClick={() => onSelect(1)}
         disabled={disabled}
@@ -110,10 +105,8 @@ function MatchPredictionCard({
   const pts = PHASE_POINTS[match.phase];
   const canSave = home !== "" && away !== "" && !locked;
 
-  // Build tokens with usedOnMatchId relative to THIS match
   const localTokens: MultiplierToken[] = tokens.map((t) => ({
     ...t,
-    // If a token is used on THIS match, show it as active (not blocked)
     usedOnMatchId: t.usedOnMatchId === match.id ? undefined : t.usedOnMatchId,
   }));
 
@@ -210,20 +203,67 @@ function MatchPredictionCard({
   );
 }
 
+function PointsLegendModal({ phase, onClose }: { phase: Phase; onClose: () => void }) {
+  const pts = PHASE_POINTS[phase];
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center px-4 pb-8" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <div
+        className="relative w-full max-w-lg rounded-2xl bg-[#0d1f3c] border border-white/15 p-5 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-sm font-bold text-white">Puntos · {phase === "GROUP" ? "Fase de Grupos" : PHASE_LABELS[phase]}</p>
+          <button onClick={onClose} className="text-white/40 hover:text-white transition-colors">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="flex gap-4 mb-4">
+          <div className="flex-1 rounded-xl bg-white/5 p-3 text-center">
+            <p className="text-2xl font-black text-white">{pts.exact}</p>
+            <p className="text-xs text-white/40 mt-0.5">resultado exacto</p>
+          </div>
+          <div className="flex-1 rounded-xl bg-white/5 p-3 text-center">
+            <p className="text-2xl font-black text-white">{pts.winner}</p>
+            <p className="text-xs text-white/40 mt-0.5">ganador correcto</p>
+          </div>
+          {pts.draw > 0 && (
+            <div className="flex-1 rounded-xl bg-white/5 p-3 text-center">
+              <p className="text-2xl font-black text-white">{pts.draw}</p>
+              <p className="text-xs text-white/40 mt-0.5">empate correcto</p>
+            </div>
+          )}
+        </div>
+        <div className="flex items-center gap-3 rounded-xl bg-white/5 px-4 py-3">
+          <span className="text-xs text-white/40">Multiplicadores:</span>
+          <span className="text-sm font-bold text-blue-400">⚡ ×2</span>
+          <span className="text-sm font-bold text-orange-400">🔥 ×3</span>
+          <span className="text-sm font-bold text-purple-400">💥 ×5</span>
+          {MY_STREAK >= 3 && (
+            <>
+              <span className="text-white/20">·</span>
+              <span className="flex items-center gap-1 text-xs text-orange-400">
+                <Flame className="h-3 w-3" /> +{STREAK_BONUS} racha
+              </span>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function PrediccionesPage() {
   const [activePhase, setActivePhase] = useState<Phase>("GROUP");
-
-  // Global token state — persists across all match cards in this session
+  const [showLegend, setShowLegend] = useState(false);
   const [tokens, setTokens] = useState<MultiplierToken[]>(MOCK_MY_TOKENS);
 
   const handleTokenChange = useCallback((matchId: string, prev: TokenMultiplier, next: TokenMultiplier) => {
     setTokens((current) =>
       current.map((t) => {
-        // Release the old assignment on this match
         if (t.multiplier === prev && t.usedOnMatchId === matchId) {
           return { ...t, usedOnMatchId: undefined };
         }
-        // Assign the new token to this match
         if (t.multiplier === next && next !== 1) {
           return { ...t, usedOnMatchId: matchId };
         }
@@ -245,10 +285,10 @@ export default function PrediccionesPage() {
         subtitle={pendingCount > 0 ? `${pendingCount} pendientes` : "Todo cargado ✓"}
       />
 
-      {/* Phase tabs */}
+      {/* Phase tabs + legend button */}
       <div className="sticky top-[57px] z-30 border-b border-white/10 bg-[#0a1628]/95 backdrop-blur-lg">
-        <div className="mx-auto max-w-lg overflow-x-auto">
-          <div className="flex gap-1 p-3 min-w-max">
+        <div className="mx-auto max-w-lg flex items-center gap-2 px-3 py-3">
+          <div className="flex gap-1 overflow-x-auto flex-1 min-w-0">
             {availablePhases.map((phase) => {
               const isActive = activePhase === phase;
               const matchCount = MOCK_MATCHES.filter((m) => m.phase === phase).length;
@@ -256,7 +296,7 @@ export default function PrediccionesPage() {
                 <button
                   key={phase}
                   onClick={() => setActivePhase(phase)}
-                  className={`flex flex-col items-center gap-0.5 rounded-xl px-3 py-2 text-xs transition-all whitespace-nowrap ${
+                  className={`flex flex-col items-center gap-0.5 rounded-xl px-3 py-2 text-xs transition-all whitespace-nowrap shrink-0 ${
                     isActive ? "bg-green-600 text-white" : "bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/80"
                   }`}
                 >
@@ -270,85 +310,39 @@ export default function PrediccionesPage() {
               );
             })}
           </div>
+          <button
+            onClick={() => setShowLegend(true)}
+            className="shrink-0 flex items-center justify-center h-8 w-8 rounded-xl bg-white/5 border border-white/10 text-white/40 hover:text-white/70 hover:border-white/20 transition-all"
+            title="Ver tabla de puntos"
+          >
+            <HelpCircle className="h-4 w-4" />
+          </button>
         </div>
       </div>
 
-      {/* Token status bar */}
+      {/* Token status — compact inline bar */}
       <div className="mx-auto max-w-lg px-4 pt-3">
-        <div className="rounded-xl bg-white/5 border border-white/10 p-3">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs font-semibold text-white/70">Mis tokens multiplicadores</p>
-            {tokensLeft.length > 0 && (
-              <span className="text-[10px] text-orange-400">
-                ¡Caducan al final de Grupos!
-              </span>
-            )}
-          </div>
-          <div className="flex gap-2 flex-wrap">
-            {tokens.map((t) => (
-              <div
-                key={t.multiplier}
-                className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 border text-xs font-bold ${
-                  t.decayed
-                    ? "opacity-30 bg-white/5 border-white/10 text-white/40 line-through"
-                    : t.usedOnMatchId
-                    ? `opacity-60 ${t.color}`
-                    : t.color
-                }`}
-              >
-                <span>{t.emoji}</span>
-                <span>{t.label}</span>
-                {t.usedOnMatchId && !t.decayed && (
-                  <span className="text-[9px] opacity-70">en uso</span>
-                )}
-                {t.decayed && <span className="text-[9px]">caducó</span>}
-                {!t.usedOnMatchId && !t.decayed && (
-                  <span className="h-1.5 w-1.5 rounded-full bg-current animate-pulse" />
-                )}
-              </div>
-            ))}
-          </div>
-          <p className="text-[10px] text-white/30 mt-2">
-            Usá cada token en un partido para multiplicar tus puntos. Los no usados caducan tras la fase de grupos.
-          </p>
-        </div>
-      </div>
-
-      {/* Points legend */}
-      <div className="mx-auto max-w-lg px-4 pt-2">
-        <div className="rounded-xl bg-white/5 border border-white/10 p-3 flex items-center gap-3 flex-wrap">
-          <div className="text-center">
-            <p className="text-lg font-black text-white">{PHASE_POINTS[activePhase].exact}</p>
-            <p className="text-[9px] text-white/40">exacto</p>
-          </div>
-          <div className="h-6 w-px bg-white/10" />
-          <div className="text-center">
-            <p className="text-lg font-black text-white">{PHASE_POINTS[activePhase].winner}</p>
-            <p className="text-[9px] text-white/40">ganador</p>
-          </div>
-          {PHASE_POINTS[activePhase].draw > 0 && (
-            <>
-              <div className="h-6 w-px bg-white/10" />
-              <div className="text-center">
-                <p className="text-lg font-black text-white">{PHASE_POINTS[activePhase].draw}</p>
-                <p className="text-[9px] text-white/40">empate</p>
-              </div>
-            </>
-          )}
-          <div className="h-6 w-px bg-white/10" />
-          <div className="flex items-center gap-1.5 text-xs">
-            <span className="text-blue-400 font-bold">⚡2x</span>
-            <span className="text-orange-400 font-bold">🔥3x</span>
-            <span className="text-purple-400 font-bold">💥5x</span>
-          </div>
-          {MY_STREAK >= 3 && (
-            <>
-              <div className="h-6 w-px bg-white/10" />
-              <div className="flex items-center gap-1 text-xs text-orange-400">
-                <Flame className="h-3.5 w-3.5" />
-                <span className="font-bold">+{STREAK_BONUS} racha</span>
-              </div>
-            </>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[11px] text-white/40 shrink-0">Mis tokens:</span>
+          {tokens.map((t) => (
+            <span
+              key={t.multiplier}
+              className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold border ${
+                t.decayed
+                  ? "opacity-25 bg-white/5 border-white/10 text-white/40 line-through"
+                  : t.usedOnMatchId
+                  ? `opacity-50 ${t.color}`
+                  : t.color
+              }`}
+            >
+              {t.emoji} {t.label}
+              {t.usedOnMatchId && !t.decayed && <span className="text-[9px] opacity-70">en uso</span>}
+              {t.decayed && <span className="text-[9px]">caducó</span>}
+              {!t.usedOnMatchId && !t.decayed && <span className="h-1 w-1 rounded-full bg-current animate-pulse" />}
+            </span>
+          ))}
+          {tokensLeft.length > 0 && (
+            <span className="text-[10px] text-orange-400/80 shrink-0">¡Caducan al final de Grupos!</span>
           )}
         </div>
       </div>
@@ -371,6 +365,11 @@ export default function PrediccionesPage() {
           ))
         )}
       </div>
+
+      {/* Points legend modal */}
+      {showLegend && (
+        <PointsLegendModal phase={activePhase} onClose={() => setShowLegend(false)} />
+      )}
     </div>
   );
 }

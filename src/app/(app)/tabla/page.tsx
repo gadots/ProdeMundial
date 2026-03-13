@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { MOCK_PRODE } from "@/lib/mock-data";
 import { PHASE_LABELS, Phase } from "@/lib/types";
 import { streakBonusPoints } from "@/lib/scoring";
-import { TrendingUp, TrendingDown, Minus, Flame } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 
 const PHASE_ORDER: Phase[] = [
   "GROUP", "ROUND_OF_16", "QUARTER_FINAL", "SEMI_FINAL", "FINAL"
@@ -90,7 +90,6 @@ export default function TablaPage() {
           const isMe = member.id === "u1";
           const barWidth = (score / maxPoints) * 100;
           const streakBonus = streakBonusPoints(member.streak.current);
-          const tokensLeft = member.tokens.filter((t) => !t.usedOnMatchId && !t.decayed).length;
 
           return (
             <Card
@@ -103,82 +102,70 @@ export default function TablaPage() {
                   : ""
               }`}
             >
-              <CardContent className="p-4">
+              <CardContent className="p-3.5">
                 <div className="flex items-center gap-3">
                   {/* Rank */}
-                  <div className="w-8 text-center shrink-0">
+                  <div className="w-7 text-center shrink-0">
                     {idx === 0 ? <span className="text-xl">🥇</span>
                     : idx === 1 ? <span className="text-xl">🥈</span>
                     : idx === 2 ? <span className="text-xl">🥉</span>
-                    : <span className="text-base font-black text-white/50">#{idx + 1}</span>}
+                    : <span className="text-sm font-black text-white/40">#{idx + 1}</span>}
                   </div>
 
                   {/* Avatar */}
                   <div className="relative shrink-0">
-                    <div className="h-10 w-10 rounded-full overflow-hidden bg-white/10 flex items-center justify-center">
+                    <div className="h-9 w-9 rounded-full overflow-hidden bg-white/10 flex items-center justify-center">
                       {member.avatarUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={member.avatarUrl} alt={member.displayName} className="h-full w-full object-cover" />
                       ) : (
-                        <span className="text-lg">{member.displayName[0]}</span>
+                        <span className="text-base">{member.displayName[0]}</span>
                       )}
                     </div>
                     {isMe && (
-                      <span className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-green-500 border-2 border-[#0a1628]" />
+                      <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-green-500 border-2 border-[#0a1628]" />
                     )}
                   </div>
 
                   {/* Name + bar */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <div className="flex items-center gap-1.5 mb-1.5">
                       <p className={`text-sm font-bold leading-tight truncate ${isMe ? "text-green-300" : "text-white"}`}>
                         {member.displayName}
-                        {isMe && <span className="ml-1 text-[10px] text-green-500">(vos)</span>}
+                        {isMe && <span className="ml-1 text-[10px] text-green-500/70">(vos)</span>}
                       </p>
 
-                      {/* Rank change */}
+                      {/* Rank change — solo en vista general */}
                       {view === "total" && (
                         rankChange > 0 ? (
                           <span className="flex items-center gap-0.5 text-[10px] text-green-400 shrink-0">
-                            <TrendingUp className="h-3 w-3" />{rankChange}
+                            <TrendingUp className="h-2.5 w-2.5" />{rankChange}
                           </span>
                         ) : rankChange < 0 ? (
                           <span className="flex items-center gap-0.5 text-[10px] text-red-400 shrink-0">
-                            <TrendingDown className="h-3 w-3" />{Math.abs(rankChange)}
+                            <TrendingDown className="h-2.5 w-2.5" />{Math.abs(rankChange)}
                           </span>
                         ) : (
-                          <Minus className="h-3 w-3 text-white/20 shrink-0" />
+                          <Minus className="h-2.5 w-2.5 text-white/15 shrink-0" />
                         )
                       )}
 
-                      {/* Streak badge */}
+                      {/* Streak dot */}
                       {member.streak.current >= 3 && (
-                        <span className={`flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-bold shrink-0 ${
-                          member.streak.current >= 5
-                            ? "bg-orange-500/30 text-orange-300"
-                            : "bg-orange-500/15 text-orange-400"
-                        }`}>
-                          <Flame className="h-2.5 w-2.5" />
-                          {member.streak.current}
-                          {streakBonus > 0 && ` +${streakBonus}`}
-                        </span>
-                      )}
-
-                      {/* Token dots */}
-                      {tokensLeft > 0 && (
-                        <span className="flex gap-0.5 shrink-0">
-                          {member.tokens.filter((t) => !t.usedOnMatchId && !t.decayed).map((t) => (
-                            <span key={t.multiplier} className="text-[10px]">{t.emoji}</span>
-                          ))}
-                        </span>
+                        <span
+                          title={`Racha ${member.streak.current}${streakBonus > 0 ? ` · +${streakBonus}pts bonus` : ""}`}
+                          className={`h-2 w-2 rounded-full shrink-0 ${
+                            member.streak.current >= 5 ? "bg-orange-400" : "bg-orange-500/70"
+                          }`}
+                        />
                       )}
                     </div>
 
-                    {/* Points bar */}
-                    <div className="h-1.5 rounded-full bg-white/10">
+                    {/* Progress bar */}
+                    <div className="h-1 rounded-full bg-white/8">
                       <div
                         className={`h-full rounded-full transition-all ${
-                          idx === 0 ? "bg-yellow-400" : isMe ? "bg-green-400" : "bg-white/40"
+                          idx === 0 ? "bg-yellow-400/80" : isMe ? "bg-green-400/80" : "bg-white/30"
                         }`}
                         style={{ width: `${barWidth}%` }}
                       />
@@ -186,25 +173,11 @@ export default function TablaPage() {
                   </div>
 
                   {/* Score */}
-                  <div className="text-right shrink-0">
+                  <div className="text-right shrink-0 ml-1">
                     <p className="text-xl font-black text-white">{score}</p>
                     <p className="text-[10px] text-white/30">pts</p>
                   </div>
                 </div>
-
-                {/* Phase breakdown */}
-                {view === "total" && (
-                  <div className="mt-3 flex gap-3 border-t border-white/5 pt-2.5 flex-wrap">
-                    {PHASE_ORDER.filter((p) => (member.pointsPerPhase[p] ?? 0) > 0).map((p) => (
-                      <div key={p} className="text-center">
-                        <p className="text-[10px] text-white/30 leading-none">
-                          {p === "GROUP" ? "Grupos" : p === "ROUND_OF_16" ? "Octavos" : p === "QUARTER_FINAL" ? "Cuartos" : p === "SEMI_FINAL" ? "Semis" : "Final"}
-                        </p>
-                        <p className="text-xs font-bold text-white/60">{member.pointsPerPhase[p]}</p>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </CardContent>
             </Card>
           );
