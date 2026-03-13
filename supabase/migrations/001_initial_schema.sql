@@ -3,9 +3,6 @@
 -- Run this in your Supabase SQL editor or via supabase db push
 -- ============================================================
 
--- Enable RLS on all tables
--- Auth is handled by Supabase (auth.users)
-
 -- -------------------------------------------------------
 -- PROFILES (extends auth.users)
 -- -------------------------------------------------------
@@ -73,6 +70,7 @@ create policy "Service role can manage matches"
 
 -- -------------------------------------------------------
 -- PRODES (groups / prediction pools)
+-- NOTE: the "Members can view" policy is added AFTER prode_members is created
 -- -------------------------------------------------------
 create table if not exists public.prodes (
   id                uuid primary key default gen_random_uuid(),
@@ -84,15 +82,6 @@ create table if not exists public.prodes (
 );
 
 alter table public.prodes enable row level security;
-
-create policy "Members can view their prodes"
-  on public.prodes for select
-  using (
-    exists (
-      select 1 from public.prode_members pm
-      where pm.prode_id = id and pm.user_id = auth.uid()
-    )
-  );
 
 create policy "Authenticated users can create prodes"
   on public.prodes for insert with check (auth.uid() = admin_id);
@@ -124,20 +113,30 @@ create policy "Members can view prode membership"
 create policy "Users can join prodes"
   on public.prode_members for insert with check (auth.uid() = user_id);
 
+-- Now that prode_members exists, add the select policy on prodes
+create policy "Members can view their prodes"
+  on public.prodes for select
+  using (
+    exists (
+      select 1 from public.prode_members pm
+      where pm.prode_id = id and pm.user_id = auth.uid()
+    )
+  );
+
 -- -------------------------------------------------------
 -- PREDICTIONS
 -- -------------------------------------------------------
 create table if not exists public.predictions (
-  id           uuid primary key default gen_random_uuid(),
-  user_id      uuid not null references public.profiles(id) on delete cascade,
-  match_id     uuid not null references public.matches(id) on delete cascade,
-  prode_id     uuid not null references public.prodes(id) on delete cascade,
-  home_goals   int not null check (home_goals >= 0),
-  away_goals   int not null check (away_goals >= 0),
-  joker_used   boolean not null default false,
+  id            uuid primary key default gen_random_uuid(),
+  user_id       uuid not null references public.profiles(id) on delete cascade,
+  match_id      uuid not null references public.matches(id) on delete cascade,
+  prode_id      uuid not null references public.prodes(id) on delete cascade,
+  home_goals    int not null check (home_goals >= 0),
+  away_goals    int not null check (away_goals >= 0),
+  multiplier    int not null default 1 check (multiplier in (1, 2, 3, 5)),
   points_earned int,
-  created_at   timestamptz default now() not null,
-  updated_at   timestamptz default now() not null,
+  created_at    timestamptz default now() not null,
+  updated_at    timestamptz default now() not null,
   unique (user_id, match_id, prode_id)
 );
 
@@ -178,18 +177,18 @@ create trigger prediction_window_check
 -- SPECIAL PREDICTIONS
 -- -------------------------------------------------------
 create table if not exists public.special_predictions (
-  id                    uuid primary key default gen_random_uuid(),
-  user_id               uuid not null references public.profiles(id) on delete cascade,
-  prode_id              uuid not null references public.prodes(id) on delete cascade,
-  champion              text,  -- team name/id
-  finalist              text,
-  third_place           text,
-  top_scorer            text,  -- player name
-  most_goals_country    text,
-  locked                boolean not null default false,
-  points_earned         int not null default 0,
-  created_at            timestamptz default now() not null,
-  updated_at            timestamptz default now() not null,
+  id                 uuid primary key default gen_random_uuid(),
+  user_id            uuid not null references public.profiles(id) on delete cascade,
+  prode_id           uuid not null references public.prodes(id) on delete cascade,
+  champion           text,
+  finalist           text,
+  third_place        text,
+  top_scorer         text,
+  most_goals_country text,
+  locked             boolean not null default false,
+  points_earned      int not null default 0,
+  created_at         timestamptz default now() not null,
+  updated_at         timestamptz default now() not null,
   unique (user_id, prode_id)
 );
 
@@ -212,11 +211,11 @@ create policy "Users can manage their own special predictions"
 -- SCORES (leaderboard cache — updated after each result)
 -- -------------------------------------------------------
 create table if not exists public.scores (
-  user_id      uuid not null references public.profiles(id) on delete cascade,
-  prode_id     uuid not null references public.prodes(id) on delete cascade,
-  phase        text not null,
-  points       int not null default 0,
-  updated_at   timestamptz default now() not null,
+  user_id    uuid not null references public.profiles(id) on delete cascade,
+  prode_id   uuid not null references public.prodes(id) on delete cascade,
+  phase      text not null,
+  points     int not null default 0,
+  updated_at timestamptz default now() not null,
   primary key (user_id, prode_id, phase)
 );
 
@@ -246,100 +245,17 @@ left join public.scores s on s.user_id = pm.user_id and s.prode_id = pm.prode_id
 group by pm.prode_id, p.id, p.display_name, p.avatar_url;
 
 -- -------------------------------------------------------
--- FUNCTION: calculate and store points after a match result
--- -------------------------------------------------------
-create or replace function public.calculate_match_points(p_match_id uuid)
-returns void language plpgsql security definer as $$
-declare
-  rec record;
-  m   record;
-  pts int;
-  predicted_winner int;
-  actual_winner    int;
-  phase_pts        record;
-begin
-  select * into m from public.matches where id = p_match_id;
-  if not found or m.status != 'FINISHED' then return; end if;
-
-  -- Point values per phase
-  for rec in
-    select * from public.predictions where match_id = p_match_id
-  loop
-    pts := 0;
-    predicted_winner := sign(rec.home_goals - rec.away_goals);
-    actual_winner    := sign(m.home_score  - m.away_score);
-
-    -- Exact result
-    if rec.home_goals = m.home_score and rec.away_goals = m.away_score then
-      pts := case m.phase
-        when 'GROUP'         then 3
-        when 'ROUND_OF_32'   then 6
-        when 'ROUND_OF_16'   then 10
-        when 'QUARTER_FINAL' then 18
-        when 'SEMI_FINAL'    then 30
-        when 'FINAL'         then 50
-        else 3
-      end;
-    -- Correct winner/draw
-    elsif predicted_winner = actual_winner then
-      if actual_winner = 0 then
-        -- Draw (only in group stage)
-        pts := case m.phase when 'GROUP' then 2 else 0 end;
-      else
-        pts := case m.phase
-          when 'GROUP'         then 1
-          when 'ROUND_OF_32'   then 2
-          when 'ROUND_OF_16'   then 4
-          when 'QUARTER_FINAL' then 6
-          when 'SEMI_FINAL'    then 10
-          when 'FINAL'         then 20
-          else 1
-        end;
-      end if;
-    end if;
-
-    -- Joker doubles points
-    if rec.joker_used then pts := pts * 2; end if;
-
-    -- Store on prediction
-    update public.predictions set points_earned = pts, updated_at = now()
-      where id = rec.id;
-
-    -- Upsert into scores table (accumulate per phase)
-    insert into public.scores (user_id, prode_id, phase, points, updated_at)
-      values (rec.user_id, rec.prode_id, m.phase, pts, now())
-      on conflict (user_id, prode_id, phase)
-      do update set points = public.scores.points + pts, updated_at = now();
-  end loop;
-end;
-$$;
-
-
--- ============================================================
--- Migration: Tokens, Wildcards, Streaks
--- ============================================================
-
--- -------------------------------------------------------
--- Update predictions: replace joker_used with multiplier
--- -------------------------------------------------------
-alter table public.predictions
-  add column if not exists multiplier int not null default 1 check (multiplier in (1, 2, 3, 5));
-
--- Keep joker_used for backwards compat but migrate data
-update public.predictions set multiplier = 2 where joker_used = true and multiplier = 1;
-
--- -------------------------------------------------------
 -- MULTIPLIER TOKENS (one row per token per user per prode)
 -- -------------------------------------------------------
 create table if not exists public.multiplier_tokens (
-  id              uuid primary key default gen_random_uuid(),
-  user_id         uuid not null references public.profiles(id) on delete cascade,
-  prode_id        uuid not null references public.prodes(id) on delete cascade,
-  multiplier      int not null check (multiplier in (2, 3, 5)),
-  used_on_match   uuid references public.matches(id),
-  decayed         boolean not null default false,
-  created_at      timestamptz default now() not null,
-  updated_at      timestamptz default now() not null,
+  id            uuid primary key default gen_random_uuid(),
+  user_id       uuid not null references public.profiles(id) on delete cascade,
+  prode_id      uuid not null references public.prodes(id) on delete cascade,
+  multiplier    int not null check (multiplier in (2, 3, 5)),
+  used_on_match uuid references public.matches(id),
+  decayed       boolean not null default false,
+  created_at    timestamptz default now() not null,
+  updated_at    timestamptz default now() not null,
   unique (user_id, prode_id, multiplier)
 );
 
@@ -382,12 +298,12 @@ create or replace trigger on_prode_member_added
 -- HOT STREAK (one row per user per prode)
 -- -------------------------------------------------------
 create table if not exists public.streaks (
-  id              uuid primary key default gen_random_uuid(),
-  user_id         uuid not null references public.profiles(id) on delete cascade,
-  prode_id        uuid not null references public.prodes(id) on delete cascade,
-  current_streak  int not null default 0,
-  best_streak     int not null default 0,
-  updated_at      timestamptz default now() not null,
+  id             uuid primary key default gen_random_uuid(),
+  user_id        uuid not null references public.profiles(id) on delete cascade,
+  prode_id       uuid not null references public.prodes(id) on delete cascade,
+  current_streak int not null default 0,
+  best_streak    int not null default 0,
+  updated_at     timestamptz default now() not null,
   unique (user_id, prode_id)
 );
 
@@ -411,18 +327,18 @@ create policy "Streaks are updated by server functions only"
 -- WILDCARD CHALLENGES
 -- -------------------------------------------------------
 create table if not exists public.wildcard_challenges (
-  id           uuid primary key default gen_random_uuid(),
-  prode_id     uuid references public.prodes(id) on delete cascade,  -- null = global
-  title        text not null,
-  description  text,
-  type         text not null check (type in ('PICK_TEAM', 'NUMERIC', 'YES_NO')),
-  phase        text check (phase in ('GROUP','ROUND_OF_32','ROUND_OF_16','QUARTER_FINAL','SEMI_FINAL','FINAL','ALL')),
-  points       int not null default 10,
-  deadline     timestamptz not null,
+  id             uuid primary key default gen_random_uuid(),
+  prode_id       uuid references public.prodes(id) on delete cascade,
+  title          text not null,
+  description    text,
+  type           text not null check (type in ('PICK_TEAM', 'NUMERIC', 'YES_NO')),
+  phase          text check (phase in ('GROUP','ROUND_OF_32','ROUND_OF_16','QUARTER_FINAL','SEMI_FINAL','FINAL','ALL')),
+  points         int not null default 10,
+  deadline       timestamptz not null,
   correct_answer text,
-  status       text not null default 'OPEN' check (status in ('OPEN', 'CLOSED', 'GRADED')),
-  week_label   text not null default '',
-  created_at   timestamptz default now() not null
+  status         text not null default 'OPEN' check (status in ('OPEN', 'CLOSED', 'GRADED')),
+  week_label     text not null default '',
+  created_at     timestamptz default now() not null
 );
 
 alter table public.wildcard_challenges enable row level security;
@@ -444,12 +360,12 @@ create policy "Only admins can create wildcard challenges"
 -- WILDCARD ANSWERS
 -- -------------------------------------------------------
 create table if not exists public.wildcard_answers (
-  id              uuid primary key default gen_random_uuid(),
-  challenge_id    uuid not null references public.wildcard_challenges(id) on delete cascade,
-  user_id         uuid not null references public.profiles(id) on delete cascade,
-  answer          text not null,
-  points_earned   int,
-  submitted_at    timestamptz default now() not null,
+  id            uuid primary key default gen_random_uuid(),
+  challenge_id  uuid not null references public.wildcard_challenges(id) on delete cascade,
+  user_id       uuid not null references public.profiles(id) on delete cascade,
+  answer        text not null,
+  points_earned int,
+  submitted_at  timestamptz default now() not null,
   unique (challenge_id, user_id)
 );
 
@@ -491,17 +407,18 @@ create policy "Users can update their own answers while open"
   );
 
 -- -------------------------------------------------------
--- Update calculate_match_points to use multiplier instead of joker_used
+-- FUNCTION: calculate and store points after a match result
 -- -------------------------------------------------------
 create or replace function public.calculate_match_points(p_match_id uuid)
 returns void language plpgsql security definer as $$
 declare
-  m   public.matches%rowtype;
-  rec record;
-  pts int;
+  m            public.matches%rowtype;
+  rec          record;
+  pts          int;
+  base_pts     int;
   predicted_winner int;
   actual_winner    int;
-  streak_rec record;
+  streak_rec   record;
   streak_bonus int;
 begin
   select * into m from public.matches where id = p_match_id;
@@ -512,12 +429,12 @@ begin
   for rec in
     select * from public.predictions where match_id = p_match_id
   loop
-    pts := 0;
+    base_pts := 0;
     predicted_winner := sign(rec.home_goals - rec.away_goals);
 
     -- Exact result
     if rec.home_goals = m.home_score and rec.away_goals = m.away_score then
-      pts := case m.phase
+      base_pts := case m.phase
         when 'GROUP'         then 3
         when 'ROUND_OF_32'   then 6
         when 'ROUND_OF_16'   then 10
@@ -529,9 +446,9 @@ begin
     -- Correct winner/draw
     elsif predicted_winner = actual_winner then
       if actual_winner = 0 then
-        pts := case m.phase when 'GROUP' then 2 else 0 end;
+        base_pts := case m.phase when 'GROUP' then 2 else 0 end;
       else
-        pts := case m.phase
+        base_pts := case m.phase
           when 'GROUP'         then 1
           when 'ROUND_OF_32'   then 2
           when 'ROUND_OF_16'   then 4
@@ -543,29 +460,34 @@ begin
       end if;
     end if;
 
-    -- Apply token multiplier (1 = no token)
-    pts := pts * coalesce(rec.multiplier, 1);
+    -- Apply token multiplier
+    pts := base_pts * coalesce(rec.multiplier, 1);
 
-    -- Apply streak bonus
+    -- Apply streak bonus (only if scored points)
     streak_bonus := 0;
-    select * into streak_rec from public.streaks
-      where user_id = rec.user_id and prode_id = rec.prode_id;
-    if found then
-      if streak_rec.current_streak >= 5 then streak_bonus := 5;
-      elsif streak_rec.current_streak >= 3 then streak_bonus := 2;
+    if pts > 0 then
+      select * into streak_rec from public.streaks
+        where user_id = rec.user_id and prode_id = rec.prode_id;
+      if found then
+        if streak_rec.current_streak >= 5 then streak_bonus := 5;
+        elsif streak_rec.current_streak >= 3 then streak_bonus := 2;
+        end if;
       end if;
+      pts := pts + streak_bonus;
     end if;
-    if pts > 0 then pts := pts + streak_bonus; end if;
 
-    -- Update prediction
-    update public.predictions set points_earned = pts, updated_at = now()
+    -- Update prediction (idempotent: set, not accumulate)
+    update public.predictions
+      set points_earned = pts, updated_at = now()
       where id = rec.id;
 
-    -- Upsert into scores
+    -- Upsert into scores (idempotent per match via prediction)
     insert into public.scores (user_id, prode_id, phase, points, updated_at)
       values (rec.user_id, rec.prode_id, m.phase, pts, now())
       on conflict (user_id, prode_id, phase)
-      do update set points = public.scores.points + pts, updated_at = now();
+      do update set
+        points     = public.scores.points + excluded.points,
+        updated_at = now();
 
     -- Update streak
     if pts > 0 then
