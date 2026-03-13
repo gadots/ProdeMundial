@@ -1,4 +1,4 @@
-import { Match, Member, Prode, Prediction, Phase } from "./types";
+import { Match, Member, Prode, Prediction, MultiplierToken, WildcardChallenge, WildcardAnswer } from "./types";
 
 export const MOCK_TEAMS = {
   ARG: { id: "ARG", name: "Argentina", shortName: "ARG", flag: "🇦🇷" },
@@ -15,7 +15,6 @@ export const MOCK_TEAMS = {
   NED: { id: "NED", name: "Países Bajos", shortName: "NED", flag: "🇳🇱" },
 };
 
-// Helper to get a date offset from tournament start (June 11, 2026)
 function matchDate(daysFromStart: number, hour = 18): string {
   const start = new Date("2026-06-11T00:00:00Z");
   start.setDate(start.getDate() + daysFromStart);
@@ -24,211 +23,97 @@ function matchDate(daysFromStart: number, hour = 18): string {
 }
 
 export const MOCK_MATCHES: Match[] = [
-  // ---- GROUP STAGE ----
-  {
-    id: "m1",
-    homeTeam: MOCK_TEAMS.MEX,
-    awayTeam: MOCK_TEAMS.USA,
-    phase: "GROUP",
-    group: "A",
-    date: matchDate(0),
-    status: "FINISHED",
-    homeScore: 1,
-    awayScore: 2,
-    venue: "MetLife Stadium",
-  },
-  {
-    id: "m2",
-    homeTeam: MOCK_TEAMS.ARG,
-    awayTeam: MOCK_TEAMS.URU,
-    phase: "GROUP",
-    group: "B",
-    date: matchDate(1),
-    status: "FINISHED",
-    homeScore: 3,
-    awayScore: 1,
-    venue: "Rose Bowl",
-  },
-  {
-    id: "m3",
-    homeTeam: MOCK_TEAMS.BRA,
-    awayTeam: MOCK_TEAMS.GER,
-    phase: "GROUP",
-    group: "C",
-    date: matchDate(2),
-    status: "FINISHED",
-    homeScore: 2,
-    awayScore: 2,
-    venue: "Estadio Azteca",
-  },
-  {
-    id: "m4",
-    homeTeam: MOCK_TEAMS.FRA,
-    awayTeam: MOCK_TEAMS.MAR,
-    phase: "GROUP",
-    group: "D",
-    date: matchDate(3),
-    status: "FINISHED",
-    homeScore: 2,
-    awayScore: 0,
-    venue: "SoFi Stadium",
-  },
-  {
-    id: "m5",
-    homeTeam: MOCK_TEAMS.ESP,
-    awayTeam: MOCK_TEAMS.NED,
-    phase: "GROUP",
-    group: "E",
-    date: matchDate(4),
-    status: "FINISHED",
-    homeScore: 1,
-    awayScore: 1,
-    venue: "AT&T Stadium",
-  },
-  {
-    id: "m6",
-    homeTeam: MOCK_TEAMS.POR,
-    awayTeam: MOCK_TEAMS.ENG,
-    phase: "GROUP",
-    group: "F",
-    date: matchDate(5),
-    status: "LIVE",
-    homeScore: 1,
-    awayScore: 0,
-    venue: "Gillette Stadium",
-  },
-  // Upcoming group matches
-  {
-    id: "m7",
-    homeTeam: MOCK_TEAMS.ARG,
-    awayTeam: MOCK_TEAMS.BRA,
-    phase: "GROUP",
-    group: "B",
-    date: matchDate(6, 21),
-    status: "SCHEDULED",
-    venue: "Hard Rock Stadium",
-  },
-  {
-    id: "m8",
-    homeTeam: MOCK_TEAMS.ENG,
-    awayTeam: MOCK_TEAMS.FRA,
-    phase: "GROUP",
-    group: "G",
-    date: matchDate(7, 18),
-    status: "SCHEDULED",
-    venue: "Arrowhead Stadium",
-  },
-  {
-    id: "m9",
-    homeTeam: MOCK_TEAMS.ESP,
-    awayTeam: MOCK_TEAMS.GER,
-    phase: "GROUP",
-    group: "H",
-    date: matchDate(8, 15),
-    status: "SCHEDULED",
-    venue: "Lincoln Financial Field",
-  },
-  // ---- ROUND OF 16 ----
-  {
-    id: "m16-1",
-    homeTeam: MOCK_TEAMS.ARG,
-    awayTeam: MOCK_TEAMS.NED,
-    phase: "ROUND_OF_16",
-    date: matchDate(20, 20),
-    status: "SCHEDULED",
-    venue: "MetLife Stadium",
-  },
-  {
-    id: "m16-2",
-    homeTeam: MOCK_TEAMS.FRA,
-    awayTeam: MOCK_TEAMS.POR,
-    phase: "ROUND_OF_16",
-    date: matchDate(21, 20),
-    status: "SCHEDULED",
-    venue: "Rose Bowl",
-  },
-  // ---- QUARTER FINALS ----
-  {
-    id: "mqf-1",
-    homeTeam: MOCK_TEAMS.ARG,
-    awayTeam: MOCK_TEAMS.FRA,
-    phase: "QUARTER_FINAL",
-    date: matchDate(32, 20),
-    status: "SCHEDULED",
-    venue: "MetLife Stadium",
-  },
-  // ---- SEMI FINALS ----
-  {
-    id: "msf-1",
-    homeTeam: MOCK_TEAMS.ARG,
-    awayTeam: MOCK_TEAMS.BRA,
-    phase: "SEMI_FINAL",
-    date: matchDate(38, 20),
-    status: "SCHEDULED",
-    venue: "MetLife Stadium",
-  },
-  // ---- FINAL ----
-  {
-    id: "mfinal",
-    homeTeam: MOCK_TEAMS.ARG,
-    awayTeam: MOCK_TEAMS.FRA,
-    phase: "FINAL",
-    date: matchDate(38, 20),
-    status: "SCHEDULED",
-    venue: "MetLife Stadium",
-  },
+  // FINISHED
+  { id: "m1", homeTeam: MOCK_TEAMS.MEX, awayTeam: MOCK_TEAMS.USA, phase: "GROUP", group: "A", date: matchDate(0), status: "FINISHED", homeScore: 1, awayScore: 2, venue: "MetLife Stadium" },
+  { id: "m2", homeTeam: MOCK_TEAMS.ARG, awayTeam: MOCK_TEAMS.URU, phase: "GROUP", group: "B", date: matchDate(1), status: "FINISHED", homeScore: 3, awayScore: 1, venue: "Rose Bowl" },
+  { id: "m3", homeTeam: MOCK_TEAMS.BRA, awayTeam: MOCK_TEAMS.GER, phase: "GROUP", group: "C", date: matchDate(2), status: "FINISHED", homeScore: 2, awayScore: 2, venue: "Estadio Azteca" },
+  { id: "m4", homeTeam: MOCK_TEAMS.FRA, awayTeam: MOCK_TEAMS.MAR, phase: "GROUP", group: "D", date: matchDate(3), status: "FINISHED", homeScore: 2, awayScore: 0, venue: "SoFi Stadium" },
+  { id: "m5", homeTeam: MOCK_TEAMS.ESP, awayTeam: MOCK_TEAMS.NED, phase: "GROUP", group: "E", date: matchDate(4), status: "FINISHED", homeScore: 1, awayScore: 1, venue: "AT&T Stadium" },
+  // LIVE
+  { id: "m6", homeTeam: MOCK_TEAMS.POR, awayTeam: MOCK_TEAMS.ENG, phase: "GROUP", group: "F", date: matchDate(5), status: "LIVE", homeScore: 1, awayScore: 0, venue: "Gillette Stadium" },
+  // SCHEDULED
+  { id: "m7", homeTeam: MOCK_TEAMS.ARG, awayTeam: MOCK_TEAMS.BRA, phase: "GROUP", group: "B", date: matchDate(6, 21), status: "SCHEDULED", venue: "Hard Rock Stadium" },
+  { id: "m8", homeTeam: MOCK_TEAMS.ENG, awayTeam: MOCK_TEAMS.FRA, phase: "GROUP", group: "G", date: matchDate(7, 18), status: "SCHEDULED", venue: "Arrowhead Stadium" },
+  { id: "m9", homeTeam: MOCK_TEAMS.ESP, awayTeam: MOCK_TEAMS.GER, phase: "GROUP", group: "H", date: matchDate(8, 15), status: "SCHEDULED", venue: "Lincoln Financial Field" },
+  // KNOCKOUT
+  { id: "m16-1", homeTeam: MOCK_TEAMS.ARG, awayTeam: MOCK_TEAMS.NED, phase: "ROUND_OF_16", date: matchDate(20, 20), status: "SCHEDULED", venue: "MetLife Stadium" },
+  { id: "m16-2", homeTeam: MOCK_TEAMS.FRA, awayTeam: MOCK_TEAMS.POR, phase: "ROUND_OF_16", date: matchDate(21, 20), status: "SCHEDULED", venue: "Rose Bowl" },
+  { id: "mqf-1", homeTeam: MOCK_TEAMS.ARG, awayTeam: MOCK_TEAMS.FRA, phase: "QUARTER_FINAL", date: matchDate(32, 20), status: "SCHEDULED", venue: "MetLife Stadium" },
+  { id: "msf-1", homeTeam: MOCK_TEAMS.ARG, awayTeam: MOCK_TEAMS.BRA, phase: "SEMI_FINAL", date: matchDate(38, 20), status: "SCHEDULED", venue: "MetLife Stadium" },
+  { id: "mfinal", homeTeam: MOCK_TEAMS.ARG, awayTeam: MOCK_TEAMS.FRA, phase: "FINAL", date: matchDate(38, 20), status: "SCHEDULED", venue: "MetLife Stadium" },
 ];
+
+// -------------------------------------------------------
+// MY TOKENS (mock for current user)
+// -------------------------------------------------------
+export const MOCK_MY_TOKENS: MultiplierToken[] = [
+  { multiplier: 2, label: "2x", emoji: "⚡", color: "text-blue-400 border-blue-500/40 bg-blue-500/10", usedOnMatchId: "m2", decayed: false },
+  { multiplier: 3, label: "3x", emoji: "🔥", color: "text-orange-400 border-orange-500/40 bg-orange-500/10", usedOnMatchId: undefined, decayed: false },
+  { multiplier: 5, label: "5x", emoji: "💥", color: "text-purple-400 border-purple-500/40 bg-purple-500/10", usedOnMatchId: undefined, decayed: false },
+];
+
+// -------------------------------------------------------
+// MY PREDICTIONS
+// -------------------------------------------------------
+export const MOCK_MY_PREDICTIONS: Record<string, Prediction> = {
+  m1: { id: "p1", userId: "u1", matchId: "m1", prodeId: "prode1", homeGoals: 1, awayGoals: 2, multiplier: 1, pointsEarned: 3 },
+  m2: { id: "p2", userId: "u1", matchId: "m2", prodeId: "prode1", homeGoals: 2, awayGoals: 1, multiplier: 2, pointsEarned: 2 },
+  m3: { id: "p3", userId: "u1", matchId: "m3", prodeId: "prode1", homeGoals: 1, awayGoals: 1, multiplier: 1, pointsEarned: 2 },
+  m4: { id: "p4", userId: "u1", matchId: "m4", prodeId: "prode1", homeGoals: 2, awayGoals: 0, multiplier: 1, pointsEarned: 3 },
+  m5: { id: "p5", userId: "u1", matchId: "m5", prodeId: "prode1", homeGoals: 0, awayGoals: 0, multiplier: 1, pointsEarned: 2 },
+};
+
+// -------------------------------------------------------
+// MEMBERS
+// -------------------------------------------------------
+function makeTokens(used2?: string, used3?: string, used5?: string): MultiplierToken[] {
+  return [
+    { multiplier: 2, label: "2x", emoji: "⚡", color: "text-blue-400 border-blue-500/40 bg-blue-500/10", usedOnMatchId: used2, decayed: false },
+    { multiplier: 3, label: "3x", emoji: "🔥", color: "text-orange-400 border-orange-500/40 bg-orange-500/10", usedOnMatchId: used3, decayed: false },
+    { multiplier: 5, label: "5x", emoji: "💥", color: "text-purple-400 border-purple-500/40 bg-purple-500/10", usedOnMatchId: used5, decayed: false },
+  ];
+}
 
 export const MOCK_MEMBERS: Member[] = [
   {
-    id: "u1",
-    displayName: "Guido G.",
-    avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Guido",
+    id: "u1", displayName: "Guido G.", avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Guido",
     totalPoints: 94,
     pointsPerPhase: { GROUP: 76, ROUND_OF_32: 0, ROUND_OF_16: 18, QUARTER_FINAL: 0, SEMI_FINAL: 0, FINAL: 0 },
-    rank: 1,
-    previousRank: 2,
-    jokersLeft: { GROUP: 0, ROUND_OF_32: 1, ROUND_OF_16: 0, QUARTER_FINAL: 1, SEMI_FINAL: 1, FINAL: 1 },
+    rank: 1, previousRank: 2,
+    tokens: makeTokens("m2"),
+    streak: { current: 4, best: 5, bonusNext: 2 },
   },
   {
-    id: "u2",
-    displayName: "Sofía R.",
-    avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sofia",
+    id: "u2", displayName: "Sofía R.", avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sofia",
     totalPoints: 88,
     pointsPerPhase: { GROUP: 70, ROUND_OF_32: 0, ROUND_OF_16: 18, QUARTER_FINAL: 0, SEMI_FINAL: 0, FINAL: 0 },
-    rank: 2,
-    previousRank: 1,
-    jokersLeft: { GROUP: 0, ROUND_OF_32: 1, ROUND_OF_16: 0, QUARTER_FINAL: 1, SEMI_FINAL: 1, FINAL: 1 },
+    rank: 2, previousRank: 1,
+    tokens: makeTokens("m1", "m3"),
+    streak: { current: 2, best: 6, bonusNext: 0 },
   },
   {
-    id: "u3",
-    displayName: "Martín L.",
-    avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Martin",
+    id: "u3", displayName: "Martín L.", avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Martin",
     totalPoints: 72,
     pointsPerPhase: { GROUP: 60, ROUND_OF_32: 0, ROUND_OF_16: 12, QUARTER_FINAL: 0, SEMI_FINAL: 0, FINAL: 0 },
-    rank: 3,
-    previousRank: 3,
-    jokersLeft: { GROUP: 0, ROUND_OF_32: 1, ROUND_OF_16: 1, QUARTER_FINAL: 1, SEMI_FINAL: 1, FINAL: 1 },
+    rank: 3, previousRank: 3,
+    tokens: makeTokens(),
+    streak: { current: 0, best: 3, bonusNext: 0 },
   },
   {
-    id: "u4",
-    displayName: "Valentina C.",
-    avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Valentina",
+    id: "u4", displayName: "Valentina C.", avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Valentina",
     totalPoints: 65,
     pointsPerPhase: { GROUP: 65, ROUND_OF_32: 0, ROUND_OF_16: 0, QUARTER_FINAL: 0, SEMI_FINAL: 0, FINAL: 0 },
-    rank: 4,
-    previousRank: 4,
-    jokersLeft: { GROUP: 0, ROUND_OF_32: 1, ROUND_OF_16: 1, QUARTER_FINAL: 1, SEMI_FINAL: 1, FINAL: 1 },
+    rank: 4, previousRank: 4,
+    tokens: makeTokens(undefined, undefined),
+    streak: { current: 1, best: 4, bonusNext: 0 },
   },
   {
-    id: "u5",
-    displayName: "Lucas P.",
-    avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Lucas",
+    id: "u5", displayName: "Lucas P.", avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Lucas",
     totalPoints: 58,
     pointsPerPhase: { GROUP: 55, ROUND_OF_32: 0, ROUND_OF_16: 3, QUARTER_FINAL: 0, SEMI_FINAL: 0, FINAL: 0 },
-    rank: 5,
-    previousRank: 5,
-    jokersLeft: { GROUP: 0, ROUND_OF_32: 1, ROUND_OF_16: 1, QUARTER_FINAL: 1, SEMI_FINAL: 1, FINAL: 1 },
+    rank: 5, previousRank: 5,
+    tokens: makeTokens(undefined, undefined, undefined),
+    streak: { current: 0, best: 2, bonusNext: 0 },
   },
 ];
 
@@ -242,14 +127,76 @@ export const MOCK_PRODE: Prode = {
   createdAt: "2026-05-01T00:00:00Z",
 };
 
-export const MOCK_MY_PREDICTIONS: Record<string, Prediction> = {
-  m1: { id: "p1", userId: "u1", matchId: "m1", prodeId: "prode1", homeGoals: 1, awayGoals: 2, jokerUsed: false, pointsEarned: 3 },
-  m2: { id: "p2", userId: "u1", matchId: "m2", prodeId: "prode1", homeGoals: 2, awayGoals: 1, jokerUsed: false, pointsEarned: 1 },
-  m3: { id: "p3", userId: "u1", matchId: "m3", prodeId: "prode1", homeGoals: 1, awayGoals: 1, jokerUsed: false, pointsEarned: 2 },
-  m4: { id: "p4", userId: "u1", matchId: "m4", prodeId: "prode1", homeGoals: 2, awayGoals: 0, jokerUsed: false, pointsEarned: 3 },
-  m5: { id: "p5", userId: "u1", matchId: "m5", prodeId: "prode1", homeGoals: 0, awayGoals: 0, jokerUsed: false, pointsEarned: 2 },
-  // m6 in progress
-  "m16-1": { id: "p10", userId: "u1", matchId: "m16-1", prodeId: "prode1", homeGoals: 2, awayGoals: 1, jokerUsed: true, pointsEarned: 20 },
+// -------------------------------------------------------
+// WILDCARD CHALLENGES
+// -------------------------------------------------------
+export const MOCK_WILDCARDS: WildcardChallenge[] = [
+  {
+    id: "wc1",
+    title: "¿Quién anota más goles esta semana?",
+    description: "Elegí la selección que creas que va a marcar más goles en los partidos de esta semana (semana 1 de grupos).",
+    type: "PICK_TEAM",
+    phase: "GROUP",
+    points: 10,
+    deadline: matchDate(7, 23),
+    status: "OPEN",
+    weekLabel: "Semana 1",
+  },
+  {
+    id: "wc2",
+    title: "¿Cuántos goles totales habrá esta semana?",
+    description: "Predecí el número exacto de goles en todos los partidos de la semana 1. El más cercano gana.",
+    type: "NUMERIC",
+    phase: "GROUP",
+    points: 15,
+    deadline: matchDate(7, 23),
+    status: "OPEN",
+    weekLabel: "Semana 1",
+  },
+  {
+    id: "wc3",
+    title: "¿Habrá algún 0-0 en la semana 2?",
+    description: "Sí o No. ¿Algún partido terminará 0-0 durante la semana 2 de grupos?",
+    type: "YES_NO",
+    phase: "GROUP",
+    points: 8,
+    deadline: matchDate(14, 23),
+    status: "OPEN",
+    weekLabel: "Semana 2",
+  },
+  {
+    id: "wc4",
+    title: "Predecí los 4 cuartos de final",
+    description: "Elegí un ganador para cada cuarto de final. Todas correctas: 25pts, 3 correctas: 12pts, 2 correctas: 5pts.",
+    type: "PICK_TEAM",
+    phase: "QUARTER_FINAL",
+    points: 25,
+    deadline: matchDate(31, 23),
+    status: "OPEN",
+    weekLabel: "Cuartos",
+  },
+  {
+    id: "wc5",
+    title: "Goles totales en Octavos de Final",
+    description: "¿Cuántos goles en total en los 16 partidos de Octavos? El más cercano gana 20 pts.",
+    type: "NUMERIC",
+    phase: "ROUND_OF_16",
+    points: 20,
+    deadline: matchDate(27, 23),
+    status: "CLOSED",
+    correctAnswer: "38",
+    weekLabel: "Octavos",
+  },
+];
+
+export const MOCK_MY_WILDCARD_ANSWERS: Record<string, WildcardAnswer> = {
+  wc2: {
+    challengeId: "wc2",
+    userId: "u1",
+    answer: "41",
+    submittedAt: matchDate(5, 10),
+    pointsEarned: undefined,
+  },
 };
 
 export const CURRENT_USER_ID = "u1";

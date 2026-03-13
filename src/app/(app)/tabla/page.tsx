@@ -3,10 +3,10 @@
 import { useState } from "react";
 import { TopBar } from "@/components/nav";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { MOCK_PRODE } from "@/lib/mock-data";
 import { PHASE_LABELS, Phase } from "@/lib/types";
-import { TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { streakBonusPoints } from "@/lib/scoring";
+import { TrendingUp, TrendingDown, Minus, Flame } from "lucide-react";
 
 const PHASE_ORDER: Phase[] = [
   "GROUP", "ROUND_OF_16", "QUARTER_FINAL", "SEMI_FINAL", "FINAL"
@@ -83,12 +83,14 @@ export default function TablaPage() {
       )}
 
       {/* Leaderboard */}
-      <div className="mx-auto max-w-lg space-y-2 px-4 py-4">
+      <div className="mx-auto max-w-lg space-y-2 px-4 py-4 pb-6">
         {sortedByView.map((member, idx) => {
           const score = getMemberScore(member);
           const rankChange = member.previousRank ? member.previousRank - member.rank : 0;
           const isMe = member.id === "u1";
           const barWidth = (score / maxPoints) * 100;
+          const streakBonus = streakBonusPoints(member.streak.current);
+          const tokensLeft = member.tokens.filter((t) => !t.usedOnMatchId && !t.decayed).length;
 
           return (
             <Card
@@ -105,15 +107,10 @@ export default function TablaPage() {
                 <div className="flex items-center gap-3">
                   {/* Rank */}
                   <div className="w-8 text-center shrink-0">
-                    {idx === 0 ? (
-                      <span className="text-xl">🥇</span>
-                    ) : idx === 1 ? (
-                      <span className="text-xl">🥈</span>
-                    ) : idx === 2 ? (
-                      <span className="text-xl">🥉</span>
-                    ) : (
-                      <span className="text-base font-black text-white/50">#{idx + 1}</span>
-                    )}
+                    {idx === 0 ? <span className="text-xl">🥇</span>
+                    : idx === 1 ? <span className="text-xl">🥈</span>
+                    : idx === 2 ? <span className="text-xl">🥉</span>
+                    : <span className="text-base font-black text-white/50">#{idx + 1}</span>}
                   </div>
 
                   {/* Avatar */}
@@ -133,25 +130,50 @@ export default function TablaPage() {
 
                   {/* Name + bar */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <p className={`text-sm font-bold leading-tight truncate ${isMe ? "text-green-300" : "text-white"}`}>
                         {member.displayName}
                         {isMe && <span className="ml-1 text-[10px] text-green-500">(vos)</span>}
                       </p>
-                      {rankChange !== 0 && view === "total" && (
-                        <span className={`flex items-center gap-0.5 text-[10px] shrink-0 ${rankChange > 0 ? "text-green-400" : "text-red-400"}`}>
-                          {rankChange > 0 ? (
-                            <TrendingUp className="h-3 w-3" />
-                          ) : (
-                            <TrendingDown className="h-3 w-3" />
-                          )}
-                          {Math.abs(rankChange)}
+
+                      {/* Rank change */}
+                      {view === "total" && (
+                        rankChange > 0 ? (
+                          <span className="flex items-center gap-0.5 text-[10px] text-green-400 shrink-0">
+                            <TrendingUp className="h-3 w-3" />{rankChange}
+                          </span>
+                        ) : rankChange < 0 ? (
+                          <span className="flex items-center gap-0.5 text-[10px] text-red-400 shrink-0">
+                            <TrendingDown className="h-3 w-3" />{Math.abs(rankChange)}
+                          </span>
+                        ) : (
+                          <Minus className="h-3 w-3 text-white/20 shrink-0" />
+                        )
+                      )}
+
+                      {/* Streak badge */}
+                      {member.streak.current >= 3 && (
+                        <span className={`flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-bold shrink-0 ${
+                          member.streak.current >= 5
+                            ? "bg-orange-500/30 text-orange-300"
+                            : "bg-orange-500/15 text-orange-400"
+                        }`}>
+                          <Flame className="h-2.5 w-2.5" />
+                          {member.streak.current}
+                          {streakBonus > 0 && ` +${streakBonus}`}
                         </span>
                       )}
-                      {rankChange === 0 && view === "total" && (
-                        <Minus className="h-3 w-3 text-white/20 shrink-0" />
+
+                      {/* Token dots */}
+                      {tokensLeft > 0 && (
+                        <span className="flex gap-0.5 shrink-0">
+                          {member.tokens.filter((t) => !t.usedOnMatchId && !t.decayed).map((t) => (
+                            <span key={t.multiplier} className="text-[10px]">{t.emoji}</span>
+                          ))}
+                        </span>
                       )}
                     </div>
+
                     {/* Points bar */}
                     <div className="h-1.5 rounded-full bg-white/10">
                       <div
@@ -170,9 +192,9 @@ export default function TablaPage() {
                   </div>
                 </div>
 
-                {/* Phase breakdown (only in total view) */}
+                {/* Phase breakdown */}
                 {view === "total" && (
-                  <div className="mt-3 flex gap-3 border-t border-white/5 pt-2.5">
+                  <div className="mt-3 flex gap-3 border-t border-white/5 pt-2.5 flex-wrap">
                     {PHASE_ORDER.filter((p) => (member.pointsPerPhase[p] ?? 0) > 0).map((p) => (
                       <div key={p} className="text-center">
                         <p className="text-[10px] text-white/30 leading-none">
