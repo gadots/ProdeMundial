@@ -6,10 +6,16 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CURRENT_USER_NAME, MOCK_PRODE } from "@/lib/mock-data";
 import { LogOut, ChevronRight, User } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 
 
 export default function PerfilPage() {
   const me = MOCK_PRODE.members.find((m) => m.id === "u1")!;
+
+  const handleLogout = async () => {
+    await createClient().auth.signOut();
+    window.location.href = "/";
+  };
 
   return (
     <div>
@@ -65,11 +71,11 @@ export default function PerfilPage() {
         {/* Settings */}
         <Card>
           <CardContent className="p-0 divide-y divide-white/10">
-            <Link href="/" className="flex items-center gap-3 px-4 py-3.5 hover:bg-white/5 transition-colors">
+            <button onClick={handleLogout} className="flex w-full items-center gap-3 px-4 py-3.5 hover:bg-white/5 transition-colors">
               <LogOut className="h-4 w-4 text-red-400" />
               <span className="text-sm text-red-400">Cerrar sesión</span>
               <ChevronRight className="h-4 w-4 text-white/20 ml-auto" />
-            </Link>
+            </button>
           </CardContent>
         </Card>
 
