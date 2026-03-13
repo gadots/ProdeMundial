@@ -189,20 +189,21 @@ function MatchPredictionCard({
 function RulesModal({ onClose }: { onClose: () => void }) {
   const phases = PHASE_ORDER.filter((p) => MOCK_MATCHES.some((m) => m.phase === p));
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center px-4 pb-6 sm:items-center" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center p-4 sm:items-center" onClick={onClose}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <div
-        className="relative w-full max-w-lg rounded-2xl bg-[#0d1f3c] border border-white/15 shadow-2xl overflow-y-auto max-h-[80vh]"
+        className="relative w-full max-w-lg flex flex-col rounded-2xl bg-[#0d1f3c] border border-white/15 shadow-2xl"
+        style={{ maxHeight: "calc(100dvh - 2rem)" }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 sticky top-0 bg-[#0d1f3c]/95 backdrop-blur-sm">
+        <div className="shrink-0 flex items-center justify-between px-5 py-4 border-b border-white/10 bg-[#0d1f3c] rounded-t-2xl">
           <p className="text-sm font-bold text-white">Reglas de puntuación</p>
-          <button onClick={onClose} className="text-white/40 hover:text-white transition-colors p-1 rounded-lg hover:bg-white/10">
+          <button onClick={onClose} aria-label="Cerrar" className="text-white/40 hover:text-white transition-colors p-1 rounded-lg hover:bg-white/10">
             <X className="h-4 w-4" />
           </button>
         </div>
 
-        <div className="p-5 space-y-4">
+        <div className="overflow-y-auto flex-1 p-5 space-y-4">
           {/* Tabla por fase */}
           <div>
             <p className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-3">Puntos por fase</p>
@@ -380,24 +381,20 @@ export default function PrediccionesPage() {
 
         {/* Fila 2: tabs de fase (solo en vista "todas") */}
         {filterView === "all" && (
-          <div className="flex items-center gap-2 px-3 py-2">
-            <div className="flex gap-1 overflow-x-auto flex-1 min-w-0">
+          <div className="flex items-center gap-2 px-3 pb-2.5 pt-1">
+            <div className="flex gap-1 overflow-x-auto flex-1 min-w-0 pb-0.5">
               {availablePhases.map((phase) => {
                 const isActive = activePhase === phase;
-                const matchCount = MOCK_MATCHES.filter((m) => m.phase === phase).length;
                 const pendingCount = MOCK_MATCHES.filter((m) => m.phase === phase && m.status === "SCHEDULED" && !MOCK_MY_PREDICTIONS[m.id]).length;
                 return (
                   <button
                     key={phase}
                     onClick={() => setActivePhase(phase)}
-                    className={`relative flex flex-col items-center gap-0.5 rounded-xl px-3 py-1.5 text-xs transition-all whitespace-nowrap shrink-0 ${
+                    className={`relative rounded-xl px-3 py-1.5 text-xs font-semibold transition-all whitespace-nowrap shrink-0 ${
                       isActive ? "bg-green-600 text-white" : "bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/80"
                     }`}
                   >
-                    <span className="font-semibold text-[11px]">{PHASE_SHORT[phase]}</span>
-                    <span className={`text-[10px] ${isActive ? "text-green-200" : "text-white/30"}`}>
-                      {matchCount}P · {PHASE_POINTS[phase].exact}pts
-                    </span>
+                    {PHASE_SHORT[phase]}
                     {pendingCount > 0 && (
                       <span className={`absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full text-[8px] font-bold flex items-center justify-center ${
                         isActive ? "bg-white text-green-700" : "bg-orange-500 text-white"

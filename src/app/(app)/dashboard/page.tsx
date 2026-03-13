@@ -206,7 +206,7 @@ export default function DashboardPage() {
 
           {/* Tokens */}
           {tokensAvailable.length > 0 && (
-            <Link href="/predicciones">
+            <Link href="/predicciones" className="block">
               <div className="flex items-center justify-between rounded-xl px-4 py-3 bg-yellow-500/10 border border-yellow-500/15 hover:border-yellow-500/30 transition-colors">
                 <div className="flex items-center gap-2">
                   <span className="text-base">{tokensAvailable.map((t) => t.emoji).join("")}</span>
@@ -223,7 +223,7 @@ export default function DashboardPage() {
           )}
 
           {/* Desafíos — siempre visible */}
-          <Link href="/desafios">
+          <Link href="/desafios" className="block">
             <div className="flex items-center justify-between rounded-xl px-4 py-3 bg-purple-500/10 border border-purple-500/15 hover:border-purple-500/30 transition-colors">
               <div className="flex items-center gap-2">
                 <span className="text-base">🎯</span>
