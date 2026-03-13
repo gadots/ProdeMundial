@@ -2,13 +2,25 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 const PUBLIC_ROUTES = ["/", "/join", "/auth/callback"];
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+// Si no hay Supabase configurado (modo demo/mock), dejar pasar todo sin auth
+const SUPABASE_ENABLED = !!(SUPABASE_URL && SUPABASE_ANON_KEY
+  && !SUPABASE_URL.includes("<your-project>")
+  && SUPABASE_URL.startsWith("https://"));
 
 export async function middleware(request: NextRequest) {
+  // Modo demo: sin Supabase, todas las rutas son accesibles
+  if (!SUPABASE_ENABLED) {
+    return NextResponse.next({ request });
+  }
+
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    SUPABASE_URL!,
+    SUPABASE_ANON_KEY!,
     {
       cookies: {
         getAll() {
