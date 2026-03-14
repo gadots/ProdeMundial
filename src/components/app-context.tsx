@@ -167,12 +167,40 @@ function AppProviderSupabase({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Load matches (independent of user)
+  // Load matches + subscribe to Realtime changes
   useEffect(() => {
     Q.getMatches().then((data) => {
       setMatches(data);
       setMatchesLoading(false);
     });
+
+    // Realtime: update a match when it changes in the DB (e.g. LIVE, FINISHED, scores)
+    // Note: enable realtime on the 'matches' table in Supabase dashboard for this to work.
+    const supabase = createClient();
+    const matchChannel = supabase
+      .channel("realtime-matches")
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "matches" },
+        (payload) => {
+          const updated = payload.new as Record<string, unknown>;
+          setMatches((prev) =>
+            prev.map((m) =>
+              m.id === updated.id
+                ? {
+                    ...m,
+                    status: updated.status as Match["status"],
+                    homeScore: (updated.home_score as number | null) ?? undefined,
+                    awayScore: (updated.away_score as number | null) ?? undefined,
+                  }
+                : m
+            )
+          );
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(matchChannel); };
   }, []);
 
   // Load prode + user-specific data once user is available
@@ -213,6 +241,63 @@ function AppProviderSupabase({ children }: { children: React.ReactNode }) {
       setWildcardAnswers(answersData);
       setWildcardsLoading(false);
       setPointsToday(ptsTodayData);
+
+      // Realtime: when points_earned updates on our predictions (after cron calculates)
+      // Note: enable realtime on the 'predictions' table in Supabase dashboard.
+      const supabase = createClient();
+      const predChannel = supabase
+        .channel(`realtime-predictions-${user.id}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "predictions",
+            filter: `user_id=eq.${user.id}`,
+          },
+          (payload) => {
+            const row = payload.new as Record<string, unknown>;
+            const matchId = row.match_id as string;
+            const pointsEarned = row.points_earned as number | null;
+            setPredictions((prev) => {
+              if (!prev[matchId]) return prev;
+              return {
+                ...prev,
+                [matchId]: { ...prev[matchId], pointsEarned: pointsEarned ?? undefined },
+              };
+            });
+          }
+        )
+        .subscribe();
+
+      // Realtime: token decay (decayed = true pushed from cron)
+      const tokenChannel = supabase
+        .channel(`realtime-tokens-${user.id}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "multiplier_tokens",
+            filter: `user_id=eq.${user.id}`,
+          },
+          (payload) => {
+            const row = payload.new as Record<string, unknown>;
+            setTokens((prev) =>
+              prev.map((t) =>
+                t.multiplier === (row.multiplier as number)
+                  ? { ...t, decayed: row.decayed as boolean }
+                  : t
+              )
+            );
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(predChannel);
+        supabase.removeChannel(tokenChannel);
+      };
     });
   }, [user?.id]);
 

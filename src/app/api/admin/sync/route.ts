@@ -2,13 +2,14 @@ import { NextResponse } from "next/server";
 import { syncMatches } from "@/lib/sync-matches";
 
 /**
- * Vercel Cron: syncs match data from football-data.org into Supabase,
- * calculates points for newly-finished matches, and decays group tokens.
+ * Manual sync trigger — same as the cron job but callable on-demand.
+ * Protected by CRON_SECRET.
  *
- * Schedule is defined in vercel.json.
- * Protected by CRON_SECRET to prevent unauthorized calls.
+ * Usage:
+ *   curl -X POST /api/admin/sync \
+ *     -H "Authorization: Bearer <CRON_SECRET>"
  */
-export async function GET(request: Request) {
+export async function POST(request: Request) {
   const authHeader = request.headers.get("authorization");
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -17,12 +18,11 @@ export async function GET(request: Request) {
   try {
     const result = await syncMatches();
     if (result.error) {
-      console.error("sync-matches error:", result.error);
       return NextResponse.json(result, { status: 500 });
     }
     return NextResponse.json(result);
   } catch (err) {
-    console.error("sync-matches exception:", err);
+    console.error("admin/sync exception:", err);
     return NextResponse.json({ error: String(err) }, { status: 500 });
   }
 }
