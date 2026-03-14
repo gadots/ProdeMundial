@@ -10,7 +10,7 @@ const SUPABASE_ENABLED = !!(SUPABASE_URL && SUPABASE_ANON_KEY
   && !SUPABASE_URL.includes("<your-project>")
   && SUPABASE_URL.startsWith("https://"));
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   // Modo demo: sin Supabase, todas las rutas son accesibles
   if (!SUPABASE_ENABLED) {
     return NextResponse.next({ request });
