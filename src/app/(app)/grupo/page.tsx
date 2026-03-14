@@ -6,21 +6,23 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { MOCK_PRODE, CURRENT_USER_ID } from "@/lib/mock-data";
+import { useApp } from "@/components/app-context";
+import * as Q from "@/lib/supabase/queries";
 import { Copy, Check, QrCode, UserPlus, Trophy, Settings2, Crown, Pencil } from "lucide-react";
 
 export default function GrupoPage() {
+  const { user, prode, prodeId } = useApp();
   const [copied, setCopied] = useState(false);
 
   const [editingPrize, setEditingPrize] = useState(false);
-  const [prize, setPrize] = useState(MOCK_PRODE.prizeDescription ?? "");
+  const [prize, setPrize] = useState(prode?.prizeDescription ?? "");
 
   const [editingName, setEditingName] = useState(false);
-  const [prodeName, setProdeName] = useState(MOCK_PRODE.name);
+  const [prodeName, setProdeName] = useState(prode?.name ?? "");
   const [savedName, setSavedName] = useState(false);
 
-  const isAdmin = MOCK_PRODE.adminId === CURRENT_USER_ID;
-  const inviteLink = `https://prodemundial.app/join/${MOCK_PRODE.inviteCode}`;
+  const isAdmin = prode?.adminId === user?.id;
+  const inviteLink = prode ? `https://prodemundial.app/join/${prode.inviteCode}` : "";
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(inviteLink).catch(() => {});
@@ -28,21 +30,32 @@ export default function GrupoPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleSaveName = () => {
+  const handleSaveName = async () => {
+    if (!prodeId) return;
+    await Q.updateProdeName(prodeId, prodeName);
     setSavedName(true);
     setEditingName(false);
     setTimeout(() => setSavedName(false), 2000);
-    // En producción: UPDATE prodes SET name = prodeName WHERE id = prode.id
   };
 
-  const handleSavePrize = () => {
+  const handleSavePrize = async () => {
+    if (!prodeId) return;
+    await Q.updateProdePrize(prodeId, prize);
     setEditingPrize(false);
-    // En producción: update Supabase prodes table
   };
+
+  if (!prode) {
+    return (
+      <div>
+        <TopBar title="Configuraciones" />
+        <div className="flex items-center justify-center h-40 text-white/30 text-sm">Cargando…</div>
+      </div>
+    );
+  }
 
   return (
     <div>
-      <TopBar title="Configuraciones" subtitle={prodeName} />
+      <TopBar title="Configuraciones" subtitle={prodeName || prode.name} />
 
       <div className="mx-auto max-w-lg space-y-4 px-4 py-4">
 
@@ -66,14 +79,14 @@ export default function GrupoPage() {
                         <Check className="h-3.5 w-3.5 mr-1" />
                         {savedName ? "Guardado" : "Guardar"}
                       </Button>
-                      <Button size="sm" variant="secondary" onClick={() => { setEditingName(false); setProdeName(MOCK_PRODE.name); }}>
+                      <Button size="sm" variant="secondary" onClick={() => { setEditingName(false); setProdeName(prode.name); }}>
                         Cancelar
                       </Button>
                     </div>
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
-                    <h2 className="text-lg font-black text-white leading-tight">{prodeName}</h2>
+                    <h2 className="text-lg font-black text-white leading-tight">{prodeName || prode.name}</h2>
                     {isAdmin && (
                       <button onClick={() => setEditingName(true)} className="text-white/30 hover:text-white/60 transition-colors shrink-0">
                         <Pencil className="h-3.5 w-3.5" />
@@ -83,14 +96,14 @@ export default function GrupoPage() {
                 )}
               </div>
               {!editingName && (
-                <Badge variant="default" className="shrink-0 ml-3">{MOCK_PRODE.members.length} jugadores</Badge>
+                <Badge variant="default" className="shrink-0 ml-3">{prode.members.length} jugadores</Badge>
               )}
             </div>
             {!editingName && (
               <div className="flex items-center gap-2 text-xs text-white/40">
-                <span>Creado el {new Date(MOCK_PRODE.createdAt).toLocaleDateString("es-AR")}</span>
+                <span>Creado el {new Date(prode.createdAt).toLocaleDateString("es-AR")}</span>
                 <span>·</span>
-                <span>Código: <span className="font-bold text-white/70">{MOCK_PRODE.inviteCode}</span></span>
+                <span>Código: <span className="font-bold text-white/70">{prode.inviteCode}</span></span>
               </div>
             )}
           </CardContent>
@@ -131,7 +144,7 @@ export default function GrupoPage() {
             ) : (
               <div className="rounded-xl bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 p-3">
                 <p className="text-sm text-white/80">
-                  {prize || <span className="text-white/30 italic">Sin premio definido aún</span>}
+                  {prize || prode.prizeDescription || <span className="text-white/30 italic">Sin premio definido aún</span>}
                 </p>
               </div>
             )}
@@ -160,7 +173,7 @@ export default function GrupoPage() {
               Ver código QR
             </button>
             <p className="text-xs text-white/30 text-center">
-              Compartí el link o el código <span className="font-bold text-white/50">{MOCK_PRODE.inviteCode}</span> para que tus amigos se unan
+              Compartí el link o el código <span className="font-bold text-white/50">{prode.inviteCode}</span> para que tus amigos se unan
             </p>
           </CardContent>
         </Card>
@@ -169,15 +182,15 @@ export default function GrupoPage() {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between pb-3">
-              <CardTitle className="text-sm">Participantes ({MOCK_PRODE.members.length})</CardTitle>
+              <CardTitle className="text-sm">Participantes ({prode.members.length})</CardTitle>
             </div>
           </CardHeader>
           <CardContent className="pt-0 space-y-1">
-            {MOCK_PRODE.members.map((member, idx) => (
+            {prode.members.map((member, idx) => (
               <div
                 key={member.id}
                 className={`flex items-center gap-3 rounded-xl p-3 transition-colors ${
-                  member.id === CURRENT_USER_ID ? "bg-green-500/10" : "hover:bg-white/5"
+                  member.id === user?.id ? "bg-green-500/10" : "hover:bg-white/5"
                 }`}
               >
                 <div className="relative shrink-0">
@@ -189,18 +202,18 @@ export default function GrupoPage() {
                       <span className="text-base">{member.displayName[0]}</span>
                     )}
                   </div>
-                  {MOCK_PRODE.adminId === member.id && (
+                  {prode.adminId === member.id && (
                     <span className="absolute -top-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-yellow-500/20 border border-yellow-500/30 flex items-center justify-center">
                       <Crown className="h-2 w-2 text-yellow-400" />
                     </span>
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className={`text-sm font-semibold truncate ${member.id === CURRENT_USER_ID ? "text-green-300" : "text-white"}`}>
+                  <p className={`text-sm font-semibold truncate ${member.id === user?.id ? "text-green-300" : "text-white"}`}>
                     {member.displayName}
-                    {member.id === CURRENT_USER_ID && <span className="ml-1 text-[10px] text-green-500">(vos)</span>}
+                    {member.id === user?.id && <span className="ml-1 text-[10px] text-green-500">(vos)</span>}
                   </p>
-                  {MOCK_PRODE.adminId === member.id && (
+                  {prode.adminId === member.id && (
                     <p className="text-[10px] text-yellow-500/70">Admin</p>
                   )}
                 </div>
