@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { TopBar } from "@/components/nav";
-import { MOCK_PRODE, MOCK_POINTS_TODAY } from "@/lib/mock-data";
+import { useApp } from "@/components/app-context";
 import { PHASE_LABELS, Phase } from "@/lib/types";
 
 const PHASE_ORDER: Phase[] = [
@@ -10,8 +10,10 @@ const PHASE_ORDER: Phase[] = [
 ];
 
 export default function TablaPage() {
+  const { user, prode, pointsToday } = useApp();
   const [view, setView] = useState<"total" | Phase>("total");
-  const members = [...MOCK_PRODE.members].sort((a, b) => b.totalPoints - a.totalPoints);
+
+  const members = [...(prode?.members ?? [])].sort((a, b) => b.totalPoints - a.totalPoints);
 
   const getMemberScore = (member: typeof members[0]) => {
     if (view === "total") return member.totalPoints;
@@ -22,7 +24,7 @@ export default function TablaPage() {
 
   return (
     <div>
-      <TopBar title="Posiciones" subtitle={MOCK_PRODE.name} />
+      <TopBar title="Posiciones" subtitle={prode?.name ?? "…"} />
 
       {/* Selector de vista */}
       <div className="sticky top-[57px] z-30 border-b border-white/10 bg-[#0a1628]/95 backdrop-blur-lg">
@@ -65,13 +67,13 @@ export default function TablaPage() {
       </div>
 
       {/* Premio */}
-      {MOCK_PRODE.prizeDescription && (
+      {prode?.prizeDescription && (
         <div className="px-4 pt-4">
           <div className="flex items-center gap-3 rounded-2xl bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 p-3">
             <span className="text-xl">🏆</span>
             <div>
               <p className="text-xs text-yellow-400 font-semibold">Premio al ganador</p>
-              <p className="text-sm text-white/80">{MOCK_PRODE.prizeDescription}</p>
+              <p className="text-sm text-white/80">{prode.prizeDescription}</p>
             </div>
           </div>
         </div>
@@ -94,8 +96,8 @@ export default function TablaPage() {
         {sortedByView.map((member, idx) => {
           const score = getMemberScore(member);
           const rankChange = member.previousRank ? member.previousRank - member.rank : 0;
-          const isMe = member.id === "u1";
-          const todayPts = MOCK_POINTS_TODAY[member.id] ?? 0;
+          const isMe = member.id === user?.id;
+          const todayPts = pointsToday[member.id] ?? 0;
 
           return (
             <div

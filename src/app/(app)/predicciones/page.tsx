@@ -5,8 +5,8 @@ import { TopBar } from "@/components/nav";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MOCK_MATCHES, MOCK_MY_PREDICTIONS, MOCK_MY_TOKENS } from "@/lib/mock-data";
-import { PHASE_LABELS, PHASE_POINTS, Phase, Match, MultiplierToken, TokenMultiplier } from "@/lib/types";
+import { useApp } from "@/components/app-context";
+import { PHASE_LABELS, PHASE_POINTS, Phase, Match, MultiplierToken, TokenMultiplier, Prediction } from "@/lib/types";
 import { maxPointsForMatch, streakBonusPoints } from "@/lib/scoring";
 import { Save, Lock, Check, Flame, HelpCircle, X } from "lucide-react";
 
@@ -20,9 +20,6 @@ const PHASE_SHORT: Record<Phase, string> = {
   GROUP: "Grupos", ROUND_OF_32: "Ronda 32", ROUND_OF_16: "Octavos",
   QUARTER_FINAL: "Cuartos", SEMI_FINAL: "Semis", FINAL: "Final",
 };
-
-const MY_STREAK = 4;
-const STREAK_BONUS = streakBonusPoints(MY_STREAK);
 
 type FilterView = "all" | "pending" | "urgent";
 
@@ -86,23 +83,32 @@ function TokenPicker({
 }
 
 function MatchPredictionCard({
-  match, tokens, onTokenChange,
+  match,
+  tokens,
+  existing,
+  myStreak,
+  onTokenChange,
+  onSave,
 }: {
   match: Match;
   tokens: MultiplierToken[];
+  existing?: Prediction;
+  myStreak: number;
   onTokenChange: (matchId: string, prev: TokenMultiplier, next: TokenMultiplier) => void;
+  onSave: (matchId: string, home: number, away: number, multiplier: TokenMultiplier) => Promise<{ error: string | null }>;
 }) {
-  const existing = MOCK_MY_PREDICTIONS[match.id];
   const [home, setHome] = useState(existing?.homeGoals?.toString() ?? "");
   const [away, setAway] = useState(existing?.awayGoals?.toString() ?? "");
   const [multiplier, setMultiplier] = useState<TokenMultiplier>(existing?.multiplier ?? 1);
   const [saved, setSaved] = useState(!!existing);
+  const [saving, setSaving] = useState(false);
 
   const isFinished = match.status === "FINISHED";
   const isLive = match.status === "LIVE";
   const locked = isFinished || isLive;
   const pts = PHASE_POINTS[match.phase];
   const canSave = home !== "" && away !== "" && !locked;
+  const streakBonus = streakBonusPoints(myStreak);
 
   const localTokens: MultiplierToken[] = tokens.map((t) => ({
     ...t,
@@ -116,7 +122,15 @@ function MatchPredictionCard({
     onTokenChange(match.id, prev, next);
   };
 
-  const potential = maxPointsForMatch(match.phase, multiplier) + (MY_STREAK >= 3 && !locked ? STREAK_BONUS : 0);
+  const handleSave = async () => {
+    if (!canSave) return;
+    setSaving(true);
+    const result = await onSave(match.id, Number(home), Number(away), multiplier);
+    setSaving(false);
+    if (!result.error) setSaved(true);
+  };
+
+  const potential = maxPointsForMatch(match.phase, multiplier) + (myStreak >= 3 && !locked ? streakBonus : 0);
 
   return (
     <Card className={`overflow-hidden transition-all ${locked ? "opacity-70" : "hover:border-green-500/20"}`}>
@@ -142,9 +156,9 @@ function MatchPredictionCard({
             <p className="text-sm font-bold text-white leading-tight">{match.homeTeam.name}</p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <ScoreInput value={home} onChange={setHome} disabled={locked} />
+            <ScoreInput value={home} onChange={(v) => { setHome(v); setSaved(false); }} disabled={locked} />
             <span className="text-white/30 font-bold text-lg">-</span>
-            <ScoreInput value={away} onChange={setAway} disabled={locked} />
+            <ScoreInput value={away} onChange={(v) => { setAway(v); setSaved(false); }} disabled={locked} />
           </div>
           <div className="flex flex-1 items-center gap-2 justify-end">
             <p className="text-sm font-bold text-white leading-tight text-right">{match.awayTeam.name}</p>
@@ -167,20 +181,33 @@ function MatchPredictionCard({
         {!locked && (
           <div className="flex flex-wrap items-center gap-2">
             <TokenPicker tokens={localTokens} activeMultiplier={multiplier} onSelect={handleTokenSelect} disabled={locked} />
-            {MY_STREAK >= 3 && (
+            {myStreak >= 3 && (
               <span className="flex items-center gap-1 text-[10px] text-orange-400">
-                <Flame className="h-3 w-3" />+{STREAK_BONUS} racha
+                <Flame className="h-3 w-3" />+{streakBonus} racha
               </span>
             )}
             <Button
-              onClick={() => { if (canSave) setSaved(true); }}
-              disabled={!canSave}
+              onClick={handleSave}
+              disabled={!canSave || saving}
               size="sm"
               className="ml-auto"
               variant={saved ? "secondary" : "default"}
             >
-              {saved ? <><Check className="h-3.5 w-3.5" /> Guardado</> : <><Save className="h-3.5 w-3.5" /> Guardar</>}
+              {saving ? (
+                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+              ) : saved ? (
+                <><Check className="h-3.5 w-3.5" /> Guardado</>
+              ) : (
+                <><Save className="h-3.5 w-3.5" /> Guardar</>
+              )}
             </Button>
+          </div>
+        )}
+
+        {/* Predicción guardada — resumen en partidos no bloqueados */}
+        {!locked && pts && (
+          <div className="mt-1 text-[10px] text-white/20">
+            Exacto: {pts.exact} pts · Ganador: {pts.winner} pts{pts.draw > 0 ? ` · Empate: ${pts.draw} pts` : ""}
           </div>
         )}
       </CardContent>
@@ -188,8 +215,8 @@ function MatchPredictionCard({
   );
 }
 
-function RulesModal({ onClose }: { onClose: () => void }) {
-  const phases = PHASE_ORDER.filter((p) => MOCK_MATCHES.some((m) => m.phase === p));
+function RulesModal({ matches, onClose }: { matches: Match[]; onClose: () => void }) {
+  const phases = PHASE_ORDER.filter((p) => matches.some((m) => m.phase === p));
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center p-4 sm:items-center" onClick={onClose}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
@@ -206,7 +233,6 @@ function RulesModal({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="overflow-y-auto flex-1 min-h-0 p-5 space-y-4">
-          {/* Tabla por fase */}
           <div>
             <p className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-3">Puntos por fase</p>
             <div className="rounded-xl overflow-hidden border border-white/10">
@@ -236,7 +262,6 @@ function RulesModal({ onClose }: { onClose: () => void }) {
             </div>
           </div>
 
-          {/* Tokens */}
           <div>
             <p className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-2">Tokens multiplicadores</p>
             <div className="space-y-2">
@@ -254,7 +279,6 @@ function RulesModal({ onClose }: { onClose: () => void }) {
             </div>
           </div>
 
-          {/* Racha */}
           <div>
             <p className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-2">Bonus de racha</p>
             <div className="space-y-1.5">
@@ -270,7 +294,6 @@ function RulesModal({ onClose }: { onClose: () => void }) {
             </div>
           </div>
 
-          {/* Predicciones especiales */}
           <div>
             <p className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-2">Predicciones especiales</p>
             <div className="rounded-xl bg-white/5 border border-white/10 overflow-hidden">
@@ -296,36 +319,43 @@ function RulesModal({ onClose }: { onClose: () => void }) {
 }
 
 export default function PrediccionesPage() {
+  const { matches, predictions, tokens, setTokens, updateTokenUsage, streak, savePrediction } = useApp();
+
   const [activePhase, setActivePhase] = useState<Phase>("GROUP");
   const [filterView, setFilterView] = useState<FilterView>("all");
   const [showRules, setShowRules] = useState(false);
-  const [tokens, setTokens] = useState<MultiplierToken[]>(MOCK_MY_TOKENS);
 
   const handleTokenChange = useCallback((matchId: string, prev: TokenMultiplier, next: TokenMultiplier) => {
-    setTokens((current) =>
-      current.map((t) => {
+    setTokens(
+      tokens.map((t) => {
         if (t.multiplier === prev && t.usedOnMatchId === matchId) return { ...t, usedOnMatchId: undefined };
         if (t.multiplier === next && next !== 1) return { ...t, usedOnMatchId: matchId };
         return t;
       })
     );
-  }, []);
+    // Persist to DB: clear previous token, set new
+    if (prev !== 1) updateTokenUsage(prev, null);
+    if (next !== 1) updateTokenUsage(next, matchId);
+  }, [tokens, setTokens, updateTokenUsage]);
 
-  const availablePhases = PHASE_ORDER.filter((p) => MOCK_MATCHES.some((m) => m.phase === p));
+  const handleSave = useCallback(async (
+    matchId: string, home: number, away: number, multiplier: TokenMultiplier
+  ) => {
+    return savePrediction({ matchId, homeGoals: home, awayGoals: away, multiplier });
+  }, [savePrediction]);
 
-  // Pendientes: SCHEDULED sin predicción
-  const allPending = MOCK_MATCHES.filter((m) => m.status === "SCHEDULED" && !MOCK_MY_PREDICTIONS[m.id]);
-  // Urgentes: pendientes que vencen en < 24h
+  const availablePhases = PHASE_ORDER.filter((p) => matches.some((m) => m.phase === p));
+
+  const allPending = matches.filter((m) => m.status === "SCHEDULED" && !predictions[m.id]);
   const allUrgent = allPending.filter((m) => {
     const diff = new Date(m.date).getTime() - MODULE_LOAD_TIME;
     return diff > 0 && diff < 86400000;
   });
 
-  // Partidos a mostrar según el filtro activo
   const matchesToShow =
     filterView === "pending" ? allPending :
     filterView === "urgent"  ? allUrgent :
-    MOCK_MATCHES.filter((m) => m.phase === activePhase);
+    matches.filter((m) => m.phase === activePhase);
 
   const tokensLeft = tokens.filter((t) => !t.usedOnMatchId && !t.decayed);
 
@@ -387,7 +417,7 @@ export default function PrediccionesPage() {
             <div className="flex gap-1 overflow-x-auto flex-1 min-w-0 pt-2 pb-1">
               {availablePhases.map((phase) => {
                 const isActive = activePhase === phase;
-                const pendingCount = MOCK_MATCHES.filter((m) => m.phase === phase && m.status === "SCHEDULED" && !MOCK_MY_PREDICTIONS[m.id]).length;
+                const pendingCount = matches.filter((m) => m.phase === phase && m.status === "SCHEDULED" && !predictions[m.id]).length;
                 return (
                   <button
                     key={phase}
@@ -465,13 +495,16 @@ export default function PrediccionesPage() {
               key={match.id}
               match={match}
               tokens={tokens}
+              existing={predictions[match.id]}
+              myStreak={streak.current}
               onTokenChange={handleTokenChange}
+              onSave={handleSave}
             />
           ))
         )}
       </div>
 
-      {showRules && <RulesModal onClose={() => setShowRules(false)} />}
+      {showRules && <RulesModal matches={matches} onClose={() => setShowRules(false)} />}
     </div>
   );
 }

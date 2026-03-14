@@ -5,8 +5,8 @@ import Link from "next/link";
 import { TopBar } from "@/components/nav";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { MOCK_MATCHES, MOCK_PRODE, MOCK_MY_PREDICTIONS, MOCK_MY_TOKENS, MOCK_WILDCARDS, CURRENT_USER_NAME } from "@/lib/mock-data";
-import { PHASE_LABELS, PHASE_POINTS } from "@/lib/types";
+import { useApp } from "@/components/app-context";
+import { PHASE_LABELS, PHASE_POINTS, Match } from "@/lib/types";
 import { streakBonusPoints } from "@/lib/scoring";
 import { ChevronRight, Zap, TrendingUp, Clock } from "lucide-react";
 
@@ -30,9 +30,10 @@ function useCountdown(targetDate: string) {
   return timeLeft;
 }
 
-function MatchCard({ match }: { match: (typeof MOCK_MATCHES)[0] }) {
+function MatchCard({ match }: { match: Match }) {
+  const { predictions } = useApp();
   const countdown = useCountdown(match.date);
-  const myPrediction = MOCK_MY_PREDICTIONS[match.id];
+  const myPrediction = predictions[match.id];
   const isLive = match.status === "LIVE";
   const isFinished = match.status === "FINISHED";
   const pts = PHASE_POINTS[match.phase];
@@ -117,15 +118,16 @@ function MatchCard({ match }: { match: (typeof MOCK_MATCHES)[0] }) {
 }
 
 export default function DashboardPage() {
-  const me = MOCK_PRODE.members.find((m) => m.id === "u1")!;
-  const leader = MOCK_PRODE.members[0];
-  const upcoming = MOCK_MATCHES.filter((m) => m.status === "SCHEDULED").slice(0, 4);
-  const live = MOCK_MATCHES.filter((m) => m.status === "LIVE");
-  const gap = leader.totalPoints - me.totalPoints;
+  const { user, prode, matches, tokens, wildcards, streak } = useApp();
 
-  const tokensAvailable = MOCK_MY_TOKENS.filter((t) => !t.usedOnMatchId && !t.decayed);
-  const openWildcards = MOCK_WILDCARDS.filter((w) => w.status === "OPEN");
-  const streak = me.streak;
+  const me = prode?.members.find((m) => m.id === user?.id) ?? prode?.members[0];
+  const leader = prode?.members[0];
+  const upcoming = matches.filter((m) => m.status === "SCHEDULED").slice(0, 4);
+  const live = matches.filter((m) => m.status === "LIVE");
+  const gap = leader && me ? leader.totalPoints - me.totalPoints : 0;
+
+  const tokensAvailable = tokens.filter((t) => !t.usedOnMatchId && !t.decayed);
+  const openWildcards = wildcards.filter((w) => w.status === "OPEN");
   const streakBonus = streakBonusPoints(streak.current);
   const remainingPotential = 50 + 30 * 2 + 18;
 
@@ -133,7 +135,7 @@ export default function DashboardPage() {
     <div>
       <TopBar
         title="Dashboard"
-        subtitle={`Hola, ${CURRENT_USER_NAME} 👋`}
+        subtitle={`Hola, ${user?.displayName ?? "…"} 👋`}
         showNotification
       />
 
@@ -143,48 +145,50 @@ export default function DashboardPage() {
         <div className="space-y-3 mb-5 lg:mb-0">
 
           {/* Mi posición */}
-          <Link href="/tabla" className="block">
-          <Card className="overflow-hidden hover:border-green-500/30 transition-colors">
-            <div className="bg-gradient-to-br from-green-600/20 to-blue-600/10 p-5">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-xs text-white/40 mb-0.5">Tu posición</p>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-4xl font-black text-white">#{me.rank}</span>
-                    {me.previousRank && me.rank < me.previousRank && (
-                      <span className="flex items-center gap-0.5 text-xs text-green-400">
-                        <TrendingUp className="h-3 w-3" />
-                        {me.previousRank - me.rank}
-                      </span>
-                    )}
+          {me && (
+            <Link href="/tabla" className="block">
+              <Card className="overflow-hidden hover:border-green-500/30 transition-colors">
+                <div className="bg-gradient-to-br from-green-600/20 to-blue-600/10 p-5">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-xs text-white/40 mb-0.5">Tu posición</p>
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-4xl font-black text-white">#{me.rank}</span>
+                        {me.previousRank && me.rank < me.previousRank && (
+                          <span className="flex items-center gap-0.5 text-xs text-green-400">
+                            <TrendingUp className="h-3 w-3" />
+                            {me.previousRank - me.rank}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-white/30 mt-1">de {prode?.members.length ?? "…"} participantes</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-white/40 mb-0.5">Puntos</p>
+                      <p className="text-3xl font-black text-white">{me.totalPoints}</p>
+                    </div>
                   </div>
-                  <p className="text-xs text-white/30 mt-1">de {MOCK_PRODE.members.length} participantes</p>
+                  {me.rank > 1 && leader && (
+                    <div className="mt-4 rounded-xl bg-black/20 p-3">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-xs text-white/40">vs. líder</span>
+                        <span className="text-xs font-bold text-orange-400">−{gap} pts</span>
+                      </div>
+                      <div className="h-1 rounded-full bg-white/10">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-orange-500 to-yellow-400"
+                          style={{ width: `${Math.max(5, (me.totalPoints / leader.totalPoints) * 100)}%` }}
+                        />
+                      </div>
+                      <p className="text-[10px] text-white/30 mt-2">
+                        La final sola vale hasta {remainingPotential} pts — cualquiera puede ganar
+                      </p>
+                    </div>
+                  )}
                 </div>
-                <div className="text-right">
-                  <p className="text-xs text-white/40 mb-0.5">Puntos</p>
-                  <p className="text-3xl font-black text-white">{me.totalPoints}</p>
-                </div>
-              </div>
-              {me.rank > 1 && (
-                <div className="mt-4 rounded-xl bg-black/20 p-3">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-xs text-white/40">vs. líder</span>
-                    <span className="text-xs font-bold text-orange-400">−{gap} pts</span>
-                  </div>
-                  <div className="h-1 rounded-full bg-white/10">
-                    <div
-                      className="h-full rounded-full bg-gradient-to-r from-orange-500 to-yellow-400"
-                      style={{ width: `${Math.max(5, (me.totalPoints / leader.totalPoints) * 100)}%` }}
-                    />
-                  </div>
-                  <p className="text-[10px] text-white/30 mt-2">
-                    La final sola vale hasta {remainingPotential} pts — cualquiera puede ganar
-                  </p>
-                </div>
-              )}
-            </div>
-          </Card>
-          </Link>
+              </Card>
+            </Link>
+          )}
 
           {/* Racha */}
           {streak.current >= 1 && (

@@ -3,17 +3,48 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, Users } from "lucide-react";
+import { Loader2, Users, AlertCircle } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import * as Q from "@/lib/supabase/queries";
 
 export default function JoinPage() {
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const handleJoin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 800));
-    setLoading(false);
+    setError("");
+
+    // Check if Supabase is configured
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const isSupabase = !!(supabaseUrl && supabaseUrl.startsWith("https://") && !supabaseUrl.includes("<your-project>"));
+
+    if (!isSupabase) {
+      // Mock mode: just navigate
+      await new Promise((r) => setTimeout(r, 800));
+      window.location.href = "/dashboard";
+      return;
+    }
+
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      setError("Tenés que estar logueado para unirte a un prode");
+      setLoading(false);
+      return;
+    }
+
+    const result = await Q.joinProde(user.id, code);
+
+    if (result.error) {
+      setError(result.error);
+      setLoading(false);
+      return;
+    }
+
     window.location.href = "/dashboard";
   };
 
@@ -38,11 +69,17 @@ export default function JoinPage() {
               type="text"
               placeholder="MUNDIAL26"
               value={code}
-              onChange={(e) => setCode(e.target.value.toUpperCase())}
+              onChange={(e) => { setCode(e.target.value.toUpperCase()); setError(""); }}
               className="text-center text-xl font-black tracking-widest uppercase"
               maxLength={12}
               required
             />
+            {error && (
+              <div className="flex items-center gap-2 rounded-xl bg-red-500/10 border border-red-500/20 px-3 py-2.5">
+                <AlertCircle className="h-4 w-4 text-red-400 shrink-0" />
+                <p className="text-xs text-red-300">{error}</p>
+              </div>
+            )}
             <Button type="submit" className="w-full" disabled={loading || code.length < 4}>
               {loading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />

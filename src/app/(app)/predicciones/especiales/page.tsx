@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { TopBar } from "@/components/nav";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useApp } from "@/components/app-context";
+import * as Q from "@/lib/supabase/queries";
 import { ALL_WC_TEAMS } from "@/lib/mock-data";
 import { Lock, Save, Check, Info, Search } from "lucide-react";
 
@@ -147,17 +149,32 @@ function PlayerInput({
 }
 
 export default function EspecialesPage() {
+  const { user, prodeId } = useApp();
   const [predictions, setPredictions] = useState<Record<string, string>>({
     champion: "ARG",
     topScorer: "Lionel Messi",
   });
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  // Load existing special predictions from DB
+  useEffect(() => {
+    if (!user || !prodeId) return;
+    Q.getSpecialPredictions(user.id, prodeId).then((data) => {
+      if (Object.keys(data).length > 0) setPredictions(data);
+    });
+  }, [user?.id, prodeId]);
 
   const totalPotential = SPECIAL_PREDICTIONS.reduce((sum, p) => sum + p.points, 0);
   const filled = SPECIAL_PREDICTIONS.filter((p) => predictions[p.id]).length;
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (LOCKED) return;
+    setSaving(true);
+    if (user && prodeId) {
+      await Q.upsertSpecialPredictions(user.id, prodeId, predictions);
+    }
+    setSaving(false);
     setSaved(true);
   };
 
@@ -246,8 +263,10 @@ export default function EspecialesPage() {
         ))}
 
         {!LOCKED && (
-          <Button onClick={handleSave} className="w-full" disabled={filled === 0} size="lg">
-            {saved ? (
+          <Button onClick={handleSave} className="w-full" disabled={filled === 0 || saving} size="lg">
+            {saving ? (
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+            ) : saved ? (
               <><Check className="h-4 w-4" /> Predicciones guardadas</>
             ) : (
               <><Save className="h-4 w-4" /> Guardar predicciones especiales</>

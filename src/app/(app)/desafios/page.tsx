@@ -6,7 +6,7 @@ import { TopBar } from "@/components/nav";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MOCK_WILDCARDS, MOCK_MY_WILDCARD_ANSWERS } from "@/lib/mock-data";
+import { useApp } from "@/components/app-context";
 import { WildcardChallenge, WildcardType } from "@/lib/types";
 import { ChevronRight, Clock, Check, Lock, Star } from "lucide-react";
 
@@ -40,15 +40,22 @@ function AnswerInput({
 }: {
   challenge: WildcardChallenge;
   existingAnswer?: string;
-  onSubmit: (answer: string) => void;
+  onSubmit: (answer: string) => Promise<{ error: string | null }>;
 }) {
   const [value, setValue] = useState(existingAnswer ?? "");
   const [submitted, setSubmitted] = useState(!!existingAnswer);
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = () => {
-    if (!value.trim()) return;
-    setSubmitted(true);
-    onSubmit(value.trim());
+  const handleSubmit = async (val?: string) => {
+    const answer = val ?? value;
+    if (!answer.trim()) return;
+    setSubmitting(true);
+    const result = await onSubmit(answer.trim());
+    setSubmitting(false);
+    if (!result.error) {
+      setValue(answer.trim());
+      setSubmitted(true);
+    }
   };
 
   if (submitted) {
@@ -75,7 +82,8 @@ function AnswerInput({
           variant={value === "Si" ? "default" : "secondary"}
           size="sm"
           className="flex-1"
-          onClick={() => { setValue("Si"); handleSubmit(); }}
+          disabled={submitting}
+          onClick={() => { setValue("Si"); handleSubmit("Si"); }}
         >
           Sí
         </Button>
@@ -83,7 +91,8 @@ function AnswerInput({
           variant={value === "No" ? "default" : "secondary"}
           size="sm"
           className="flex-1"
-          onClick={() => { setValue("No"); handleSubmit(); }}
+          disabled={submitting}
+          onClick={() => { setValue("No"); handleSubmit("No"); }}
         >
           No
         </Button>
@@ -100,24 +109,20 @@ function AnswerInput({
         placeholder={challenge.type === "NUMERIC" ? "Ej: 42" : "Escribí tu respuesta…"}
         className="flex-1 rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-purple-500"
       />
-      <Button onClick={handleSubmit} disabled={!value.trim()} size="sm">
-        Enviar
+      <Button onClick={() => handleSubmit()} disabled={!value.trim() || submitting} size="sm">
+        {submitting ? <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" /> : "Enviar"}
       </Button>
     </div>
   );
 }
 
 function WildcardCard({ challenge }: { challenge: WildcardChallenge }) {
-  const [answers, setAnswers] = useState<Record<string, string>>(
-    MOCK_MY_WILDCARD_ANSWERS[challenge.id]
-      ? { [challenge.id]: MOCK_MY_WILDCARD_ANSWERS[challenge.id].answer }
-      : {}
-  );
+  const { wildcardAnswers, submitWildcardAnswer } = useApp();
+  const existingAnswer = wildcardAnswers[challenge.id];
 
   const countdown = useCountdown(challenge.deadline);
   const isClosed = challenge.status === "CLOSED" || challenge.status === "GRADED";
   const isGraded = challenge.status === "GRADED";
-  const myAnswer = answers[challenge.id];
 
   return (
     <Card className={`overflow-hidden ${isClosed ? "opacity-70" : "border-purple-500/20 hover:border-purple-500/35"} transition-all`}>
@@ -157,8 +162,8 @@ function WildcardCard({ challenge }: { challenge: WildcardChallenge }) {
         {!isClosed ? (
           <AnswerInput
             challenge={challenge}
-            existingAnswer={myAnswer}
-            onSubmit={(answer) => setAnswers((prev) => ({ ...prev, [challenge.id]: answer }))}
+            existingAnswer={existingAnswer?.answer}
+            onSubmit={(answer) => submitWildcardAnswer(challenge.id, answer)}
           />
         ) : isGraded && challenge.correctAnswer ? (
           <div className="rounded-xl bg-white/5 border border-white/10 px-3 py-2 flex items-center justify-between">
@@ -166,11 +171,11 @@ function WildcardCard({ challenge }: { challenge: WildcardChallenge }) {
               <p className="text-[10px] text-white/30">Respuesta correcta</p>
               <p className="text-sm font-bold text-white">{challenge.correctAnswer}</p>
             </div>
-            {myAnswer && (
+            {existingAnswer && (
               <div className="text-right">
                 <p className="text-[10px] text-white/30">Tu respuesta</p>
-                <p className={`text-sm font-bold ${myAnswer === challenge.correctAnswer ? "text-green-400" : "text-white/60"}`}>
-                  {myAnswer}
+                <p className={`text-sm font-bold ${existingAnswer.answer === challenge.correctAnswer ? "text-green-400" : "text-white/60"}`}>
+                  {existingAnswer.answer}
                 </p>
               </div>
             )}
@@ -187,10 +192,11 @@ function WildcardCard({ challenge }: { challenge: WildcardChallenge }) {
 }
 
 export default function DesafiosPage() {
+  const { wildcards } = useApp();
   const [tab, setTab] = useState<"open" | "closed">("open");
 
-  const open = MOCK_WILDCARDS.filter((w) => w.status === "OPEN");
-  const closed = MOCK_WILDCARDS.filter((w) => w.status !== "OPEN");
+  const open = wildcards.filter((w) => w.status === "OPEN");
+  const closed = wildcards.filter((w) => w.status !== "OPEN");
   const display = tab === "open" ? open : closed;
 
   return (
