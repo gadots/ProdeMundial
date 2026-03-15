@@ -475,6 +475,61 @@ export async function getMyProfile(
   };
 }
 
+// -------------------------------------------------------
+// Create prode
+// -------------------------------------------------------
+
+function generateInviteCode(): string {
+  // Exclude ambiguous chars: O, 0, I, 1
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code = "";
+  for (let i = 0; i < 6; i++) {
+    code += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return code;
+}
+
+export async function createProde(
+  userId: string,
+  name: string
+): Promise<{ error: string | null; prodeId: string | null }> {
+  const supabase = createClient();
+
+  // Try up to 3 times in case of invite_code collision
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const inviteCode = generateInviteCode();
+
+    const { data: prode, error: prodeError } = await supabase
+      .from("prodes")
+      .insert({ name, admin_id: userId, invite_code: inviteCode })
+      .select("id")
+      .single();
+
+    if (prodeError) {
+      // Unique violation on invite_code → retry
+      if (prodeError.code === "23505" && prodeError.message.includes("invite_code")) {
+        continue;
+      }
+      return { error: prodeError.message, prodeId: null };
+    }
+
+    if (!prode) return { error: "Error al crear el prode", prodeId: null };
+
+    // Add creator as member (tokens auto-assigned by trigger)
+    const { error: memberError } = await supabase
+      .from("prode_members")
+      .insert({ user_id: userId, prode_id: prode.id });
+
+    if (memberError) return { error: memberError.message, prodeId: null };
+
+    return { error: null, prodeId: prode.id };
+  }
+
+  return { error: "No se pudo generar un código único. Intentá de nuevo.", prodeId: null };
+}
+
+// -------------------------------------------------------
+
 export async function getPointsToday(prodeId: string): Promise<Record<string, number>> {
   const supabase = createClient();
   const since = new Date();
