@@ -1,4 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
+import { AUTH_FILE } from "./e2e/auth.setup";
 
 export default defineConfig({
   testDir: "./e2e",
@@ -12,17 +13,26 @@ export default defineConfig({
     trace: "on-first-retry",
   },
   projects: [
+    // Proyecto de setup: corre auth.setup.ts primero, guarda cookies
+    {
+      name: "setup",
+      testMatch: /auth\.setup\.ts/,
+    },
     {
       name: "mobile-chrome",
       use: {
         ...devices["Pixel 5"],
+        storageState: AUTH_FILE,
       },
+      dependencies: ["setup"],
     },
     {
       name: "desktop-chrome",
       use: {
         ...devices["Desktop Chrome"],
+        storageState: AUTH_FILE,
       },
+      dependencies: ["setup"],
     },
   ],
   webServer: {

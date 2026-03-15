@@ -213,6 +213,8 @@ function AppProviderSupabase({ children }: { children: React.ReactNode }) {
         setPredictionsLoading(false);
         setTokensLoading(false);
         setWildcardsLoading(false);
+        // Usuario autenticado pero sin prode → redirigir a join/crear
+        window.location.href = "/join";
         return;
       }
 
