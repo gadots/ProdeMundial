@@ -18,8 +18,16 @@ setup("autenticar usuario de test", async ({ page }) => {
   await page.fill('input[type="password"]', password);
   await page.click('button[type="submit"]');
 
-  // Esperar que el login redirija al dashboard
-  await expect(page).toHaveURL(/\/dashboard/, { timeout: 15000 });
+  // Esperar que redirija a dashboard o join (si el usuario no tiene prode)
+  await expect(page).toHaveURL(/\/(dashboard|join)/, { timeout: 15000 });
+
+  // Si redirigió a /join, crear un prode de test
+  if (page.url().includes("/join")) {
+    await page.getByRole("button", { name: /Crear/i }).click();
+    await page.fill('input[placeholder*="Pibes"]', "E2E Test Prode");
+    await page.getByRole("button", { name: /Crear prode/i }).click();
+    await expect(page).toHaveURL(/\/dashboard/, { timeout: 10000 });
+  }
 
   // Guardar estado de auth (cookies + localStorage)
   await page.context().storageState({ path: AUTH_FILE });
