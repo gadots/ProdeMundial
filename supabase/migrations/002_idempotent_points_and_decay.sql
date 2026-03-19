@@ -10,7 +10,9 @@ alter table public.matches
 -- Fix calculate_match_points to be fully idempotent:
 -- Skips predictions where points_earned IS NOT NULL (already done).
 -- Marks the match with calculated_at once all predictions are processed.
+-- DROP first because the return type changes from void (001) to int (002).
 -- -------------------------------------------------------
+drop function if exists public.calculate_match_points(uuid);
 create or replace function public.calculate_match_points(p_match_id uuid)
 returns int language plpgsql security definer as $$
 declare
