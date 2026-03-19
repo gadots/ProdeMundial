@@ -1,5 +1,5 @@
 -- ============================================================
--- ProdeMundial — Initial Schema
+-- ProdeMundial — Initial Schema (idempotent version)
 -- Run this in your Supabase SQL editor or via supabase db push
 -- ============================================================
 
@@ -16,9 +16,11 @@ create table if not exists public.profiles (
 
 alter table public.profiles enable row level security;
 
+drop policy if exists "Users can view all profiles" on public.profiles;
 create policy "Users can view all profiles"
   on public.profiles for select using (true);
 
+drop policy if exists "Users can update their own profile" on public.profiles;
 create policy "Users can update their own profile"
   on public.profiles for update using (auth.uid() = id);
 
@@ -62,9 +64,11 @@ create table if not exists public.matches (
 
 alter table public.matches enable row level security;
 
+drop policy if exists "Everyone can read matches" on public.matches;
 create policy "Everyone can read matches"
   on public.matches for select using (true);
 
+drop policy if exists "Service role can manage matches" on public.matches;
 create policy "Service role can manage matches"
   on public.matches for all using (auth.role() = 'service_role');
 
@@ -83,9 +87,11 @@ create table if not exists public.prodes (
 
 alter table public.prodes enable row level security;
 
+drop policy if exists "Authenticated users can create prodes" on public.prodes;
 create policy "Authenticated users can create prodes"
   on public.prodes for insert with check (auth.uid() = admin_id);
 
+drop policy if exists "Admin can update their prode" on public.prodes;
 create policy "Admin can update their prode"
   on public.prodes for update using (auth.uid() = admin_id);
 
@@ -101,6 +107,7 @@ create table if not exists public.prode_members (
 
 alter table public.prode_members enable row level security;
 
+drop policy if exists "Members can view prode membership" on public.prode_members;
 create policy "Members can view prode membership"
   on public.prode_members for select
   using (
@@ -110,10 +117,12 @@ create policy "Members can view prode membership"
     )
   );
 
+drop policy if exists "Users can join prodes" on public.prode_members;
 create policy "Users can join prodes"
   on public.prode_members for insert with check (auth.uid() = user_id);
 
 -- Now that prode_members exists, add the select policy on prodes
+drop policy if exists "Members can view their prodes" on public.prodes;
 create policy "Members can view their prodes"
   on public.prodes for select
   using (
@@ -142,6 +151,7 @@ create table if not exists public.predictions (
 
 alter table public.predictions enable row level security;
 
+drop policy if exists "Members can view predictions in their prodes" on public.predictions;
 create policy "Members can view predictions in their prodes"
   on public.predictions for select
   using (
@@ -151,6 +161,7 @@ create policy "Members can view predictions in their prodes"
     )
   );
 
+drop policy if exists "Users can manage their own predictions" on public.predictions;
 create policy "Users can manage their own predictions"
   on public.predictions for all
   using (auth.uid() = user_id);
@@ -169,6 +180,7 @@ begin
 end;
 $$;
 
+drop trigger if exists prediction_window_check on public.predictions;
 create trigger prediction_window_check
   before insert or update on public.predictions
   for each row execute procedure check_prediction_window();
@@ -194,6 +206,7 @@ create table if not exists public.special_predictions (
 
 alter table public.special_predictions enable row level security;
 
+drop policy if exists "Members can view special predictions in their prodes" on public.special_predictions;
 create policy "Members can view special predictions in their prodes"
   on public.special_predictions for select
   using (
@@ -203,6 +216,7 @@ create policy "Members can view special predictions in their prodes"
     )
   );
 
+drop policy if exists "Users can manage their own special predictions" on public.special_predictions;
 create policy "Users can manage their own special predictions"
   on public.special_predictions for all
   using (auth.uid() = user_id);
@@ -221,6 +235,7 @@ create table if not exists public.scores (
 
 alter table public.scores enable row level security;
 
+drop policy if exists "Members can view scores in their prodes" on public.scores;
 create policy "Members can view scores in their prodes"
   on public.scores for select
   using (
@@ -261,6 +276,7 @@ create table if not exists public.multiplier_tokens (
 
 alter table public.multiplier_tokens enable row level security;
 
+drop policy if exists "Members can view tokens in their prodes" on public.multiplier_tokens;
 create policy "Members can view tokens in their prodes"
   on public.multiplier_tokens for select
   using (
@@ -271,6 +287,7 @@ create policy "Members can view tokens in their prodes"
     )
   );
 
+drop policy if exists "Users can manage their own tokens" on public.multiplier_tokens;
 create policy "Users can manage their own tokens"
   on public.multiplier_tokens for all
   using (user_id = auth.uid())
@@ -309,6 +326,7 @@ create table if not exists public.streaks (
 
 alter table public.streaks enable row level security;
 
+drop policy if exists "Members can view streaks in their prodes" on public.streaks;
 create policy "Members can view streaks in their prodes"
   on public.streaks for select
   using (
@@ -319,6 +337,7 @@ create policy "Members can view streaks in their prodes"
     )
   );
 
+drop policy if exists "Streaks are updated by server functions only" on public.streaks;
 create policy "Streaks are updated by server functions only"
   on public.streaks for all
   using (user_id = auth.uid());
@@ -343,9 +362,11 @@ create table if not exists public.wildcard_challenges (
 
 alter table public.wildcard_challenges enable row level security;
 
+drop policy if exists "Everyone can read wildcard challenges" on public.wildcard_challenges;
 create policy "Everyone can read wildcard challenges"
   on public.wildcard_challenges for select using (true);
 
+drop policy if exists "Only admins can create wildcard challenges" on public.wildcard_challenges;
 create policy "Only admins can create wildcard challenges"
   on public.wildcard_challenges for insert
   with check (
@@ -371,6 +392,7 @@ create table if not exists public.wildcard_answers (
 
 alter table public.wildcard_answers enable row level security;
 
+drop policy if exists "Users can view all answers after challenge closes" on public.wildcard_answers;
 create policy "Users can view all answers after challenge closes"
   on public.wildcard_answers for select
   using (
@@ -382,6 +404,7 @@ create policy "Users can view all answers after challenge closes"
     )
   );
 
+drop policy if exists "Users can submit their own answers" on public.wildcard_answers;
 create policy "Users can submit their own answers"
   on public.wildcard_answers for insert
   with check (
@@ -394,6 +417,7 @@ create policy "Users can submit their own answers"
     )
   );
 
+drop policy if exists "Users can update their own answers while open" on public.wildcard_answers;
 create policy "Users can update their own answers while open"
   on public.wildcard_answers for update
   using (
