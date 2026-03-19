@@ -43,7 +43,7 @@ export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   // Redirect unauthenticated users to landing
-  if (!user && !PUBLIC_ROUTES.some((r) => pathname.startsWith(r))) {
+  if (!user && !PUBLIC_ROUTES.some((r) => r === "/" ? pathname === "/" : pathname.startsWith(r))) {
     const url = request.nextUrl.clone();
     url.pathname = "/";
     return NextResponse.redirect(url);
