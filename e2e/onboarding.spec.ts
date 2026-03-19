@@ -6,12 +6,12 @@ test.describe("Onboarding — join/crear prode", () => {
   });
 
   test("muestra los dos tabs: Unirme y Crear", async ({ page }) => {
-    await expect(page.getByRole("button", { name: /Unirme/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Unirme", exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: /Crear/i })).toBeVisible();
   });
 
   test("tab Unirme muestra input para código de invitación", async ({ page }) => {
-    await page.getByRole("button", { name: /Unirme/i }).click();
+    await page.getByRole("button", { name: "Unirme", exact: true }).click();
     await expect(page.getByPlaceholder("MUNDIAL26")).toBeVisible();
   });
 
@@ -21,7 +21,7 @@ test.describe("Onboarding — join/crear prode", () => {
   });
 
   test("unirse con código inválido muestra error", async ({ page }) => {
-    await page.getByRole("button", { name: /Unirme/i }).click();
+    await page.getByRole("button", { name: "Unirme", exact: true }).click();
     await page.fill('input[placeholder="MUNDIAL26"]', "INVALIDO");
     await page.getByRole("button", { name: /Unirme al prode/i }).click();
     await expect(page.getByText(/inválido|no encontrado/i)).toBeVisible({ timeout: 8000 });
@@ -35,7 +35,7 @@ test.describe("Onboarding — join/crear prode", () => {
   });
 
   test("el botón Unirme está deshabilitado con código muy corto", async ({ page }) => {
-    await page.getByRole("button", { name: /Unirme/i }).click();
+    await page.getByRole("button", { name: "Unirme", exact: true }).click();
     await page.fill('input[placeholder="MUNDIAL26"]', "AB");
     const btn = page.getByRole("button", { name: /Unirme al prode/i });
     await expect(btn).toBeDisabled();

@@ -1,6 +1,8 @@
 import { test, expect } from "@playwright/test";
 
 test.describe("Navigation", () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
   test("bottom nav is visible on mobile", async ({ page }) => {
     await page.goto("/dashboard");
     // Bottom nav has fixed positioning at the bottom
