@@ -1,5 +1,4 @@
 import { test, expect } from "@playwright/test";
-import { AUTH_FILE } from "./auth.setup";
 
 test.describe("Auth — middleware y redirects", () => {
   test("usuario NO autenticado que accede a /dashboard es redirigido a /", async ({ browser }) => {
