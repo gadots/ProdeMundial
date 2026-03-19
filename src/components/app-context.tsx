@@ -323,7 +323,7 @@ function AppProviderSupabase({ children }: { children: React.ReactNode }) {
       }
       return result;
     },
-    [user?.id, prodeId]
+    [user, prodeId]
   );
 
   const updateTokenUsage = useCallback(
@@ -334,7 +334,7 @@ function AppProviderSupabase({ children }: { children: React.ReactNode }) {
         prev.map((t) => (t.multiplier === multiplier ? { ...t, usedOnMatchId: matchId ?? undefined } : t))
       );
     },
-    [user?.id, prodeId]
+    [user, prodeId]
   );
 
   const submitWildcardAnswer = useCallback(
@@ -354,7 +354,7 @@ function AppProviderSupabase({ children }: { children: React.ReactNode }) {
       }
       return result;
     },
-    [user?.id]
+    [user]
   );
 
   const value: AppContextValue = {
