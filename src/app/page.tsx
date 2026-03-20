@@ -84,7 +84,7 @@ export default function LandingPage() {
     setLoading(true);
     setError("");
     const { error } = await createClient().auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/callback?next=/perfil`,
+      redirectTo: `${window.location.origin}/auth/callback?next=/nueva-contrasena`,
     });
     setLoading(false);
     if (error) {

@@ -19,7 +19,7 @@ export interface SyncResult {
   error?: string;
 }
 
-function mapStage(stage: string): string {
+export function mapStage(stage: string): string {
   const map: Record<string, string> = {
     GROUP_STAGE: "GROUP",
     ROUND_OF_32: "ROUND_OF_32",
@@ -31,7 +31,7 @@ function mapStage(stage: string): string {
   return map[stage] ?? "GROUP";
 }
 
-function mapStatus(status: string): string {
+export function mapStatus(status: string): string {
   const map: Record<string, string> = {
     SCHEDULED: "SCHEDULED",
     TIMED: "SCHEDULED",
