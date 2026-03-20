@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, useCallback } from "react";
+import { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import * as Q from "@/lib/supabase/queries";
 import { Prode, Match, Prediction, MultiplierToken, WildcardChallenge, WildcardAnswer, StreakInfo, TokenMultiplier } from "@/lib/types";
@@ -36,6 +36,8 @@ export interface AppContextValue {
   prode: Prode | null;
   prodeId: string | null;
   prodeLoading: boolean;
+  allProdes: Q.ProdeInfo[];
+  switchProde: (id: string) => Promise<void>;
   // Matches
   matches: Match[];
   matchesLoading: boolean;
@@ -71,6 +73,8 @@ const DEFAULT_VALUE: AppContextValue = {
   prode: MOCK_PRODE,
   prodeId: MOCK_PRODE.id,
   prodeLoading: false,
+  allProdes: [{ id: MOCK_PRODE.id, name: MOCK_PRODE.name, adminId: MOCK_PRODE.adminId, inviteCode: MOCK_PRODE.inviteCode, createdAt: MOCK_PRODE.createdAt }],
+  switchProde: async () => {},
   matches: MOCK_MATCHES,
   matchesLoading: false,
   predictions: MOCK_MY_PREDICTIONS,
@@ -115,6 +119,7 @@ function AppProviderSupabase({ children }: { children: React.ReactNode }) {
   const [prode, setProde] = useState<Prode | null>(null);
   const [prodeId, setProdeId] = useState<string | null>(null);
   const [prodeLoading, setProdeLoading] = useState(true);
+  const [allProdes, setAllProdes] = useState<Q.ProdeInfo[]>([]);
 
   const [matches, setMatches] = useState<Match[]>([]);
   const [matchesLoading, setMatchesLoading] = useState(true);
@@ -133,7 +138,48 @@ function AppProviderSupabase({ children }: { children: React.ReactNode }) {
 
   const [pointsToday, setPointsToday] = useState<Record<string, number>>({});
 
+  // Stable ref to current userId so callbacks don't go stale
+  const userIdRef = useRef<string | null>(null);
+
+  // -------------------------------------------------------
+  // Load prode-specific data (reusable for initial load + switchProde)
+  // -------------------------------------------------------
+
+  const loadProdeData = useCallback(async (info: Q.ProdeInfo, userId: string) => {
+    setProdeLoading(true);
+    setPredictionsLoading(true);
+    setTokensLoading(true);
+    setWildcardsLoading(true);
+    setProdeId(info.id);
+
+    const [prodeData, predsData, tokensData, streakData, wildcardsData, answersData, ptsTodayData] =
+      await Promise.all([
+        Q.getProde(info.id, info),
+        Q.getMyPredictions(userId, info.id),
+        Q.getMyTokens(userId, info.id),
+        Q.getMyStreak(userId, info.id),
+        Q.getWildcards(info.id),
+        Q.getMyWildcardAnswers(userId),
+        Q.getPointsToday(info.id),
+      ]);
+
+    setProde(prodeData);
+    setProdeLoading(false);
+    setPredictions(predsData);
+    setPredictionsLoading(false);
+    setTokens(tokensData);
+    setTokensLoading(false);
+    setStreak(streakData);
+    setWildcards(wildcardsData);
+    setWildcardAnswers(answersData);
+    setWildcardsLoading(false);
+    setPointsToday(ptsTodayData);
+  }, []);
+
+  // -------------------------------------------------------
   // Load user session
+  // -------------------------------------------------------
+
   useEffect(() => {
     const supabase = createClient();
 
@@ -142,15 +188,18 @@ function AppProviderSupabase({ children }: { children: React.ReactNode }) {
       if (!authUser) {
         setUser(null);
         setUserLoading(false);
+        userIdRef.current = null;
         return;
       }
       const profile = await Q.getMyProfile(authUser.id);
-      setUser({
+      const appUser: AppUser = {
         id: authUser.id,
         email: authUser.email,
         displayName: profile?.displayName ?? authUser.email?.split("@")[0] ?? "Usuario",
         avatarUrl: profile?.avatarUrl,
-      });
+      };
+      setUser(appUser);
+      userIdRef.current = authUser.id;
       setUserLoading(false);
     };
 
@@ -159,6 +208,7 @@ function AppProviderSupabase({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === "SIGNED_OUT") {
         setUser(null);
+        userIdRef.current = null;
       } else {
         loadUser();
       }
@@ -167,15 +217,16 @@ function AppProviderSupabase({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Load matches + subscribe to Realtime changes
+  // -------------------------------------------------------
+  // Load matches + Realtime subscription
+  // -------------------------------------------------------
+
   useEffect(() => {
     Q.getMatches().then((data) => {
       setMatches(data);
       setMatchesLoading(false);
     });
 
-    // Realtime: update a match when it changes in the DB (e.g. LIVE, FINISHED, scores)
-    // Note: enable realtime on the 'matches' table in Supabase dashboard for this to work.
     const supabase = createClient();
     const matchChannel = supabase
       .channel("realtime-matches")
@@ -203,86 +254,60 @@ function AppProviderSupabase({ children }: { children: React.ReactNode }) {
     return () => { supabase.removeChannel(matchChannel); };
   }, []);
 
+  // -------------------------------------------------------
   // Load prode + user-specific data once user is available
+  // -------------------------------------------------------
+
   useEffect(() => {
     if (!user) return;
 
-    Q.getMyProdeInfo(user.id).then(async (info) => {
-      if (!info) {
+    let predChannel: ReturnType<ReturnType<typeof createClient>["channel"]> | null = null;
+    let tokenChannel: ReturnType<ReturnType<typeof createClient>["channel"]> | null = null;
+
+    const init = async () => {
+      const infos = await Q.getAllMyProdes(user.id);
+      if (infos.length === 0) {
         setProdeLoading(false);
         setPredictionsLoading(false);
         setTokensLoading(false);
         setWildcardsLoading(false);
-        // Usuario autenticado pero sin prode → redirigir a join/crear
         window.location.href = "/join";
         return;
       }
 
-      setProdeId(info.id);
+      setAllProdes(infos);
 
-      // Load all user data in parallel
-      const [prodeData, predsData, tokensData, streakData, wildcardsData, answersData, ptsTodayData] =
-        await Promise.all([
-          Q.getProde(info.id, info),
-          Q.getMyPredictions(user.id, info.id),
-          Q.getMyTokens(user.id, info.id),
-          Q.getMyStreak(user.id, info.id),
-          Q.getWildcards(info.id),
-          Q.getMyWildcardAnswers(user.id),
-          Q.getPointsToday(info.id),
-        ]);
+      // Pick previously-selected prode or default to first
+      const savedId = typeof window !== "undefined" ? localStorage.getItem("activeProdeId") : null;
+      const active = infos.find((i) => i.id === savedId) ?? infos[0];
 
-      setProde(prodeData);
-      setProdeLoading(false);
-      setPredictions(predsData);
-      setPredictionsLoading(false);
-      setTokens(tokensData);
-      setTokensLoading(false);
-      setStreak(streakData);
-      setWildcards(wildcardsData);
-      setWildcardAnswers(answersData);
-      setWildcardsLoading(false);
-      setPointsToday(ptsTodayData);
+      await loadProdeData(active, user.id);
 
-      // Realtime: when points_earned updates on our predictions (after cron calculates)
-      // Note: enable realtime on the 'predictions' table in Supabase dashboard.
+      // Realtime: predictions
       const supabase = createClient();
-      const predChannel = supabase
+      predChannel = supabase
         .channel(`realtime-predictions-${user.id}`)
         .on(
           "postgres_changes",
-          {
-            event: "UPDATE",
-            schema: "public",
-            table: "predictions",
-            filter: `user_id=eq.${user.id}`,
-          },
+          { event: "UPDATE", schema: "public", table: "predictions", filter: `user_id=eq.${user.id}` },
           (payload) => {
             const row = payload.new as Record<string, unknown>;
             const matchId = row.match_id as string;
             const pointsEarned = row.points_earned as number | null;
             setPredictions((prev) => {
               if (!prev[matchId]) return prev;
-              return {
-                ...prev,
-                [matchId]: { ...prev[matchId], pointsEarned: pointsEarned ?? undefined },
-              };
+              return { ...prev, [matchId]: { ...prev[matchId], pointsEarned: pointsEarned ?? undefined } };
             });
           }
         )
         .subscribe();
 
-      // Realtime: token decay (decayed = true pushed from cron)
-      const tokenChannel = supabase
+      // Realtime: tokens
+      tokenChannel = supabase
         .channel(`realtime-tokens-${user.id}`)
         .on(
           "postgres_changes",
-          {
-            event: "UPDATE",
-            schema: "public",
-            table: "multiplier_tokens",
-            filter: `user_id=eq.${user.id}`,
-          },
+          { event: "UPDATE", schema: "public", table: "multiplier_tokens", filter: `user_id=eq.${user.id}` },
           (payload) => {
             const row = payload.new as Record<string, unknown>;
             setTokens((prev) =>
@@ -295,13 +320,33 @@ function AppProviderSupabase({ children }: { children: React.ReactNode }) {
           }
         )
         .subscribe();
+    };
 
-      return () => {
-        supabase.removeChannel(predChannel);
-        supabase.removeChannel(tokenChannel);
-      };
-    });
-  }, [user?.id]);
+    init();
+
+    return () => {
+      const supabase = createClient();
+      if (predChannel) supabase.removeChannel(predChannel);
+      if (tokenChannel) supabase.removeChannel(tokenChannel);
+    };
+  }, [user?.id, loadProdeData]);
+
+  // -------------------------------------------------------
+  // Switch prode
+  // -------------------------------------------------------
+
+  const switchProde = useCallback(async (id: string) => {
+    const userId = userIdRef.current;
+    if (!userId) return;
+    const info = allProdes.find((p) => p.id === id);
+    if (!info) return;
+    if (typeof window !== "undefined") localStorage.setItem("activeProdeId", id);
+    await loadProdeData(info, userId);
+  }, [allProdes, loadProdeData]);
+
+  // -------------------------------------------------------
+  // Actions
+  // -------------------------------------------------------
 
   const savePrediction = useCallback(
     async (pred: { matchId: string; homeGoals: number; awayGoals: number; multiplier: TokenMultiplier }) => {
@@ -363,6 +408,8 @@ function AppProviderSupabase({ children }: { children: React.ReactNode }) {
     prode,
     prodeId,
     prodeLoading,
+    allProdes,
+    switchProde,
     matches,
     matchesLoading,
     predictions,

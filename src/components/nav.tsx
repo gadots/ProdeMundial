@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Home, List, Trophy, Settings, Target, Bell, Star, X, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useApp } from "@/components/app-context";
+import { createClient } from "@/lib/supabase/client";
 
 const navItems = [
   { href: "/dashboard",    icon: Home,     label: "Dashboard"    },
@@ -14,18 +16,87 @@ const navItems = [
   { href: "/grupo",        icon: Settings, label: "Config"       },
 ];
 
-const MOCK_NOTIFICATIONS = [
-  { id: "n1", emoji: "🔴", message: "Portugal vs Inglaterra comenzó hace 5 minutos", time: "Hace 5 min", read: false },
-  { id: "n2", emoji: "⚽", message: "¡ARG 3-1 URU! Ganaste 1 punto en ese partido", time: "Ayer", read: false },
-  { id: "n3", emoji: "📈", message: "Sofía R. subió al 1er puesto después del partido Brasil-Alemania", time: "Ayer", read: true },
-  { id: "n4", emoji: "⏰", message: "Quedan 3 partidos sin predecir en la Fase de Grupos", time: "Hace 2 días", read: true },
-  { id: "n5", emoji: "⭐", message: "Recordá completar tus predicciones especiales — cierran el 11 de junio", time: "Hace 3 días", read: true },
-];
+interface Notification {
+  id: string;
+  emoji: string;
+  message: string;
+  time: string;
+  unread: boolean;
+}
+
+function useNotifications(): Notification[] {
+  const { matches, predictions } = useApp();
+
+  return useMemo(() => {
+    const notifs: Notification[] = [];
+    const now = new Date();
+
+    // Live matches
+    matches
+      .filter((m) => m.status === "LIVE")
+      .forEach((m) => {
+        notifs.push({
+          id: `live-${m.id}`,
+          emoji: "🔴",
+          message: `${m.homeTeam.name} vs ${m.awayTeam.name} está en vivo ahora`,
+          time: "Ahora",
+          unread: true,
+        });
+      });
+
+    // Recently scored predictions (points_earned set, match finished)
+    const scoredPreds = Object.values(predictions)
+      .filter((p) => p.pointsEarned !== undefined)
+      .slice(-5);
+    scoredPreds.forEach((p) => {
+      const match = matches.find((m) => m.id === p.matchId);
+      if (!match || match.status !== "FINISHED") return;
+      notifs.push({
+        id: `pts-${p.matchId}`,
+        emoji: (p.pointsEarned ?? 0) > 0 ? "⚽" : "❌",
+        message:
+          (p.pointsEarned ?? 0) > 0
+            ? `Ganaste ${p.pointsEarned} pts en ${match.homeTeam.shortName} vs ${match.awayTeam.shortName}`
+            : `Sin puntos en ${match.homeTeam.shortName} vs ${match.awayTeam.shortName}`,
+        time: "Reciente",
+        unread: false,
+      });
+    });
+
+    // Upcoming unpredicted matches (next 48 h)
+    const in48h = new Date(now.getTime() + 48 * 60 * 60 * 1000);
+    const unpredicted = matches.filter(
+      (m) =>
+        m.status === "SCHEDULED" &&
+        new Date(m.date) > now &&
+        new Date(m.date) <= in48h &&
+        !predictions[m.id]
+    );
+    if (unpredicted.length > 0) {
+      notifs.push({
+        id: "upcoming-unpredicted",
+        emoji: "⏰",
+        message: `Tenés ${unpredicted.length} partido${unpredicted.length > 1 ? "s" : ""} sin predecir en las próximas 48 horas`,
+        time: "Próximamente",
+        unread: true,
+      });
+    }
+
+    return notifs;
+  }, [matches, predictions]);
+}
 
 function NotificationsDrawer({ onClose }: { onClose: () => void }) {
-  const [notifications, setNotifications] = useState(MOCK_NOTIFICATIONS);
-  const unreadCount = notifications.filter((n) => !n.read).length;
-  const markAllRead = () => setNotifications((n) => n.map((notif) => ({ ...notif, read: true })));
+  const computed = useNotifications();
+  const [readIds, setReadIds] = useState<Set<string>>(new Set());
+
+  const notifications = computed.map((n) => ({
+    ...n,
+    unread: n.unread && !readIds.has(n.id),
+  }));
+
+  const unreadCount = notifications.filter((n) => n.unread).length;
+  const markAllRead = () => setReadIds(new Set(computed.map((n) => n.id)));
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end" onClick={onClose}>
@@ -57,19 +128,25 @@ function NotificationsDrawer({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="divide-y divide-white/5">
+          {notifications.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-16 text-white/30 text-sm gap-2">
+              <Bell className="h-8 w-8 opacity-30" />
+              <p>Sin notificaciones</p>
+            </div>
+          )}
           {notifications.map((notif) => (
             <div
               key={notif.id}
-              className={`flex items-start gap-3 px-5 py-4 ${!notif.read ? "bg-white/5" : ""}`}
+              className={`flex items-start gap-3 px-5 py-4 ${notif.unread ? "bg-white/5" : ""}`}
             >
               <span className="text-lg shrink-0 mt-0.5">{notif.emoji}</span>
               <div className="flex-1 min-w-0">
-                <p className={`text-sm leading-snug ${notif.read ? "text-white/50" : "text-white"}`}>
+                <p className={`text-sm leading-snug ${notif.unread ? "text-white" : "text-white/50"}`}>
                   {notif.message}
                 </p>
                 <p className="text-[10px] text-white/30 mt-0.5">{notif.time}</p>
               </div>
-              {!notif.read && (
+              {notif.unread && (
                 <span className="h-2 w-2 rounded-full bg-green-400 shrink-0 mt-1.5" />
               )}
             </div>
@@ -82,6 +159,14 @@ function NotificationsDrawer({ onClose }: { onClose: () => void }) {
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/");
+  };
+
   return (
     <div className="flex flex-col h-full px-3 py-6">
       <div className="mb-8 px-3">
@@ -125,13 +210,13 @@ export function Sidebar() {
         </Link>
       </nav>
 
-      <Link
-        href="/"
-        className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-red-400/60 hover:text-red-400 hover:bg-white/5 transition-all mt-4"
+      <button
+        onClick={handleLogout}
+        className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-red-400/60 hover:text-red-400 hover:bg-white/5 transition-all mt-4 w-full text-left"
       >
         <LogOut className="h-[18px] w-[18px] shrink-0" />
         Cerrar sesión
-      </Link>
+      </button>
     </div>
   );
 }
@@ -173,6 +258,8 @@ export function TopBar({
   showNotification?: boolean;
 }) {
   const [showDrawer, setShowDrawer] = useState(false);
+  const notifications = useNotifications();
+  const hasUnread = notifications.some((n) => n.unread);
 
   return (
     <>
@@ -189,7 +276,7 @@ export function TopBar({
               aria-label="Ver notificaciones"
             >
               <Bell className="h-5 w-5 text-white/70" />
-              <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-red-500" />
+              {hasUnread && <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-red-500" />}
             </button>
           )}
         </div>

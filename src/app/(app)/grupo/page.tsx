@@ -1,18 +1,59 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { TopBar } from "@/components/nav";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useApp } from "@/components/app-context";
+import { createClient } from "@/lib/supabase/client";
 import * as Q from "@/lib/supabase/queries";
-import { Copy, Check, QrCode, UserPlus, Trophy, Settings2, Crown, Pencil } from "lucide-react";
+import {
+  Copy, Check, QrCode, UserPlus, Trophy, Settings2,
+  Crown, Pencil, X, LogOut, ArrowLeftRight,
+} from "lucide-react";
+
+function QrModal({ url, onClose }: { url: string; onClose: () => void }) {
+  const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(url)}`;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+      <div
+        className="relative bg-[#0d1f3c] border border-white/10 rounded-2xl p-6 w-full max-w-xs shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-sm font-semibold text-white">Código QR de invitación</p>
+          <button onClick={onClose} className="text-white/40 hover:text-white transition-colors p-1 rounded-lg hover:bg-white/10">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="flex justify-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={qrSrc}
+            alt="QR de invitación"
+            width={240}
+            height={240}
+            className="rounded-xl bg-white p-2"
+          />
+        </div>
+        <p className="text-xs text-white/40 text-center mt-4">
+          Escaneá para unirte al prode
+        </p>
+      </div>
+    </div>
+  );
+}
 
 export default function GrupoPage() {
-  const { user, prode, prodeId } = useApp();
+  const { user, prode, prodeId, allProdes, switchProde } = useApp();
+  const router = useRouter();
+
   const [copied, setCopied] = useState(false);
+  const [showQr, setShowQr] = useState(false);
 
   const [editingPrize, setEditingPrize] = useState(false);
   const [prize, setPrize] = useState(prode?.prizeDescription ?? "");
@@ -20,6 +61,8 @@ export default function GrupoPage() {
   const [editingName, setEditingName] = useState(false);
   const [prodeName, setProdeName] = useState(prode?.name ?? "");
   const [savedName, setSavedName] = useState(false);
+
+  const [switching, setSwitching] = useState(false);
 
   const isAdmin = prode?.adminId === user?.id;
   const inviteLink = prode ? `https://prodemundial.app/join/${prode.inviteCode}` : "";
@@ -42,6 +85,19 @@ export default function GrupoPage() {
     if (!prodeId) return;
     await Q.updateProdePrize(prodeId, prize);
     setEditingPrize(false);
+  };
+
+  const handleSwitchProde = async (id: string) => {
+    if (id === prodeId) return;
+    setSwitching(true);
+    await switchProde(id);
+    setSwitching(false);
+  };
+
+  const handleLogout = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/");
   };
 
   if (!prode) {
@@ -109,6 +165,37 @@ export default function GrupoPage() {
           </CardContent>
         </Card>
 
+        {/* Cambiar de prode (solo si hay más de uno) */}
+        {allProdes.length > 1 && (
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2 pb-3">
+                <ArrowLeftRight className="h-4 w-4 text-blue-400" />
+                <CardTitle className="text-sm">Mis prodes</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-0 space-y-2">
+              {allProdes.map((p) => (
+                <button
+                  key={p.id}
+                  disabled={switching}
+                  onClick={() => handleSwitchProde(p.id)}
+                  className={`w-full flex items-center justify-between rounded-xl px-3 py-2.5 text-sm transition-colors ${
+                    p.id === prodeId
+                      ? "bg-green-500/10 border border-green-500/30 text-green-300"
+                      : "bg-white/5 border border-white/10 text-white/60 hover:bg-white/10 hover:text-white/80"
+                  }`}
+                >
+                  <span className="font-medium truncate">{p.name}</span>
+                  {p.id === prodeId && (
+                    <span className="text-[10px] text-green-500 ml-2 shrink-0">activo</span>
+                  )}
+                </button>
+              ))}
+            </CardContent>
+          </Card>
+        )}
+
         {/* Premio */}
         <Card>
           <CardHeader>
@@ -168,7 +255,10 @@ export default function GrupoPage() {
                 {copied ? <><Check className="h-3.5 w-3.5" /> Copiado</> : <><Copy className="h-3.5 w-3.5" /> Copiar</>}
               </Button>
             </div>
-            <button className="w-full flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 py-3 text-sm text-white/50 hover:bg-white/10 hover:text-white/70 transition-colors">
+            <button
+              onClick={() => setShowQr(true)}
+              className="w-full flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 py-3 text-sm text-white/50 hover:bg-white/10 hover:text-white/70 transition-colors"
+            >
               <QrCode className="h-4 w-4" />
               Ver código QR
             </button>
@@ -228,7 +318,18 @@ export default function GrupoPage() {
           </CardContent>
         </Card>
 
+        {/* Cerrar sesión */}
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center justify-center gap-2 rounded-xl border border-red-500/20 bg-red-500/5 py-3 text-sm text-red-400/70 hover:bg-red-500/10 hover:text-red-400 transition-colors"
+        >
+          <LogOut className="h-4 w-4" />
+          Cerrar sesión
+        </button>
+
       </div>
+
+      {showQr && <QrModal url={inviteLink} onClose={() => setShowQr(false)} />}
     </div>
   );
 }
