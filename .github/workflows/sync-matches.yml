@@ -30,12 +30,15 @@ jobs:
       - name: Trigger sync
         run: |
           APP_URL="${{ vars.APP_URL }}"
-          response=$(curl -s -L -o /dev/null -w "%{http_code}" \
+          BODY=$(curl -s -L -w "\n%{http_code}" \
             -X POST "${APP_URL%/}/api/admin/sync" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             -H "Content-Type: application/json")
-          echo "HTTP status: $response"
-          if [ "$response" != "200" ]; then
-            echo "Sync failed with status $response"
+          HTTP_CODE=$(echo "$BODY" | tail -1)
+          RESPONSE=$(echo "$BODY" | sed '$d')
+          echo "HTTP status: $HTTP_CODE"
+          echo "Response: $RESPONSE"
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "Sync failed with status $HTTP_CODE"
             exit 1
           fi
