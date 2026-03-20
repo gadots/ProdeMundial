@@ -29,8 +29,9 @@ jobs:
     steps:
       - name: Trigger sync
         run: |
+          APP_URL="${{ vars.APP_URL }}"
           response=$(curl -s -o /dev/null -w "%{http_code}" \
-            -X POST "${{ vars.APP_URL }}/api/admin/sync" \
+            -X POST "${APP_URL%/}/api/admin/sync" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             -H "Content-Type: application/json")
           echo "HTTP status: $response"
