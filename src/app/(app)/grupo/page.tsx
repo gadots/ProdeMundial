@@ -10,11 +10,13 @@ import { Input } from "@/components/ui/input";
 import { useApp } from "@/components/app-context";
 import { createClient } from "@/lib/supabase/client";
 import * as Q from "@/lib/supabase/queries";
-import Link from "next/link";
 import {
   Share2, Check, QrCode, UserPlus, Trophy, Settings2,
-  Crown, Pencil, X, LogOut, ArrowLeftRight, PlusCircle, Users,
+  Crown, Pencil, X, LogOut, ArrowLeftRight, PlusCircle,
+  Users, Loader2, AlertCircle, AlertTriangle, DoorOpen,
 } from "lucide-react";
+
+// ─── QR Modal ────────────────────────────────────────────────────────────────
 
 function QrModal({ url, onClose }: { url: string; onClose: () => void }) {
   const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(url)}`;
@@ -33,28 +35,228 @@ function QrModal({ url, onClose }: { url: string; onClose: () => void }) {
         </div>
         <div className="flex justify-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={qrSrc}
-            alt="QR de invitación"
-            width={240}
-            height={240}
-            className="rounded-xl bg-white p-2"
-          />
+          <img src={qrSrc} alt="QR de invitación" width={240} height={240} className="rounded-xl bg-white p-2" />
         </div>
-        <p className="text-xs text-white/40 text-center mt-4">
-          Escaneá para unirte al prode
-        </p>
+        <p className="text-xs text-white/40 text-center mt-4">Escaneá para unirte al prode</p>
       </div>
     </div>
   );
 }
 
+// ─── Join / Create Modal ──────────────────────────────────────────────────────
+
+function JoinCreateModal({
+  defaultTab,
+  onClose,
+  onSuccess,
+}: {
+  defaultTab: "unirse" | "crear";
+  onClose: () => void;
+  onSuccess: (newProdeId: string) => Promise<void>;
+}) {
+  const { user } = useApp();
+  const [tab, setTab] = useState<"unirse" | "crear">(defaultTab);
+
+  // Join state
+  const [code, setCode] = useState("");
+  const [joinLoading, setJoinLoading] = useState(false);
+  const [joinError, setJoinError] = useState("");
+
+  // Create state
+  const [prodeName, setProdeName] = useState("");
+  const [createLoading, setCreateLoading] = useState(false);
+  const [createError, setCreateError] = useState("");
+
+  const handleJoin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    setJoinLoading(true);
+    setJoinError("");
+    const result = await Q.joinProde(user.id, code);
+    if (result.error) { setJoinError(result.error); setJoinLoading(false); return; }
+    await onSuccess(result.prodeId!);
+  };
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    setCreateLoading(true);
+    setCreateError("");
+    const result = await Q.createProde(user.id, prodeName.trim());
+    if (result.error) { setCreateError(result.error); setCreateLoading(false); return; }
+    await onSuccess(result.prodeId!);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 sm:p-6" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+      <div
+        className="relative bg-[#0d1f3c] border border-white/10 rounded-2xl p-6 w-full max-w-sm shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-sm font-semibold text-white">
+            {tab === "unirse" ? "Unirse a un prode" : "Crear nuevo prode"}
+          </p>
+          <button onClick={onClose} className="text-white/40 hover:text-white transition-colors p-1 rounded-lg hover:bg-white/10">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Tabs */}
+        <div className="mb-4 flex rounded-xl border border-white/10 bg-white/5 p-1">
+          <button
+            onClick={() => setTab("unirse")}
+            className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-semibold transition-colors ${
+              tab === "unirse" ? "bg-white/10 text-white" : "text-white/40 hover:text-white/70"
+            }`}
+          >
+            <Users className="h-3.5 w-3.5" /> Unirme
+          </button>
+          <button
+            onClick={() => setTab("crear")}
+            className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-semibold transition-colors ${
+              tab === "crear" ? "bg-white/10 text-white" : "text-white/40 hover:text-white/70"
+            }`}
+          >
+            <PlusCircle className="h-3.5 w-3.5" /> Crear
+          </button>
+        </div>
+
+        {tab === "unirse" ? (
+          <form onSubmit={handleJoin} className="space-y-3">
+            <Input
+              type="text"
+              placeholder="MUNDIAL26"
+              value={code}
+              onChange={(e) => { setCode(e.target.value.toUpperCase()); setJoinError(""); }}
+              className="text-center text-lg font-black tracking-widest uppercase"
+              maxLength={12}
+              autoFocus
+              required
+            />
+            {joinError && (
+              <div className="flex items-center gap-2 rounded-xl bg-red-500/10 border border-red-500/20 px-3 py-2">
+                <AlertCircle className="h-4 w-4 text-red-400 shrink-0" />
+                <p className="text-xs text-red-300">{joinError}</p>
+              </div>
+            )}
+            <Button type="submit" className="w-full" disabled={joinLoading || code.length < 4}>
+              {joinLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Users className="h-4 w-4" /> Unirme al prode</>}
+            </Button>
+          </form>
+        ) : (
+          <form onSubmit={handleCreate} className="space-y-3">
+            <Input
+              placeholder="Ej: Los Pibes del 86"
+              value={prodeName}
+              onChange={(e) => { setProdeName(e.target.value); setCreateError(""); }}
+              maxLength={50}
+              autoFocus
+              required
+            />
+            {createError && (
+              <div className="flex items-center gap-2 rounded-xl bg-red-500/10 border border-red-500/20 px-3 py-2">
+                <AlertCircle className="h-4 w-4 text-red-400 shrink-0" />
+                <p className="text-xs text-red-300">{createError}</p>
+              </div>
+            )}
+            <Button type="submit" className="w-full" disabled={createLoading || prodeName.trim().length < 2}>
+              {createLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <><PlusCircle className="h-4 w-4" /> Crear prode</>}
+            </Button>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Confirm Modal ────────────────────────────────────────────────────────────
+
+function ConfirmModal({
+  title,
+  message,
+  confirmLabel,
+  danger = false,
+  loading = false,
+  error = "",
+  onConfirm,
+  onClose,
+}: {
+  title: string;
+  message: string;
+  confirmLabel: string;
+  danger?: boolean;
+  loading?: boolean;
+  error?: string;
+  onConfirm: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+      <div
+        className="relative bg-[#0d1f3c] border border-white/10 rounded-2xl p-6 w-full max-w-xs shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start gap-3 mb-4">
+          <div className={`shrink-0 p-2 rounded-xl ${danger ? "bg-red-500/10" : "bg-yellow-500/10"}`}>
+            <AlertTriangle className={`h-5 w-5 ${danger ? "text-red-400" : "text-yellow-400"}`} />
+          </div>
+          <div>
+            <p className="text-sm font-bold text-white">{title}</p>
+            <p className="text-xs text-white/50 mt-1 leading-relaxed">{message}</p>
+          </div>
+        </div>
+        {error && (
+          <div className="flex items-center gap-2 rounded-xl bg-red-500/10 border border-red-500/20 px-3 py-2 mb-4">
+            <AlertCircle className="h-4 w-4 text-red-400 shrink-0" />
+            <p className="text-xs text-red-300">{error}</p>
+          </div>
+        )}
+        <div className="flex gap-2">
+          <Button variant="secondary" className="flex-1" onClick={onClose} disabled={loading}>
+            Cancelar
+          </Button>
+          <Button
+            className={`flex-1 ${danger ? "bg-red-600 hover:bg-red-500 text-white border-0" : ""}`}
+            onClick={onConfirm}
+            disabled={loading}
+          >
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : confirmLabel}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
+
 export default function GrupoPage() {
-  const { user, prode, prodeId, allProdes, switchProde } = useApp();
+  const { user, prode, prodeId, allProdes, switchProde, refreshAndSwitch } = useApp();
   const router = useRouter();
 
   const [copied, setCopied] = useState(false);
   const [showQr, setShowQr] = useState(false);
+  const [joinModal, setJoinModal] = useState<"unirse" | "crear" | null>(null);
+
+  // Leave / delete
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const [leaveLoading, setLeaveLoading] = useState(false);
+  const [leaveError, setLeaveError] = useState("");
+
+  const [editingPrize, setEditingPrize] = useState(false);
+  const [prize, setPrize] = useState(prode?.prizeDescription ?? "");
+
+  const [editingName, setEditingName] = useState(false);
+  const [prodeName, setProdeName] = useState(prode?.name ?? "");
+  const [savedName, setSavedName] = useState(false);
+
+  const [switching, setSwitching] = useState(false);
+
+  const isAdmin = prode?.adminId === user?.id;
+  const inviteLink = prode ? `https://prodemundial.app/join/${prode.inviteCode}` : "";
 
   const handleCopyLink = async () => {
     await navigator.clipboard.writeText(inviteLink).catch(() => {});
@@ -72,26 +274,13 @@ export default function GrupoPage() {
         });
         return;
       } catch {
-        // User cancelled or share failed → fall through to clipboard
+        // cancelled or unsupported → fallback
       }
     }
-    // Fallback: copy to clipboard
     await navigator.clipboard.writeText(inviteLink).catch(() => {});
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
-
-  const [editingPrize, setEditingPrize] = useState(false);
-  const [prize, setPrize] = useState(prode?.prizeDescription ?? "");
-
-  const [editingName, setEditingName] = useState(false);
-  const [prodeName, setProdeName] = useState(prode?.name ?? "");
-  const [savedName, setSavedName] = useState(false);
-
-  const [switching, setSwitching] = useState(false);
-
-  const isAdmin = prode?.adminId === user?.id;
-  const inviteLink = prode ? `https://prodemundial.app/join/${prode.inviteCode}` : "";
 
   const handleSaveName = async () => {
     if (!prodeId) return;
@@ -112,6 +301,29 @@ export default function GrupoPage() {
     setSwitching(true);
     await switchProde(id);
     setSwitching(false);
+  };
+
+  const handleJoinSuccess = async (newProdeId: string) => {
+    setJoinModal(null);
+    await refreshAndSwitch(newProdeId);
+  };
+
+  const handleLeaveOrDelete = async () => {
+    if (!user || !prodeId) return;
+    setLeaveLoading(true);
+    setLeaveError("");
+    const result = isAdmin
+      ? await Q.deleteProde(prodeId)
+      : await Q.leaveProde(user.id, prodeId);
+    if (result.error) {
+      setLeaveError(result.error);
+      setLeaveLoading(false);
+      return;
+    }
+    // refreshAndSwitch will redirect to /join if no prodes remain
+    await refreshAndSwitch();
+    setShowLeaveConfirm(false);
+    setLeaveLoading(false);
   };
 
   const handleLogout = async () => {
@@ -212,18 +424,18 @@ export default function GrupoPage() {
               </button>
             ))}
             <div className="flex gap-2 pt-1">
-              <Link
-                href="/join?tab=crear"
+              <button
+                onClick={() => setJoinModal("crear")}
                 className="flex-1 flex items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/5 py-2.5 text-xs text-white/50 hover:bg-white/10 hover:text-white/80 transition-colors font-medium"
               >
                 <PlusCircle className="h-3.5 w-3.5" /> Crear nuevo
-              </Link>
-              <Link
-                href="/join?tab=unirse"
+              </button>
+              <button
+                onClick={() => setJoinModal("unirse")}
                 className="flex-1 flex items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/5 py-2.5 text-xs text-white/50 hover:bg-white/10 hover:text-white/80 transition-colors font-medium"
               >
                 <Users className="h-3.5 w-3.5" /> Unirme a otro
-              </Link>
+              </button>
             </div>
           </CardContent>
         </Card>
@@ -279,7 +491,6 @@ export default function GrupoPage() {
             </div>
           </CardHeader>
           <CardContent className="pt-0 space-y-3">
-            {/* Clickable link → copies to clipboard */}
             <button
               onClick={handleCopyLink}
               className="relative w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/50 font-mono text-left hover:bg-white/10 transition-colors overflow-hidden"
@@ -355,10 +566,23 @@ export default function GrupoPage() {
           </CardContent>
         </Card>
 
+        {/* Salir / Eliminar prode */}
+        <button
+          onClick={() => { setLeaveError(""); setShowLeaveConfirm(true); }}
+          className={`w-full flex items-center justify-center gap-2 rounded-xl border py-3 text-sm transition-colors ${
+            isAdmin
+              ? "border-red-500/30 bg-red-500/8 text-red-400/80 hover:bg-red-500/15 hover:text-red-400"
+              : "border-orange-500/20 bg-orange-500/5 text-orange-400/70 hover:bg-orange-500/10 hover:text-orange-400"
+          }`}
+        >
+          {isAdmin ? <AlertTriangle className="h-4 w-4" /> : <DoorOpen className="h-4 w-4" />}
+          {isAdmin ? "Eliminar prode" : "Salir del prode"}
+        </button>
+
         {/* Cerrar sesión */}
         <button
           onClick={handleLogout}
-          className="w-full flex items-center justify-center gap-2 rounded-xl border border-red-500/20 bg-red-500/5 py-3 text-sm text-red-400/70 hover:bg-red-500/10 hover:text-red-400 transition-colors"
+          className="w-full flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 py-3 text-sm text-white/40 hover:bg-white/10 hover:text-white/60 transition-colors"
         >
           <LogOut className="h-4 w-4" />
           Cerrar sesión
@@ -366,7 +590,33 @@ export default function GrupoPage() {
 
       </div>
 
+      {/* Modals */}
       {showQr && <QrModal url={inviteLink} onClose={() => setShowQr(false)} />}
+
+      {joinModal && (
+        <JoinCreateModal
+          defaultTab={joinModal}
+          onClose={() => setJoinModal(null)}
+          onSuccess={handleJoinSuccess}
+        />
+      )}
+
+      {showLeaveConfirm && (
+        <ConfirmModal
+          title={isAdmin ? "¿Eliminar el prode?" : "¿Salir del prode?"}
+          message={
+            isAdmin
+              ? `Vas a eliminar "${prode.name}" para todos los participantes. Esta acción no se puede deshacer.`
+              : `Vas a salir de "${prode.name}". Perdés todas tus predicciones y puntos en este prode.`
+          }
+          confirmLabel={isAdmin ? "Eliminar prode" : "Salir"}
+          danger
+          loading={leaveLoading}
+          error={leaveError}
+          onConfirm={handleLeaveOrDelete}
+          onClose={() => setShowLeaveConfirm(false)}
+        />
+      )}
     </div>
   );
 }
