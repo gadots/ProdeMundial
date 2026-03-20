@@ -10,9 +10,10 @@ import { Input } from "@/components/ui/input";
 import { useApp } from "@/components/app-context";
 import { createClient } from "@/lib/supabase/client";
 import * as Q from "@/lib/supabase/queries";
+import Link from "next/link";
 import {
-  Copy, Check, QrCode, UserPlus, Trophy, Settings2,
-  Crown, Pencil, X, LogOut, ArrowLeftRight,
+  Share2, Check, QrCode, UserPlus, Trophy, Settings2,
+  Crown, Pencil, X, LogOut, ArrowLeftRight, PlusCircle, Users,
 } from "lucide-react";
 
 function QrModal({ url, onClose }: { url: string; onClose: () => void }) {
@@ -55,6 +56,31 @@ export default function GrupoPage() {
   const [copied, setCopied] = useState(false);
   const [showQr, setShowQr] = useState(false);
 
+  const handleCopyLink = async () => {
+    await navigator.clipboard.writeText(inviteLink).catch(() => {});
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleShare = async () => {
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share({
+          title: `Prode ${prode?.name ?? ""}`,
+          text: `Sumate al prode "${prode?.name ?? ""}" para el Mundial 2026`,
+          url: inviteLink,
+        });
+        return;
+      } catch {
+        // User cancelled or share failed → fall through to clipboard
+      }
+    }
+    // Fallback: copy to clipboard
+    await navigator.clipboard.writeText(inviteLink).catch(() => {});
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   const [editingPrize, setEditingPrize] = useState(false);
   const [prize, setPrize] = useState(prode?.prizeDescription ?? "");
 
@@ -66,12 +92,6 @@ export default function GrupoPage() {
 
   const isAdmin = prode?.adminId === user?.id;
   const inviteLink = prode ? `https://prodemundial.app/join/${prode.inviteCode}` : "";
-
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(inviteLink).catch(() => {});
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
 
   const handleSaveName = async () => {
     if (!prodeId) return;
@@ -165,36 +185,48 @@ export default function GrupoPage() {
           </CardContent>
         </Card>
 
-        {/* Cambiar de prode (solo si hay más de uno) */}
-        {allProdes.length > 1 && (
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2 pb-3">
-                <ArrowLeftRight className="h-4 w-4 text-blue-400" />
-                <CardTitle className="text-sm">Mis prodes</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-0 space-y-2">
-              {allProdes.map((p) => (
-                <button
-                  key={p.id}
-                  disabled={switching}
-                  onClick={() => handleSwitchProde(p.id)}
-                  className={`w-full flex items-center justify-between rounded-xl px-3 py-2.5 text-sm transition-colors ${
-                    p.id === prodeId
-                      ? "bg-green-500/10 border border-green-500/30 text-green-300"
-                      : "bg-white/5 border border-white/10 text-white/60 hover:bg-white/10 hover:text-white/80"
-                  }`}
-                >
-                  <span className="font-medium truncate">{p.name}</span>
-                  {p.id === prodeId && (
-                    <span className="text-[10px] text-green-500 ml-2 shrink-0">activo</span>
-                  )}
-                </button>
-              ))}
-            </CardContent>
-          </Card>
-        )}
+        {/* Mis prodes + crear/unirse */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2 pb-3">
+              <ArrowLeftRight className="h-4 w-4 text-blue-400" />
+              <CardTitle className="text-sm">Mis prodes</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-0 space-y-2">
+            {allProdes.map((p) => (
+              <button
+                key={p.id}
+                disabled={switching}
+                onClick={() => handleSwitchProde(p.id)}
+                className={`w-full flex items-center justify-between rounded-xl px-3 py-2.5 text-sm transition-colors ${
+                  p.id === prodeId
+                    ? "bg-green-500/10 border border-green-500/30 text-green-300"
+                    : "bg-white/5 border border-white/10 text-white/60 hover:bg-white/10 hover:text-white/80"
+                }`}
+              >
+                <span className="font-medium truncate">{p.name}</span>
+                {p.id === prodeId && (
+                  <span className="text-[10px] text-green-500 ml-2 shrink-0">activo</span>
+                )}
+              </button>
+            ))}
+            <div className="flex gap-2 pt-1">
+              <Link
+                href="/join?tab=crear"
+                className="flex-1 flex items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/5 py-2.5 text-xs text-white/50 hover:bg-white/10 hover:text-white/80 transition-colors font-medium"
+              >
+                <PlusCircle className="h-3.5 w-3.5" /> Crear nuevo
+              </Link>
+              <Link
+                href="/join?tab=unirse"
+                className="flex-1 flex items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/5 py-2.5 text-xs text-white/50 hover:bg-white/10 hover:text-white/80 transition-colors font-medium"
+              >
+                <Users className="h-3.5 w-3.5" /> Unirme a otro
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Premio */}
         <Card>
@@ -247,21 +279,26 @@ export default function GrupoPage() {
             </div>
           </CardHeader>
           <CardContent className="pt-0 space-y-3">
+            {/* Clickable link → copies to clipboard */}
+            <button
+              onClick={handleCopyLink}
+              className="relative w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/50 font-mono text-left hover:bg-white/10 transition-colors overflow-hidden"
+            >
+              <span className="block truncate">{inviteLink}</span>
+              {copied && (
+                <span className="absolute inset-0 flex items-center justify-center bg-[#0d1f3c]/90 text-green-400 text-xs font-semibold rounded-xl gap-1">
+                  <Check className="h-3.5 w-3.5" /> Copiado
+                </span>
+              )}
+            </button>
             <div className="flex gap-2">
-              <div className="flex-1 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/50 font-mono truncate">
-                {inviteLink}
-              </div>
-              <Button size="sm" variant="secondary" onClick={handleCopy} className="shrink-0">
-                {copied ? <><Check className="h-3.5 w-3.5" /> Copiado</> : <><Copy className="h-3.5 w-3.5" /> Copiar</>}
+              <Button size="sm" variant="secondary" onClick={handleShare} className="flex-1">
+                {copied ? <><Check className="h-3.5 w-3.5" /> Copiado</> : <><Share2 className="h-3.5 w-3.5" /> Compartir</>}
+              </Button>
+              <Button size="sm" variant="secondary" onClick={() => setShowQr(true)} className="shrink-0 gap-1.5">
+                <QrCode className="h-3.5 w-3.5" /> QR
               </Button>
             </div>
-            <button
-              onClick={() => setShowQr(true)}
-              className="w-full flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 py-3 text-sm text-white/50 hover:bg-white/10 hover:text-white/70 transition-colors"
-            >
-              <QrCode className="h-4 w-4" />
-              Ver código QR
-            </button>
             <p className="text-xs text-white/30 text-center">
               Compartí el link o el código <span className="font-bold text-white/50">{prode.inviteCode}</span> para que tus amigos se unan
             </p>
