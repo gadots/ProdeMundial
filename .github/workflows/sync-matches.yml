@@ -16,7 +16,7 @@ on:
   schedule:
     # Cada 5 minutos durante el Mundial (11 jun – 19 jul 2026)
     - cron: "*/5 * 11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30 6 *"
-    - cron: "*/5 * * 7 *"
+    - cron: "*/5 * 1-19 7 *"
     # Diario el resto del año (mantiene datos sin desperdiciar minutos)
     - cron: "0 6 * * *"
   # Permite dispararlo manualmente desde la UI de GitHub
