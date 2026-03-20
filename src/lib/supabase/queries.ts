@@ -108,6 +108,29 @@ export async function getMyProdeInfo(userId: string): Promise<ProdeInfo | null> 
   };
 }
 
+export async function getAllMyProdes(userId: string): Promise<ProdeInfo[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("prode_members")
+    .select("prode_id, prodes(id, name, admin_id, prize_description, invite_code, created_at)")
+    .eq("user_id", userId);
+  if (error || !data) return [];
+  const result: ProdeInfo[] = [];
+  for (const row of data) {
+    const p = (row as DbRow).prodes as DbRow | null;
+    if (!p) continue;
+    result.push({
+      id: p.id as string,
+      name: p.name as string,
+      adminId: p.admin_id as string,
+      prizeDescription: (p.prize_description as string | null) ?? undefined,
+      inviteCode: p.invite_code as string,
+      createdAt: p.created_at as string,
+    });
+  }
+  return result;
+}
+
 export async function getLeaderboard(prodeId: string): Promise<Member[]> {
   const supabase = createClient();
 
