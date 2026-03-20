@@ -215,8 +215,8 @@ function MatchPredictionCard({
   );
 }
 
-function RulesModal({ matches, onClose }: { matches: Match[]; onClose: () => void }) {
-  const phases = PHASE_ORDER.filter((p) => matches.some((m) => m.phase === p));
+function RulesModal({ onClose }: { onClose: () => void }) {
+  const phases = PHASE_ORDER;
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center p-4 sm:items-center" onClick={onClose}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
@@ -504,7 +504,7 @@ export default function PrediccionesPage() {
         )}
       </div>
 
-      {showRules && <RulesModal matches={matches} onClose={() => setShowRules(false)} />}
+      {showRules && <RulesModal onClose={() => setShowRules(false)} />}
     </div>
   );
 }

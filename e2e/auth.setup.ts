@@ -29,6 +29,10 @@ setup("autenticar usuario de test", async ({ page }) => {
     await expect(page).toHaveURL(/\/dashboard/, { timeout: 10000 });
   }
 
+  // Esperar a que los datos del prode carguen antes de guardar el estado
+  // (para que los tests que dependen de prode data encuentren el contenido)
+  await page.getByText("Tu posición").waitFor({ timeout: 12000 }).catch(() => {});
+
   // Guardar estado de auth (cookies + localStorage)
   await page.context().storageState({ path: AUTH_FILE });
 });
