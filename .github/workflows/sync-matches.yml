@@ -30,7 +30,7 @@ jobs:
       - name: Trigger sync
         run: |
           APP_URL="${{ vars.APP_URL }}"
-          response=$(curl -s -o /dev/null -w "%{http_code}" \
+          response=$(curl -s -L -o /dev/null -w "%{http_code}" \
             -X POST "${APP_URL%/}/api/admin/sync" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
             -H "Content-Type: application/json")
