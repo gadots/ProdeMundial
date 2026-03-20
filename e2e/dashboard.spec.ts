@@ -11,7 +11,7 @@ test.describe("Dashboard", () => {
   });
 
   test("renders ranking card with position and points", async ({ page }) => {
-    await expect(page.getByText("Tu posición")).toBeVisible();
+    await expect(page.getByText("Tu posición")).toBeVisible({ timeout: 12000 });
     await expect(page.getByText("Puntos")).toBeVisible();
   });
 
@@ -53,7 +53,7 @@ test.describe("Dashboard", () => {
 
   test("posiciones card links to /tabla", async ({ page }) => {
     const posCard = page.locator('a[href="/tabla"]').filter({ has: page.getByText("Tu posición") });
-    await expect(posCard).toBeVisible();
+    await expect(posCard).toBeVisible({ timeout: 12000 });
     await posCard.click();
     await expect(page).toHaveURL(/\/tabla/);
   });

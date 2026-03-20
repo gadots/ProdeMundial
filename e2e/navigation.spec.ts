@@ -12,6 +12,8 @@ test.describe("Navigation", () => {
 
   test("bottom nav links navigate to correct pages", async ({ page }) => {
     await page.goto("/dashboard");
+    // Wait for prode data to load before navigating (getAllMyProdes is async)
+    await page.getByText("Tu posición").waitFor({ timeout: 12000 }).catch(() => {});
     // Scope to the bottom nav (last nav in DOM = bottom nav on mobile)
     const bottomNav = page.locator("nav").last();
 

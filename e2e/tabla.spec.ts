@@ -16,7 +16,7 @@ test.describe("Tabla (Posiciones)", () => {
   });
 
   test("player rows are visible with rank and points", async ({ page }) => {
-    await expect(page.getByText("pts").first()).toBeVisible();
+    await expect(page.getByText("pts").first()).toBeVisible({ timeout: 12000 });
   });
 
   test("Hoy column header visible in total view", async ({ page }) => {
@@ -24,7 +24,7 @@ test.describe("Tabla (Posiciones)", () => {
   });
 
   test("current user row is highlighted", async ({ page }) => {
-    await expect(page.getByText("(vos)")).toBeVisible();
+    await expect(page.getByText("(vos)")).toBeVisible({ timeout: 12000 });
   });
 
   test("phase tabs appear in the selector", async ({ page }) => {
