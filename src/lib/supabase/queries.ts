@@ -551,6 +551,30 @@ export async function createProde(
   return { error: "No se pudo generar un código único. Intentá de nuevo.", prodeId: null };
 }
 
+export async function leaveProde(
+  userId: string,
+  prodeId: string
+): Promise<{ error: string | null }> {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("prode_members")
+    .delete()
+    .eq("user_id", userId)
+    .eq("prode_id", prodeId);
+  return { error: error?.message ?? null };
+}
+
+export async function deleteProde(
+  prodeId: string
+): Promise<{ error: string | null }> {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("prodes")
+    .delete()
+    .eq("id", prodeId);
+  return { error: error?.message ?? null };
+}
+
 // -------------------------------------------------------
 
 export async function getPointsToday(prodeId: string): Promise<Record<string, number>> {

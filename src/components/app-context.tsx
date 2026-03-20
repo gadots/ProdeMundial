@@ -38,6 +38,7 @@ export interface AppContextValue {
   prodeLoading: boolean;
   allProdes: Q.ProdeInfo[];
   switchProde: (id: string) => Promise<void>;
+  refreshAndSwitch: (switchToId?: string) => Promise<void>;
   // Matches
   matches: Match[];
   matchesLoading: boolean;
@@ -75,6 +76,7 @@ const DEFAULT_VALUE: AppContextValue = {
   prodeLoading: false,
   allProdes: [{ id: MOCK_PRODE.id, name: MOCK_PRODE.name, adminId: MOCK_PRODE.adminId, inviteCode: MOCK_PRODE.inviteCode, createdAt: MOCK_PRODE.createdAt }],
   switchProde: async () => {},
+  refreshAndSwitch: async () => {},
   matches: MOCK_MATCHES,
   matchesLoading: false,
   predictions: MOCK_MY_PREDICTIONS,
@@ -344,6 +346,33 @@ function AppProviderSupabase({ children }: { children: React.ReactNode }) {
     await loadProdeData(info, userId);
   }, [allProdes, loadProdeData]);
 
+  // Refresh the allProdes list (e.g. after joining/creating/leaving a prode)
+  // and optionally switch to a specific prode (by id).
+  const refreshAndSwitch = useCallback(async (switchToId?: string) => {
+    const userId = userIdRef.current;
+    if (!userId) return;
+    const infos = await Q.getAllMyProdes(userId);
+    setAllProdes(infos);
+    if (infos.length === 0) {
+      if (typeof window !== "undefined") window.location.href = "/join";
+      return;
+    }
+    // Determine target prode
+    let target: Q.ProdeInfo | undefined;
+    if (switchToId) {
+      target = infos.find((p) => p.id === switchToId);
+    }
+    // If current prode is no longer in the list (left/deleted), auto-pick first
+    const currentStillExists = infos.some((p) => p.id === prodeId);
+    if (!target && !currentStillExists) {
+      target = infos[0];
+    }
+    if (target) {
+      if (typeof window !== "undefined") localStorage.setItem("activeProdeId", target.id);
+      await loadProdeData(target, userId);
+    }
+  }, [prodeId, loadProdeData]);
+
   // -------------------------------------------------------
   // Actions
   // -------------------------------------------------------
@@ -410,6 +439,7 @@ function AppProviderSupabase({ children }: { children: React.ReactNode }) {
     prodeLoading,
     allProdes,
     switchProde,
+    refreshAndSwitch,
     matches,
     matchesLoading,
     predictions,
