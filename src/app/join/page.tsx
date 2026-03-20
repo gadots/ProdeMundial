@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2, Users, PlusCircle, AlertCircle } from "lucide-react";
@@ -10,7 +11,24 @@ import * as Q from "@/lib/supabase/queries";
 type Tab = "unirse" | "crear";
 
 export default function JoinPage() {
-  const [tab, setTab] = useState<Tab>("unirse");
+  return (
+    <Suspense>
+      <JoinPageInner />
+    </Suspense>
+  );
+}
+
+function JoinPageInner() {
+  const searchParams = useSearchParams();
+  const [tab, setTab] = useState<Tab>(() => {
+    const t = searchParams.get("tab");
+    return t === "crear" ? "crear" : "unirse";
+  });
+
+  useEffect(() => {
+    const t = searchParams.get("tab");
+    if (t === "crear" || t === "unirse") setTab(t);
+  }, [searchParams]);
 
   // Join
   const [code, setCode] = useState("");
