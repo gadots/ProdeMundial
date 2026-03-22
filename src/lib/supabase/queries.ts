@@ -38,7 +38,7 @@ function dbToMatch(row: DbRow): Match {
       flag: FLAG_MAP[row.away_team_short as string] ?? "🏳️",
     },
     phase: row.phase as Phase,
-    group: (row.group_name as string | null) ?? undefined,
+    group: (row.group_name as string | null)?.replace(/^GROUP_/i, "").toUpperCase() || undefined,
     date: row.date as string,
     status: row.status as MatchStatus,
     homeScore: (row.home_score as number | null) ?? undefined,

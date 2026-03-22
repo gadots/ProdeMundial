@@ -42,7 +42,7 @@ export function calculatePoints(
   }
 
   let points = base * multiplier;
-  if (multiplier > 1) reason += ` (Token ${multiplier}x)`;
+  if (multiplier > 1) reason += ` (Potenciador ${multiplier}x)`;
 
   if (streakBonus > 0 && base > 0) {
     points += streakBonus;

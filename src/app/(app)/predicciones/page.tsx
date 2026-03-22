@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import Link from "next/link";
 import { TopBar } from "@/components/nav";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -44,7 +45,7 @@ function TokenPicker({
 }) {
   return (
     <div className="flex items-center gap-1.5">
-      <span className="text-[10px] text-white/30 mr-0.5">Token:</span>
+      <span className="text-[10px] text-white/30 mr-0.5">Potenciador:</span>
       <button
         onClick={() => onSelect(1)}
         disabled={disabled}
@@ -141,11 +142,19 @@ function MatchPredictionCard({
   return (
     <Card className={`overflow-hidden transition-all ${locked ? "opacity-70" : "hover:border-green-500/20"}`}>
       <CardContent className="p-4">
-        <div className="mb-3 flex items-center justify-between">
+        <div className="mb-1 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Badge variant="phase" className="text-[10px]">
-              {match.group ? `Grupo ${match.group}` : PHASE_LABELS[match.phase]}
-            </Badge>
+            {match.group ? (
+              <Link href={`/grupos?g=${match.group}`}>
+                <Badge variant="phase" className="text-[10px] cursor-pointer hover:opacity-80 transition-opacity">
+                  Grupo {match.group}
+                </Badge>
+              </Link>
+            ) : (
+              <Badge variant="phase" className="text-[10px]">
+                {PHASE_LABELS[match.phase]}
+              </Badge>
+            )}
             {!teamsKnown && (
               <span className="flex items-center gap-1 text-[10px] text-white/30">
                 <Lock className="h-3 w-3" />
@@ -160,6 +169,18 @@ function MatchPredictionCard({
             )}
           </div>
           <span className="text-xs font-bold text-green-400">hasta {potential} pts</span>
+        </div>
+
+        <div className="flex items-center gap-2 text-[10px] text-white/30 mb-3">
+          <span>
+            {new Date(match.date).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })} hs
+          </span>
+          {match.venue && (
+            <>
+              <span className="text-white/15">·</span>
+              <span className="truncate">{match.venue}</span>
+            </>
+          )}
         </div>
 
         <div className="flex items-center gap-3 mb-4">
@@ -275,7 +296,7 @@ function RulesModal({ onClose }: { onClose: () => void }) {
           </div>
 
           <div>
-            <p className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-2">Tokens multiplicadores</p>
+            <p className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-2">Potenciadores</p>
             <div className="space-y-2">
               {[
                 { emoji: "⚡", label: "2x", color: "text-blue-400", desc: "Multiplicá por 2 los puntos de un partido" },
@@ -287,7 +308,7 @@ function RulesModal({ onClose }: { onClose: () => void }) {
                   <p className="text-xs text-white/60">{t.desc}</p>
                 </div>
               ))}
-              <p className="text-[10px] text-white/30 px-1">Cada token se usa una sola vez. Los no usados caducan al final de la fase de grupos.</p>
+              <p className="text-[10px] text-white/30 px-1">Cada potenciador se usa una sola vez. Los no usados caducan al final de la fase de grupos.</p>
             </div>
           </div>
 
@@ -450,6 +471,13 @@ export default function PrediccionesPage() {
                 );
               })}
             </div>
+            <Link
+              href="/grupos"
+              className="shrink-0 flex items-center justify-center h-8 px-2.5 rounded-xl bg-white/5 border border-white/10 text-white/40 hover:text-white/70 hover:border-white/20 transition-all text-[10px] font-semibold gap-1"
+              title="Posiciones por grupo"
+            >
+              📊 Grupos
+            </Link>
             <button
               onClick={() => setShowRules(true)}
               className="shrink-0 flex items-center justify-center h-8 w-8 rounded-xl bg-white/5 border border-white/10 text-white/40 hover:text-white/70 hover:border-white/20 transition-all"
@@ -461,10 +489,10 @@ export default function PrediccionesPage() {
         )}
       </div>
 
-      {/* Token status — compact */}
+      {/* Potenciadores — compact */}
       <div className="px-4 pt-3">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[11px] text-white/40 shrink-0">Mis tokens:</span>
+          <span className="text-[11px] text-white/40 shrink-0">Mis potenciadores:</span>
           {tokens.map((t) => (
             <span
               key={t.multiplier}
