@@ -3,17 +3,17 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Home, List, Trophy, Settings, Target, Bell, Star, X, LogOut } from "lucide-react";
+import { Home, List, Trophy, Settings, Bell, Star, X, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useApp } from "@/components/app-context";
 import { createClient } from "@/lib/supabase/client";
 
 const navItems = [
-  { href: "/dashboard",    icon: Home,     label: "Dashboard"    },
-  { href: "/predicciones", icon: List,     label: "Predicciones" },
-  { href: "/tabla",        icon: Trophy,   label: "Posiciones"   },
-  { href: "/desafios",     icon: Target,   label: "Desafíos"     },
-  { href: "/grupo",        icon: Settings, label: "Config"       },
+  { href: "/dashboard",               icon: Home,     label: "Dashboard"    },
+  { href: "/predicciones",            icon: List,     label: "Predicciones" },
+  { href: "/tabla",                   icon: Trophy,   label: "Posiciones"   },
+  { href: "/predicciones/especiales", icon: Star,     label: "Especiales"   },
+  { href: "/grupo",                   icon: Settings, label: "Config"       },
 ];
 
 interface Notification {
@@ -177,7 +177,7 @@ export function Sidebar() {
       <nav className="space-y-0.5 flex-1">
         {navItems.map(({ href, icon: Icon, label }) => {
           const isActive = pathname === href || (pathname.startsWith(href + "/") && href !== "/predicciones");
-          const isPrediccionesActive = href === "/predicciones" && pathname.startsWith("/predicciones") && pathname !== "/predicciones/especiales";
+          const isPrediccionesActive = href === "/predicciones" && pathname.startsWith("/predicciones") && !pathname.startsWith("/predicciones/especiales");
           const active = isActive || isPrediccionesActive;
           return (
             <Link
@@ -196,18 +196,6 @@ export function Sidebar() {
           );
         })}
 
-        <Link
-          href="/predicciones/especiales"
-          className={cn(
-            "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-sm font-medium",
-            pathname === "/predicciones/especiales"
-              ? "bg-yellow-500/20 text-yellow-400"
-              : "text-white/50 hover:text-white/80 hover:bg-white/5"
-          )}
-        >
-          <Star className="h-[18px] w-[18px] shrink-0" />
-          Especiales
-        </Link>
       </nav>
 
       <button

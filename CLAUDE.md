@@ -125,3 +125,5 @@ Toda la configuración está en `supabase/migrations/001_initial_schema.sql`:
 - Falta conectar Supabase real (auth flows, queries a DB)
 - Falta integración football-data.org en producción
 - No hay modo negativo (predefinido que no se implementa)
+- Desafíos (wildcards semanales) fue removido del MVP. La carpeta `src/app/(app)/desafios/` fue eliminada y el slot del nav fue reemplazado por Especiales. El tipo `WildcardChallenge` y la lógica asociada siguen en `types.ts` y `mock-data.ts` por si se reactiva.
+- Los "Tokens" se llaman "Potenciadores" en la UI. Los nombres de tipos TypeScript (`MultiplierToken`, `TokenMultiplier`) no cambiaron.

@@ -42,17 +42,35 @@ function MatchCard({ match }: { match: Match }) {
     <Link href={`/predicciones?match=${match.id}`}>
       <Card className="overflow-hidden transition-all hover:border-green-500/30 active:scale-[0.98]">
         <CardContent className="p-4">
-          <div className="mb-3 flex items-center justify-between">
-            <Badge variant="phase" className="text-[10px]">
-              {PHASE_LABELS[match.phase]}
-              {match.group ? ` · Grupo ${match.group}` : ""}
-            </Badge>
+          <div className="mb-1 flex items-center justify-between">
+            {match.group ? (
+              <Link href={`/grupos?g=${match.group}`} onClick={(e) => e.stopPropagation()}>
+                <Badge variant="phase" className="text-[10px] cursor-pointer hover:opacity-80 transition-opacity">
+                  Grupo {match.group}
+                </Badge>
+              </Link>
+            ) : (
+              <Badge variant="phase" className="text-[10px]">
+                {PHASE_LABELS[match.phase]}
+              </Badge>
+            )}
             {isLive && <Badge variant="live">🔴 EN VIVO</Badge>}
             {isFinished && <span className="text-[10px] text-white/30">Finalizado</span>}
             {!isLive && !isFinished && (
               <span className="flex items-center gap-1 text-[10px] text-white/40">
                 <Clock className="h-3 w-3" /> {countdown}
               </span>
+            )}
+          </div>
+          <div className="flex items-center gap-2 text-[10px] text-white/30 mb-3">
+            <span>
+              {new Date(match.date).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })} hs
+            </span>
+            {match.venue && (
+              <>
+                <span className="text-white/15">·</span>
+                <span className="truncate">{match.venue}</span>
+              </>
             )}
           </div>
           <div className="flex items-center gap-3">
@@ -118,7 +136,7 @@ function MatchCard({ match }: { match: Match }) {
 }
 
 export default function DashboardPage() {
-  const { user, prode, matches, tokens, wildcards, streak } = useApp();
+  const { user, prode, matches, tokens, streak } = useApp();
 
   const me = prode?.members.find((m) => m.id === user?.id) ?? prode?.members[0];
   const leader = prode?.members[0];
@@ -127,7 +145,6 @@ export default function DashboardPage() {
   const gap = leader && me ? leader.totalPoints - me.totalPoints : 0;
 
   const tokensAvailable = tokens.filter((t) => !t.usedOnMatchId && !t.decayed);
-  const openWildcards = wildcards.filter((w) => w.status === "OPEN");
   const streakBonus = streakBonusPoints(streak.current);
   const remainingPotential = 50 + 30 * 2 + 18;
 
@@ -218,7 +235,7 @@ export default function DashboardPage() {
                   <span className="text-base">{tokensAvailable.map((t) => t.emoji).join("")}</span>
                   <div>
                     <p className="text-sm font-semibold text-white">
-                      {tokensAvailable.length} token{tokensAvailable.length > 1 ? "s" : ""} sin usar
+                      {tokensAvailable.length} potenciador{tokensAvailable.length > 1 ? "es" : ""} sin usar
                     </p>
                     <p className="text-xs text-yellow-400/70">Caducan al final de Grupos</p>
                   </div>
@@ -228,21 +245,17 @@ export default function DashboardPage() {
             </Link>
           )}
 
-          {/* Desafíos — siempre visible */}
-          <Link href="/desafios" className="block">
-            <div className="flex items-center justify-between rounded-xl px-4 py-3 bg-purple-500/10 border border-purple-500/15 hover:border-purple-500/30 transition-colors">
+          {/* Grupos — acceso rápido */}
+          <Link href="/grupos" className="block">
+            <div className="flex items-center justify-between rounded-xl px-4 py-3 bg-blue-500/10 border border-blue-500/15 hover:border-blue-500/30 transition-colors">
               <div className="flex items-center gap-2">
-                <span className="text-base">🎯</span>
+                <span className="text-base">📊</span>
                 <div>
-                  <p className="text-sm font-semibold text-white">Desafíos</p>
-                  <p className="text-xs text-purple-400/70">{openWildcards.length > 0 ? `${openWildcards.length} abierto${openWildcards.length > 1 ? "s" : ""}` : "Wildcards semanales"}</p>
+                  <p className="text-sm font-semibold text-white">Posiciones por grupo</p>
+                  <p className="text-xs text-blue-400/70">Seguí cómo va cada grupo</p>
                 </div>
               </div>
-              {openWildcards.length > 0 ? (
-                <span className="text-sm font-bold text-purple-400">{openWildcards.length} pendiente{openWildcards.length > 1 ? "s" : ""}</span>
-              ) : (
-                <ChevronRight className="h-4 w-4 text-purple-400/50" />
-              )}
+              <ChevronRight className="h-4 w-4 text-blue-400/50" />
             </div>
           </Link>
 
