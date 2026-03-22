@@ -103,12 +103,18 @@ function MatchPredictionCard({
   const [saved, setSaved] = useState(!!existing);
   const [saving, setSaving] = useState(false);
 
+  const teamsKnown = !!match.homeTeam.id && !!match.awayTeam.id;
   const isFinished = match.status === "FINISHED";
   const isLive = match.status === "LIVE";
-  const locked = isFinished || isLive;
+  const locked = isFinished || isLive || !teamsKnown;
   const pts = PHASE_POINTS[match.phase];
   const canSave = home !== "" && away !== "" && !locked;
   const streakBonus = streakBonusPoints(myStreak);
+
+  const homeName = match.homeTeam.id ? match.homeTeam.name : "Por definir";
+  const homeFlag = match.homeTeam.id ? match.homeTeam.flag : "❓";
+  const awayName = match.awayTeam.id ? match.awayTeam.name : "Por definir";
+  const awayFlag = match.awayTeam.id ? match.awayTeam.flag : "❓";
 
   const localTokens: MultiplierToken[] = tokens.map((t) => ({
     ...t,
@@ -140,7 +146,13 @@ function MatchPredictionCard({
             <Badge variant="phase" className="text-[10px]">
               {match.group ? `Grupo ${match.group}` : PHASE_LABELS[match.phase]}
             </Badge>
-            {locked && (
+            {!teamsKnown && (
+              <span className="flex items-center gap-1 text-[10px] text-white/30">
+                <Lock className="h-3 w-3" />
+                Rival por definir
+              </span>
+            )}
+            {teamsKnown && locked && (
               <span className="flex items-center gap-1 text-[10px] text-white/30">
                 <Lock className="h-3 w-3" />
                 {isLive ? "En vivo" : "Finalizado"}
@@ -152,8 +164,8 @@ function MatchPredictionCard({
 
         <div className="flex items-center gap-3 mb-4">
           <div className="flex flex-1 items-center gap-2">
-            <span className="text-2xl">{match.homeTeam.flag}</span>
-            <p className="text-sm font-bold text-white leading-tight">{match.homeTeam.name}</p>
+            <span className="text-2xl">{homeFlag}</span>
+            <p className="text-sm font-bold text-white leading-tight">{homeName}</p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <ScoreInput value={home} onChange={(v) => { setHome(v); setSaved(false); }} disabled={locked} />
@@ -161,8 +173,8 @@ function MatchPredictionCard({
             <ScoreInput value={away} onChange={(v) => { setAway(v); setSaved(false); }} disabled={locked} />
           </div>
           <div className="flex flex-1 items-center gap-2 justify-end">
-            <p className="text-sm font-bold text-white leading-tight text-right">{match.awayTeam.name}</p>
-            <span className="text-2xl">{match.awayTeam.flag}</span>
+            <p className="text-sm font-bold text-white leading-tight text-right">{awayName}</p>
+            <span className="text-2xl">{awayFlag}</span>
           </div>
         </div>
 
@@ -344,7 +356,9 @@ export default function PrediccionesPage() {
     return savePrediction({ matchId, homeGoals: home, awayGoals: away, multiplier });
   }, [savePrediction]);
 
-  const availablePhases = PHASE_ORDER.filter((p) => matches.some((m) => m.phase === p));
+  const availablePhases = PHASE_ORDER.filter((p) =>
+    matches.some((m) => m.phase === p && !!m.homeTeam.id && !!m.awayTeam.id)
+  );
 
   const allPending = matches.filter((m) => m.status === "SCHEDULED" && !predictions[m.id]);
   const allUrgent = allPending.filter((m) => {
