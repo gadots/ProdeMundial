@@ -10,8 +10,13 @@ import { syncMatches } from "@/lib/sync-matches";
  *     -H "Authorization: Bearer <CRON_SECRET>"
  */
 export async function POST(request: Request) {
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret) {
+    console.error("admin/sync: CRON_SECRET env var not set");
+    return NextResponse.json({ error: "Server misconfigured: CRON_SECRET not set" }, { status: 500 });
+  }
   const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
