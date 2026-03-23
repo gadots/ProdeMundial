@@ -215,7 +215,12 @@ export function BottomNav() {
     <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-[#0a1628]/95 backdrop-blur-lg pb-safe">
       <div className="flex items-center justify-around px-2 py-2">
         {navItems.map(({ href, icon: Icon, label }) => {
-          const isActive = pathname === href || pathname.startsWith(href + "/");
+          const isActive =
+            href === "/predicciones"
+              ? pathname === href ||
+                (pathname.startsWith("/predicciones/") &&
+                  !pathname.startsWith("/predicciones/especiales"))
+              : pathname === href || pathname.startsWith(href + "/");
           return (
             <Link
               key={href}
