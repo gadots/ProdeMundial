@@ -263,7 +263,103 @@ export const ALL_WC_TEAMS = [
   { id: "NZL", name: "Nueva Zelanda",    shortName: "NZL", flag: "🇳🇿" },
 ];
 
-// Puntos ganados en las últimas 24h por usuario (mock)
+// Extra TLA codes for teams that may appear in football-data.org API responses
+// but are not in ALL_WC_TEAMS, or use different codes than our shortNames.
+// Used by queries.ts to extend FLAG_MAP beyond the 48 WC 2026 qualifiers.
+export const EXTRA_FLAGS: Record<string, string> = {
+  // Alternate codes for teams already in ALL_WC_TEAMS
+  "SRB": "🇷🇸", // Serbia — football-data.org usa SRB, nosotros SER
+  "WAL": "🏴󠁧󠁢󠁷󠁬󠁳󠁿", // Gales
+  // CONMEBOL no clasificados
+  "CHI": "🇨🇱", "CHL": "🇨🇱", // Chile
+  "BOL": "🇧🇴", // Bolivia
+  "PAR": "🇵🇾", "PRY": "🇵🇾", // Paraguay
+  "PER": "🇵🇪", // Perú
+  // UEFA no clasificados
+  "NOR": "🇳🇴", // Noruega
+  "SWE": "🇸🇪", "SVE": "🇸🇪", // Suecia
+  "SVN": "🇸🇮", "SLO": "🇸🇮", // Eslovenia
+  "CZE": "🇨🇿", // República Checa
+  "SVK": "🇸🇰", "SLK": "🇸🇰", // Eslovaquia
+  "ROU": "🇷🇴", "ROM": "🇷🇴", // Rumania
+  "GRE": "🇬🇷", "GRC": "🇬🇷", // Grecia
+  "IRL": "🇮🇪", "IRE": "🇮🇪", // Irlanda
+  "FIN": "🇫🇮", // Finlandia
+  "ISL": "🇮🇸", // Islandia
+  "GEO": "🇬🇪", // Georgia
+  "MKD": "🇲🇰", // Macedonia del Norte
+  "MNE": "🇲🇪", // Montenegro
+  "BIH": "🇧🇦", // Bosnia
+  "ALB": "🇦🇱", // Albania
+  "KSV": "🇽🇰", // Kosovo
+  "ARM": "🇦🇲", // Armenia
+  "AZE": "🇦🇿", // Azerbaiyán
+  "BLR": "🇧🇾", // Bielorrusia
+  "LTU": "🇱🇹", // Lituania
+  "LVA": "🇱🇻", // Letonia
+  "EST": "🇪🇪", // Estonia
+  // CAF no clasificados
+  "ALG": "🇩🇿", // Argelia
+  "CGO": "🇨🇬", "COG": "🇨🇬", // Congo
+  "COD": "🇨🇩", // RD Congo
+  "MLI": "🇲🇱", // Malí
+  "BFA": "🇧🇫", // Burkina Faso
+  "GNB": "🇬🇼", // Guinea-Bisáu
+  "GUI": "🇬🇳", "GIN": "🇬🇳", // Guinea
+  "GAB": "🇬🇦", // Gabón
+  "BEN": "🇧🇯", // Benín
+  "MRT": "🇲🇷", // Mauritania
+  "MOZ": "🇲🇿", // Mozambique
+  "TAN": "🇹🇿", "TZA": "🇹🇿", // Tanzania
+  "ETH": "🇪🇹", // Etiopía
+  "COM": "🇰🇲", // Comoras
+  "CHA": "🇹🇩", // Chad
+  "ZAM": "🇿🇲", "ZMB": "🇿🇲", // Zambia
+  "ZIM": "🇿🇼", "ZWE": "🇿🇼", // Zimbabue
+  "ANG": "🇦🇴", "AGO": "🇦🇴", // Angola
+  "KEN": "🇰🇪", // Kenia
+  "UGA": "🇺🇬", // Uganda
+  "LIB": "🇱🇾", // Libia
+  // AFC no clasificados
+  "QAT": "🇶🇦", // Qatar
+  "CHN": "🇨🇳", // China
+  "THA": "🇹🇭", // Tailandia
+  "VNM": "🇻🇳", "VIE": "🇻🇳", // Vietnam
+  "IDN": "🇮🇩", // Indonesia
+  "MYS": "🇲🇾", "MAL": "🇲🇾", // Malasia
+  "PHI": "🇵🇭", // Filipinas
+  "TJK": "🇹🇯", // Tayikistán
+  "KGZ": "🇰🇬", // Kirguistán
+  "TKM": "🇹🇲", // Turkmenistán
+  "OMA": "🇴🇲", // Omán
+  "KUW": "🇰🇼", "KWT": "🇰🇼", // Kuwait
+  "BHR": "🇧🇭", // Bahréin
+  "ARE": "🇦🇪", "UAE": "🇦🇪", // Emiratos
+  "YEM": "🇾🇪", // Yemen
+  "LBN": "🇱🇧", // Líbano
+  "SYR": "🇸🇾", // Siria
+  "PAL": "🇵🇸", // Palestina
+  // CONCACAF no clasificados
+  "HAI": "🇭🇹", "HTI": "🇭🇹", // Haití
+  "HON": "🇭🇳", "HND": "🇭🇳", // Honduras
+  "GTM": "🇬🇹", "GUA": "🇬🇹", // Guatemala
+  "SLV": "🇸🇻", // El Salvador
+  "NCA": "🇳🇮", "NIC": "🇳🇮", // Nicaragua
+  "CUB": "🇨🇺", // Cuba
+  "TRI": "🇹🇹", "TTO": "🇹🇹", // Trinidad y Tobago
+  "DOM": "🇩🇴", // Rep. Dominicana
+  "GUY": "🇬🇾", // Guyana
+  "SUR": "🇸🇷", // Surinam
+  // OFC no clasificados
+  "FIJ": "🇫🇯", "FJI": "🇫🇯", // Fiyi
+  "PNG": "🇵🇬", // Papua Nueva Guinea
+  "VAN": "🇻🇺", "VUT": "🇻🇺", // Vanuatu
+  "TAH": "🇵🇫", // Tahití/Polinesia Francesa
+  "NCL": "🇳🇨", // Nueva Caledonia
+  "SOL": "🇸🇧", "SLB": "🇸🇧", // Islas Salomón
+};
+
+
 export const MOCK_POINTS_TODAY: Record<string, number> = {
   u1: 5,
   u2: 0,

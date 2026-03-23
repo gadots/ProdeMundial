@@ -4,15 +4,16 @@ import {
   WildcardChallenge, WildcardAnswer, StreakInfo, TokenMultiplier, Prode,
   INITIAL_TOKENS,
 } from "@/lib/types";
-import { ALL_WC_TEAMS } from "@/lib/mock-data";
+import { ALL_WC_TEAMS, EXTRA_FLAGS } from "@/lib/mock-data";
 
 // -------------------------------------------------------
 // Helpers
 // -------------------------------------------------------
 
-const FLAG_MAP: Record<string, string> = Object.fromEntries(
-  ALL_WC_TEAMS.map((t) => [t.shortName, t.flag])
-);
+const FLAG_MAP: Record<string, string> = {
+  ...Object.fromEntries(ALL_WC_TEAMS.map((t) => [t.shortName, t.flag])),
+  ...EXTRA_FLAGS,
+};
 
 const TOKEN_DISPLAY = {
   2: { label: "2x", emoji: "⚡", color: "text-blue-400 border-blue-500/40 bg-blue-500/10" },
