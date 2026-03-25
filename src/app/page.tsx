@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,13 +17,6 @@ export default function LandingPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
-
-  // ?demo=1 en cualquier URL → entrar directo en modo demo
-  useEffect(() => {
-    if (window.location.search.includes("demo=1")) {
-      window.location.href = "/dashboard?demo=1";
-    }
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -270,7 +263,7 @@ export default function LandingPage() {
         {/* Demo mode */}
         <div className="mt-3 text-center">
           <a
-            href="/dashboard?demo=1"
+            href="/api/demo"
             className="text-xs text-white/25 hover:text-white/50 transition-colors underline underline-offset-2"
           >
             Probar en modo demo (sin cuenta)

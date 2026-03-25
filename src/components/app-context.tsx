@@ -105,46 +105,10 @@ export const useApp = () => useContext(AppContext);
 // Provider
 // -------------------------------------------------------
 
-export function AppProvider({ children }: { children: React.ReactNode }) {
-  // In mock mode, just use defaults
-  if (!IS_SUPABASE) {
+export function AppProvider({ children, demoMode = false }: { children: React.ReactNode; demoMode?: boolean }) {
+  if (!IS_SUPABASE || demoMode) {
     return <AppContext.Provider value={DEFAULT_VALUE}>{children}</AppContext.Provider>;
   }
-
-  // Supabase configured: check for demo mode flag before starting real auth
-  return <AppProviderDemoOrSupabase>{children}</AppProviderDemoOrSupabase>;
-}
-
-function AppProviderDemoOrSupabase({ children }: { children: React.ReactNode }) {
-  const [checked, setChecked] = useState(false);
-  const [demo, setDemo] = useState(false);
-
-  useEffect(() => {
-    // Check URL param ?demo=1 OR previously saved sessionStorage flag
-    const params = new URLSearchParams(window.location.search);
-    const isDemo =
-      params.get("demo") === "1" ||
-      sessionStorage.getItem("demo_mode") === "1";
-
-    if (isDemo) sessionStorage.setItem("demo_mode", "1");
-
-    setDemo(isDemo);
-    setChecked(true);
-  }, []);
-
-  // While checking (single frame), show default with userLoading=true
-  if (!checked) {
-    return (
-      <AppContext.Provider value={{ ...DEFAULT_VALUE, userLoading: true }}>
-        {children}
-      </AppContext.Provider>
-    );
-  }
-
-  if (demo) {
-    return <AppContext.Provider value={DEFAULT_VALUE}>{children}</AppContext.Provider>;
-  }
-
   return <AppProviderSupabase>{children}</AppProviderSupabase>;
 }
 
