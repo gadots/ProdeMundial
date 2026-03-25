@@ -45,7 +45,7 @@ export interface AppContextValue {
   // My predictions (keyed by matchId)
   predictions: Record<string, Prediction>;
   predictionsLoading: boolean;
-  savePrediction: (pred: { matchId: string; homeGoals: number; awayGoals: number; multiplier: TokenMultiplier }) => Promise<{ error: string | null }>;
+  savePrediction: (pred: { matchId: string; homeGoals: number; awayGoals: number; multiplier: TokenMultiplier; penaltyWinner?: "home" | "away" }) => Promise<{ error: string | null }>;
   // My tokens
   tokens: MultiplierToken[];
   tokensLoading: boolean;
@@ -378,7 +378,7 @@ function AppProviderSupabase({ children }: { children: React.ReactNode }) {
   // -------------------------------------------------------
 
   const savePrediction = useCallback(
-    async (pred: { matchId: string; homeGoals: number; awayGoals: number; multiplier: TokenMultiplier }) => {
+    async (pred: { matchId: string; homeGoals: number; awayGoals: number; multiplier: TokenMultiplier; penaltyWinner?: "home" | "away" }) => {
       if (!user || !prodeId) return { error: "No autenticado" };
       const result = await Q.upsertPrediction({ userId: user.id, prodeId, ...pred });
       if (!result.error) {
@@ -392,6 +392,7 @@ function AppProviderSupabase({ children }: { children: React.ReactNode }) {
             homeGoals: pred.homeGoals,
             awayGoals: pred.awayGoals,
             multiplier: pred.multiplier,
+            penaltyWinner: pred.penaltyWinner,
           },
         }));
       }

@@ -36,6 +36,8 @@ export const MOCK_MATCHES: Match[] = [
   { id: "m8", homeTeam: MOCK_TEAMS.ENG, awayTeam: MOCK_TEAMS.FRA, phase: "GROUP", group: "G", date: matchDate(7, 18), status: "SCHEDULED", venue: "Arrowhead Stadium" },
   { id: "m9", homeTeam: MOCK_TEAMS.ESP, awayTeam: MOCK_TEAMS.GER, phase: "GROUP", group: "H", date: matchDate(8, 15), status: "SCHEDULED", venue: "Lincoln Financial Field" },
   // KNOCKOUT
+  // TEMPORAL — borrar después de testear ROUND_OF_32
+  { id: "mr32-1", homeTeam: MOCK_TEAMS.ARG, awayTeam: MOCK_TEAMS.URU, phase: "ROUND_OF_32", date: matchDate(18, 20), status: "SCHEDULED", venue: "MetLife Stadium" },
   { id: "m16-1", homeTeam: MOCK_TEAMS.ARG, awayTeam: MOCK_TEAMS.NED, phase: "ROUND_OF_16", date: matchDate(20, 20), status: "SCHEDULED", venue: "MetLife Stadium" },
   { id: "m16-2", homeTeam: MOCK_TEAMS.FRA, awayTeam: MOCK_TEAMS.POR, phase: "ROUND_OF_16", date: matchDate(21, 20), status: "SCHEDULED", venue: "Rose Bowl" },
   { id: "mqf-1", homeTeam: MOCK_TEAMS.ARG, awayTeam: MOCK_TEAMS.FRA, phase: "QUARTER_FINAL", date: matchDate(32, 20), status: "SCHEDULED", venue: "MetLife Stadium" },

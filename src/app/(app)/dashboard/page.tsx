@@ -237,7 +237,7 @@ export default function DashboardPage() {
                     <p className="text-sm font-semibold text-white">
                       {tokensAvailable.length} potenciador{tokensAvailable.length > 1 ? "es" : ""} sin usar
                     </p>
-                    <p className="text-xs text-yellow-400/70">Caducan al final de Grupos</p>
+                    <p className="text-xs text-yellow-400/70">Solo en grupos · Caducan al fin de Octavos</p>
                   </div>
                 </div>
                 <ChevronRight className="h-4 w-4 text-yellow-400/50" />
