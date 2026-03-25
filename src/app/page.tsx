@@ -263,7 +263,7 @@ export default function LandingPage() {
         {/* Demo mode */}
         <div className="mt-3 text-center">
           <a
-            href="/api/demo"
+            href="/demo"
             className="text-xs text-white/25 hover:text-white/50 transition-colors underline underline-offset-2"
           >
             Probar en modo demo (sin cuenta)
