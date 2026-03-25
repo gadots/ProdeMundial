@@ -96,11 +96,12 @@ function MatchPredictionCard({
   existing?: Prediction;
   myStreak: number;
   onTokenChange: (matchId: string, prev: TokenMultiplier, next: TokenMultiplier) => void;
-  onSave: (matchId: string, home: number, away: number, multiplier: TokenMultiplier) => Promise<{ error: string | null }>;
+  onSave: (matchId: string, home: number, away: number, multiplier: TokenMultiplier, penaltyWinner?: "home" | "away") => Promise<{ error: string | null }>;
 }) {
   const [home, setHome] = useState(existing?.homeGoals?.toString() ?? "");
   const [away, setAway] = useState(existing?.awayGoals?.toString() ?? "");
   const [multiplier, setMultiplier] = useState<TokenMultiplier>(existing?.multiplier ?? 1);
+  const [penaltyWinner, setPenaltyWinner] = useState<"home" | "away" | undefined>(existing?.penaltyWinner);
   const [saved, setSaved] = useState(!!existing);
   const [saving, setSaving] = useState(false);
 
@@ -109,8 +110,14 @@ function MatchPredictionCard({
   const isLive = match.status === "LIVE";
   const locked = isFinished || isLive || !teamsKnown;
   const pts = PHASE_POINTS[match.phase];
-  const canSave = home !== "" && away !== "" && !locked;
+  const isGroupPhase = match.phase === "GROUP";
+  const isKnockout = !isGroupPhase;
   const streakBonus = streakBonusPoints(myStreak);
+
+  const predictedDraw = home !== "" && away !== "" && Number(home) === Number(away);
+  const showPenaltySelector = isKnockout && !locked && predictedDraw;
+  const canSave = home !== "" && away !== "" && !locked &&
+    (!showPenaltySelector || penaltyWinner !== undefined);
 
   const homeName = match.homeTeam.id ? match.homeTeam.name : "Por definir";
   const homeFlag = match.homeTeam.id ? match.homeTeam.flag : "❓";
@@ -132,12 +139,15 @@ function MatchPredictionCard({
   const handleSave = async () => {
     if (!canSave) return;
     setSaving(true);
-    const result = await onSave(match.id, Number(home), Number(away), multiplier);
+    const result = await onSave(match.id, Number(home), Number(away), multiplier, showPenaltySelector ? penaltyWinner : undefined);
     setSaving(false);
     if (!result.error) setSaved(true);
   };
 
-  const potential = maxPointsForMatch(match.phase, multiplier) + (myStreak >= 3 && !locked ? streakBonus : 0);
+  const activeMultiplier = isGroupPhase ? multiplier : 1;
+  const potential = isGroupPhase
+    ? maxPointsForMatch(match.phase, multiplier, myStreak >= 3 && !locked ? streakBonus : 0)
+    : maxPointsForMatch(match.phase);
 
   return (
     <Card className={`overflow-hidden transition-all ${locked ? "opacity-70" : "hover:border-green-500/20"}`}>
@@ -183,21 +193,57 @@ function MatchPredictionCard({
           )}
         </div>
 
-        <div className="flex items-center gap-3 mb-4">
+        {isKnockout && !locked && (
+          <p className="text-[10px] text-white/30 text-center mb-2">
+            Resultado en tiempo regular (90 min + alargue)
+          </p>
+        )}
+
+        <div className="flex items-center gap-3 mb-3">
           <div className="flex flex-1 items-center gap-2">
             <span className="text-2xl">{homeFlag}</span>
             <p className="text-sm font-bold text-white leading-tight">{homeName}</p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <ScoreInput value={home} onChange={(v) => { setHome(v); setSaved(false); }} disabled={locked} />
+            <ScoreInput value={home} onChange={(v) => { setHome(v); setSaved(false); if (Number(v) !== Number(away)) setPenaltyWinner(undefined); }} disabled={locked} />
             <span className="text-white/30 font-bold text-lg">-</span>
-            <ScoreInput value={away} onChange={(v) => { setAway(v); setSaved(false); }} disabled={locked} />
+            <ScoreInput value={away} onChange={(v) => { setAway(v); setSaved(false); if (Number(home) !== Number(v)) setPenaltyWinner(undefined); }} disabled={locked} />
           </div>
           <div className="flex flex-1 items-center gap-2 justify-end">
             <p className="text-sm font-bold text-white leading-tight text-right">{awayName}</p>
             <span className="text-2xl">{awayFlag}</span>
           </div>
         </div>
+
+        {showPenaltySelector && (
+          <div className="mb-3 rounded-xl bg-white/5 border border-white/10 p-3">
+            <p className="text-[10px] text-white/40 mb-2 text-center">¿Quién gana en penales?</p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setPenaltyWinner("home"); setSaved(false); }}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border text-xs font-semibold transition-all ${
+                  penaltyWinner === "home"
+                    ? "bg-green-500/20 border-green-500/40 text-green-300"
+                    : "bg-white/5 border-white/10 text-white/40 hover:border-white/20 hover:text-white/60"
+                }`}
+              >
+                <span>{homeFlag}</span>
+                <span className="truncate">{match.homeTeam.shortName || homeName}</span>
+              </button>
+              <button
+                onClick={() => { setPenaltyWinner("away"); setSaved(false); }}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border text-xs font-semibold transition-all ${
+                  penaltyWinner === "away"
+                    ? "bg-green-500/20 border-green-500/40 text-green-300"
+                    : "bg-white/5 border-white/10 text-white/40 hover:border-white/20 hover:text-white/60"
+                }`}
+              >
+                <span>{awayFlag}</span>
+                <span className="truncate">{match.awayTeam.shortName || awayName}</span>
+              </button>
+            </div>
+          </div>
+        )}
 
         {locked && (
           <div className="mb-3 flex items-center justify-center gap-3 rounded-xl bg-white/5 py-2">
@@ -213,7 +259,9 @@ function MatchPredictionCard({
 
         {!locked && (
           <div className="flex flex-wrap items-center gap-2">
-            <TokenPicker tokens={localTokens} activeMultiplier={multiplier} onSelect={handleTokenSelect} disabled={locked} />
+            {isGroupPhase && (
+              <TokenPicker tokens={localTokens} activeMultiplier={activeMultiplier} onSelect={handleTokenSelect} disabled={locked} />
+            )}
             {myStreak >= 3 && (
               <span className="flex items-center gap-1 text-[10px] text-orange-400">
                 <Flame className="h-3 w-3" />+{streakBonus} racha
@@ -237,10 +285,12 @@ function MatchPredictionCard({
           </div>
         )}
 
-        {/* Predicción guardada — resumen en partidos no bloqueados */}
+        {/* Resumen de puntos posibles */}
         {!locked && pts && (
           <div className="mt-1 text-[10px] text-white/20">
-            Exacto: {pts.exact} pts · Ganador: {pts.winner} pts{pts.draw > 0 ? ` · Empate: ${pts.draw} pts` : ""}
+            {isGroupPhase
+              ? `Exacto: ${pts.exact} pts · Ganador: ${pts.winner} pts${pts.draw > 0 ? ` · Empate: ${pts.draw} pts` : ""}`
+              : `Exacto: ${pts.exact} pts · Penales: ${pts.penales} pts · Ganador: ${pts.winner} pts`}
           </div>
         )}
       </CardContent>
@@ -273,26 +323,39 @@ function RulesModal({ onClose }: { onClose: () => void }) {
                 <thead>
                   <tr className="bg-white/5 text-white/40">
                     <th className="text-left px-3 py-2 font-semibold">Fase</th>
-                    <th className="text-center px-3 py-2 font-semibold">Exacto</th>
-                    <th className="text-center px-3 py-2 font-semibold">Ganador</th>
-                    <th className="text-center px-3 py-2 font-semibold">Empate</th>
+                    <th className="text-center px-2 py-2 font-semibold">Exacto</th>
+                    <th className="text-center px-2 py-2 font-semibold">Penales</th>
+                    <th className="text-center px-2 py-2 font-semibold">Ganador</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
                   {phases.map((phase) => {
                     const pts = PHASE_POINTS[phase];
+                    const isGroup = phase === "GROUP";
                     return (
                       <tr key={phase} className="text-white/80">
                         <td className="px-3 py-2 font-medium">{PHASE_SHORT[phase]}</td>
-                        <td className="px-3 py-2 text-center font-black text-green-400">{pts.exact}</td>
-                        <td className="px-3 py-2 text-center font-bold">{pts.winner}</td>
-                        <td className="px-3 py-2 text-center">{pts.draw > 0 ? pts.draw : <span className="text-white/20">—</span>}</td>
+                        <td className="px-2 py-2 text-center font-black text-green-400">{pts.exact}</td>
+                        <td className="px-2 py-2 text-center">
+                          {isGroup
+                            ? <span className="text-white/20">—</span>
+                            : <span className="font-bold text-blue-300">{pts.penales}</span>}
+                        </td>
+                        <td className="px-2 py-2 text-center font-bold">
+                          {isGroup
+                            ? <>{pts.winner} <span className="text-white/30 font-normal text-[10px]">/ {pts.draw} emp</span></>
+                            : pts.winner}
+                        </td>
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
             </div>
+            <p className="text-[10px] text-white/30 px-1 mt-1.5">
+              Penales: acertaste el empate en tiempo regular + quién gana en penales.
+              Fórmula: (pts base + bonus racha) × multiplicador.
+            </p>
           </div>
 
           <div>
@@ -308,7 +371,7 @@ function RulesModal({ onClose }: { onClose: () => void }) {
                   <p className="text-xs text-white/60">{t.desc}</p>
                 </div>
               ))}
-              <p className="text-[10px] text-white/30 px-1">Cada potenciador se usa una sola vez. Los no usados caducan al final de la fase de grupos.</p>
+              <p className="text-[10px] text-white/30 px-1">Solo aplican en la fase de grupos. Cada uno se usa una sola vez. Caducan al final de Octavos de Final.</p>
             </div>
           </div>
 
@@ -317,11 +380,11 @@ function RulesModal({ onClose }: { onClose: () => void }) {
             <div className="space-y-1.5">
               <div className="flex items-center gap-3 rounded-xl bg-orange-500/10 border border-orange-500/15 px-3 py-2">
                 <span className="text-sm">🔥🔥🔥</span>
-                <p className="text-xs text-orange-300">3 aciertos seguidos → <strong>+2 pts</strong> en el próximo</p>
+                <p className="text-xs text-orange-300">3 aciertos seguidos → <strong>+3 pts</strong> en el próximo</p>
               </div>
               <div className="flex items-center gap-3 rounded-xl bg-orange-500/15 border border-orange-500/20 px-3 py-2">
                 <span className="text-sm">🔥🔥🔥🔥🔥</span>
-                <p className="text-xs text-orange-300">5 aciertos seguidos → <strong>+5 pts</strong> en el próximo</p>
+                <p className="text-xs text-orange-300">5 aciertos seguidos → <strong>+8 pts</strong> en el próximo</p>
               </div>
               <p className="text-[10px] text-white/30 px-1">La racha se corta con cualquier predicción incorrecta.</p>
             </div>
@@ -372,9 +435,9 @@ export default function PrediccionesPage() {
   }, [tokens, setTokens, updateTokenUsage]);
 
   const handleSave = useCallback(async (
-    matchId: string, home: number, away: number, multiplier: TokenMultiplier
+    matchId: string, home: number, away: number, multiplier: TokenMultiplier, penaltyWinner?: "home" | "away"
   ) => {
-    return savePrediction({ matchId, homeGoals: home, awayGoals: away, multiplier });
+    return savePrediction({ matchId, homeGoals: home, awayGoals: away, multiplier, penaltyWinner });
   }, [savePrediction]);
 
   const availablePhases = PHASE_ORDER.filter((p) =>
@@ -511,10 +574,27 @@ export default function PrediccionesPage() {
             </span>
           ))}
           {tokensLeft.length > 0 && (
-            <span className="text-[10px] text-orange-400/80 shrink-0">¡Caducan al final de Grupos!</span>
+            <span className="text-[10px] text-orange-400/80 shrink-0">Solo en grupos · Caducan al fin de Octavos</span>
           )}
         </div>
       </div>
+
+      {/* Racha counter */}
+      {streak.current >= 1 && (
+        <div className={`mx-4 mt-3 flex items-center justify-between rounded-xl px-4 py-2.5 border ${
+          streak.current >= 5 ? "bg-orange-500/15 border-orange-500/25" :
+          streak.current >= 3 ? "bg-orange-500/10 border-orange-500/15" :
+          "bg-white/5 border-white/8"
+        }`}>
+          <div className="flex items-center gap-2">
+            <span>🔥</span>
+            <span className="text-sm font-semibold text-white">Racha de {streak.current}</span>
+          </div>
+          {streakBonusPoints(streak.current) > 0 && (
+            <span className="text-xs font-bold text-orange-400">+{streakBonusPoints(streak.current)} en próximo acierto</span>
+          )}
+        </div>
+      )}
 
       {/* Lista de partidos */}
       <div className="space-y-3 px-4 py-3 pb-6">
