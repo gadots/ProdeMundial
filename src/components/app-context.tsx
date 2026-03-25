@@ -120,11 +120,19 @@ function AppProviderDemoOrSupabase({ children }: { children: React.ReactNode }) 
   const [demo, setDemo] = useState(false);
 
   useEffect(() => {
-    setDemo(sessionStorage.getItem("demo_mode") === "1");
+    // Check URL param ?demo=1 OR previously saved sessionStorage flag
+    const params = new URLSearchParams(window.location.search);
+    const isDemo =
+      params.get("demo") === "1" ||
+      sessionStorage.getItem("demo_mode") === "1";
+
+    if (isDemo) sessionStorage.setItem("demo_mode", "1");
+
+    setDemo(isDemo);
     setChecked(true);
   }, []);
 
-  // While checking (single frame), show default with userLoading=true so children render their loading states
+  // While checking (single frame), show default with userLoading=true
   if (!checked) {
     return (
       <AppContext.Provider value={{ ...DEFAULT_VALUE, userLoading: true }}>
