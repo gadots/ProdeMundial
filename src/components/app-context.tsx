@@ -111,6 +111,32 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return <AppContext.Provider value={DEFAULT_VALUE}>{children}</AppContext.Provider>;
   }
 
+  // Supabase configured: check for demo mode flag before starting real auth
+  return <AppProviderDemoOrSupabase>{children}</AppProviderDemoOrSupabase>;
+}
+
+function AppProviderDemoOrSupabase({ children }: { children: React.ReactNode }) {
+  const [checked, setChecked] = useState(false);
+  const [demo, setDemo] = useState(false);
+
+  useEffect(() => {
+    setDemo(sessionStorage.getItem("demo_mode") === "1");
+    setChecked(true);
+  }, []);
+
+  // While checking (single frame), show default with userLoading=true so children render their loading states
+  if (!checked) {
+    return (
+      <AppContext.Provider value={{ ...DEFAULT_VALUE, userLoading: true }}>
+        {children}
+      </AppContext.Provider>
+    );
+  }
+
+  if (demo) {
+    return <AppContext.Provider value={DEFAULT_VALUE}>{children}</AppContext.Provider>;
+  }
+
   return <AppProviderSupabase>{children}</AppProviderSupabase>;
 }
 
