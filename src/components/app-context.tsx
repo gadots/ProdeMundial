@@ -105,8 +105,8 @@ export const useApp = () => useContext(AppContext);
 // Provider
 // -------------------------------------------------------
 
-export function AppProvider({ children, demoMode = false }: { children: React.ReactNode; demoMode?: boolean }) {
-  if (!IS_SUPABASE || demoMode) {
+export function AppProvider({ children }: { children: React.ReactNode }) {
+  if (!IS_SUPABASE) {
     return <AppContext.Provider value={DEFAULT_VALUE}>{children}</AppContext.Provider>;
   }
   return <AppProviderSupabase>{children}</AppProviderSupabase>;

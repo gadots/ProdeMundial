@@ -1,13 +1,9 @@
-import { cookies } from "next/headers";
 import { BottomNav, Sidebar } from "@/components/nav";
 import { AppProvider } from "@/components/app-context";
 
-export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const cookieStore = await cookies();
-  const demoMode = cookieStore.get("demo_mode")?.value === "1";
-
+export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
-    <AppProvider demoMode={demoMode}>
+    <AppProvider>
       <div className="min-h-dvh bg-[#0a1628]">
         <div className="lg:flex">
           {/* Sidebar — solo desktop */}
