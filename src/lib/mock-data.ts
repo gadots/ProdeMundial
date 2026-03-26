@@ -41,8 +41,9 @@ export const MOCK_MATCHES: Match[] = [
   { id: "m16-1", homeTeam: MOCK_TEAMS.ARG, awayTeam: MOCK_TEAMS.NED, phase: "ROUND_OF_16", date: matchDate(20, 20), status: "SCHEDULED", venue: "MetLife Stadium" },
   { id: "m16-2", homeTeam: MOCK_TEAMS.FRA, awayTeam: MOCK_TEAMS.POR, phase: "ROUND_OF_16", date: matchDate(21, 20), status: "SCHEDULED", venue: "Rose Bowl" },
   { id: "mqf-1", homeTeam: MOCK_TEAMS.ARG, awayTeam: MOCK_TEAMS.FRA, phase: "QUARTER_FINAL", date: matchDate(32, 20), status: "SCHEDULED", venue: "MetLife Stadium" },
-  { id: "msf-1", homeTeam: MOCK_TEAMS.ARG, awayTeam: MOCK_TEAMS.BRA, phase: "SEMI_FINAL", date: matchDate(38, 20), status: "SCHEDULED", venue: "MetLife Stadium" },
-  { id: "mfinal", homeTeam: MOCK_TEAMS.ARG, awayTeam: MOCK_TEAMS.FRA, phase: "FINAL", date: matchDate(38, 20), status: "SCHEDULED", venue: "MetLife Stadium" },
+  { id: "msf-1",  homeTeam: MOCK_TEAMS.ARG, awayTeam: MOCK_TEAMS.BRA, phase: "SEMI_FINAL",   date: matchDate(38, 20), status: "SCHEDULED", venue: "MetLife Stadium" },
+  { id: "m3rd",   homeTeam: MOCK_TEAMS.BRA, awayTeam: MOCK_TEAMS.FRA, phase: "THIRD_PLACE", date: matchDate(44, 17), status: "SCHEDULED", venue: "AT&T Stadium" },
+  { id: "mfinal", homeTeam: MOCK_TEAMS.ARG, awayTeam: MOCK_TEAMS.FRA, phase: "FINAL",       date: matchDate(45, 20), status: "SCHEDULED", venue: "MetLife Stadium" },
 ];
 
 // -------------------------------------------------------
@@ -80,7 +81,7 @@ export const MOCK_MEMBERS: Member[] = [
   {
     id: "u1", displayName: "Guido G.", avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Guido",
     totalPoints: 94,
-    pointsPerPhase: { GROUP: 76, ROUND_OF_32: 0, ROUND_OF_16: 18, QUARTER_FINAL: 0, SEMI_FINAL: 0, FINAL: 0 },
+    pointsPerPhase: { GROUP: 76, ROUND_OF_32: 0, ROUND_OF_16: 18, QUARTER_FINAL: 0, SEMI_FINAL: 0, THIRD_PLACE: 0, FINAL: 0 },
     rank: 1, previousRank: 2,
     tokens: makeTokens("m2"),
     streak: { current: 4, best: 5, bonusNext: 2 },
@@ -88,7 +89,7 @@ export const MOCK_MEMBERS: Member[] = [
   {
     id: "u2", displayName: "Sofía R.", avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sofia",
     totalPoints: 88,
-    pointsPerPhase: { GROUP: 70, ROUND_OF_32: 0, ROUND_OF_16: 18, QUARTER_FINAL: 0, SEMI_FINAL: 0, FINAL: 0 },
+    pointsPerPhase: { GROUP: 70, ROUND_OF_32: 0, ROUND_OF_16: 18, QUARTER_FINAL: 0, SEMI_FINAL: 0, THIRD_PLACE: 0, FINAL: 0 },
     rank: 2, previousRank: 1,
     tokens: makeTokens("m1", "m3"),
     streak: { current: 2, best: 6, bonusNext: 0 },
@@ -96,7 +97,7 @@ export const MOCK_MEMBERS: Member[] = [
   {
     id: "u3", displayName: "Martín L.", avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Martin",
     totalPoints: 72,
-    pointsPerPhase: { GROUP: 60, ROUND_OF_32: 0, ROUND_OF_16: 12, QUARTER_FINAL: 0, SEMI_FINAL: 0, FINAL: 0 },
+    pointsPerPhase: { GROUP: 60, ROUND_OF_32: 0, ROUND_OF_16: 12, QUARTER_FINAL: 0, SEMI_FINAL: 0, THIRD_PLACE: 0, FINAL: 0 },
     rank: 3, previousRank: 3,
     tokens: makeTokens(),
     streak: { current: 0, best: 3, bonusNext: 0 },
@@ -104,7 +105,7 @@ export const MOCK_MEMBERS: Member[] = [
   {
     id: "u4", displayName: "Valentina C.", avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Valentina",
     totalPoints: 65,
-    pointsPerPhase: { GROUP: 65, ROUND_OF_32: 0, ROUND_OF_16: 0, QUARTER_FINAL: 0, SEMI_FINAL: 0, FINAL: 0 },
+    pointsPerPhase: { GROUP: 65, ROUND_OF_32: 0, ROUND_OF_16: 0, QUARTER_FINAL: 0, SEMI_FINAL: 0, THIRD_PLACE: 0, FINAL: 0 },
     rank: 4, previousRank: 4,
     tokens: makeTokens(undefined, undefined),
     streak: { current: 1, best: 4, bonusNext: 0 },
@@ -112,7 +113,7 @@ export const MOCK_MEMBERS: Member[] = [
   {
     id: "u5", displayName: "Lucas P.", avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Lucas",
     totalPoints: 58,
-    pointsPerPhase: { GROUP: 55, ROUND_OF_32: 0, ROUND_OF_16: 3, QUARTER_FINAL: 0, SEMI_FINAL: 0, FINAL: 0 },
+    pointsPerPhase: { GROUP: 55, ROUND_OF_32: 0, ROUND_OF_16: 3, QUARTER_FINAL: 0, SEMI_FINAL: 0, THIRD_PLACE: 0, FINAL: 0 },
     rank: 5, previousRank: 5,
     tokens: makeTokens(undefined, undefined, undefined),
     streak: { current: 0, best: 2, bonusNext: 0 },

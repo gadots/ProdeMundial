@@ -26,6 +26,7 @@ export function mapStage(stage: string): string {
     LAST_16: "ROUND_OF_16",
     QUARTER_FINALS: "QUARTER_FINAL",
     SEMI_FINALS: "SEMI_FINAL",
+    THIRD_PLACE: "THIRD_PLACE",
     FINAL: "FINAL",
   };
   return map[stage] ?? "GROUP";

@@ -163,7 +163,7 @@ export async function getLeaderboard(prodeId: string): Promise<Member[]> {
     const profile = (m as DbRow).profiles as DbRow | null;
     const memberScores = scores.filter((s) => s.user_id === m.user_id);
     const pointsPerPhase: Record<Phase, number> = {
-      GROUP: 0, ROUND_OF_32: 0, ROUND_OF_16: 0, QUARTER_FINAL: 0, SEMI_FINAL: 0, FINAL: 0,
+      GROUP: 0, ROUND_OF_32: 0, ROUND_OF_16: 0, QUARTER_FINAL: 0, SEMI_FINAL: 0, THIRD_PLACE: 0, FINAL: 0,
     };
     let totalPoints = 0;
     memberScores.forEach((s) => {
