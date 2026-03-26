@@ -11,12 +11,7 @@ export function SyncMatchesButton() {
     setLoading(true);
     setResult(null);
     try {
-      const res = await fetch("/api/cron/sync-matches", {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${process.env.NEXT_PUBLIC_CRON_SECRET ?? ""}`,
-        },
-      });
+      const res = await fetch("/api/admin/sync", { method: "POST" });
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
         setResult({ ok: true, message: data.message ?? "Sincronización completada" });
