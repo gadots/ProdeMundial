@@ -14,12 +14,12 @@ import { Save, Lock, Check, Flame, HelpCircle, X } from "lucide-react";
 const MODULE_LOAD_TIME = Date.now();
 
 const PHASE_ORDER: Phase[] = [
-  "GROUP", "ROUND_OF_32", "ROUND_OF_16", "QUARTER_FINAL", "SEMI_FINAL", "FINAL"
+  "GROUP", "ROUND_OF_32", "ROUND_OF_16", "QUARTER_FINAL", "SEMI_FINAL", "THIRD_PLACE", "FINAL"
 ];
 
 const PHASE_SHORT: Record<Phase, string> = {
   GROUP: "Grupos", ROUND_OF_32: "Ronda 32", ROUND_OF_16: "Octavos",
-  QUARTER_FINAL: "Cuartos", SEMI_FINAL: "Semis", FINAL: "Final",
+  QUARTER_FINAL: "Cuartos", SEMI_FINAL: "Semis", THIRD_PLACE: "3er Puesto", FINAL: "Final",
 };
 
 type FilterView = "all" | "pending" | "urgent";

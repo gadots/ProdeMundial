@@ -6,7 +6,7 @@ import { useApp } from "@/components/app-context";
 import { PHASE_LABELS, Phase } from "@/lib/types";
 
 const PHASE_ORDER: Phase[] = [
-  "GROUP", "ROUND_OF_16", "QUARTER_FINAL", "SEMI_FINAL", "FINAL"
+  "GROUP", "ROUND_OF_16", "QUARTER_FINAL", "SEMI_FINAL", "THIRD_PLACE", "FINAL"
 ];
 
 export default function TablaPage() {

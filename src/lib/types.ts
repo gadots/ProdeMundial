@@ -4,6 +4,7 @@ export type Phase =
   | "ROUND_OF_16"
   | "QUARTER_FINAL"
   | "SEMI_FINAL"
+  | "THIRD_PLACE"
   | "FINAL";
 
 export const PHASE_LABELS: Record<Phase, string> = {
@@ -12,6 +13,7 @@ export const PHASE_LABELS: Record<Phase, string> = {
   ROUND_OF_16: "Octavos de Final",
   QUARTER_FINAL: "Cuartos de Final",
   SEMI_FINAL: "Semifinal",
+  THIRD_PLACE: "Tercer Puesto",
   FINAL: "Final",
 };
 
@@ -21,6 +23,7 @@ export const PHASE_POINTS: Record<Phase, { exact: number; winner: number; draw: 
   ROUND_OF_16:   { exact: 12, winner: 5,  draw: 0, penales: 7 },
   QUARTER_FINAL: { exact: 20, winner: 8,  draw: 0, penales: 12 },
   SEMI_FINAL:    { exact: 35, winner: 12, draw: 0, penales: 18 },
+  THIRD_PLACE:   { exact: 35, winner: 12, draw: 0, penales: 18 },
   FINAL:         { exact: 60, winner: 25, draw: 0, penales: 35 },
 };
 
