@@ -1,22 +1,11 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { isAdminAuthenticated } from "@/lib/admin-auth";
 import { syncMatches } from "@/lib/sync-matches";
 
-/**
- * Manual sync trigger — same as the cron job but callable on-demand.
- * Protected by CRON_SECRET.
- *
- * Usage:
- *   curl -X POST /api/admin/sync \
- *     -H "Authorization: Bearer <CRON_SECRET>"
- */
-export async function POST(request: Request) {
-  const cronSecret = process.env.CRON_SECRET;
-  if (!cronSecret) {
-    console.error("admin/sync: CRON_SECRET env var not set");
-    return NextResponse.json({ error: "Server misconfigured: CRON_SECRET not set" }, { status: 500 });
-  }
-  const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${cronSecret}`) {
+export async function POST() {
+  const cookieStore = await cookies();
+  if (!isAdminAuthenticated(cookieStore)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
