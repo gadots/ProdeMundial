@@ -259,6 +259,7 @@ export default function LandingPage() {
             Unirme al prode
           </Link>
         </p>
+
       </div>
     </div>
   );

@@ -106,11 +106,9 @@ export const useApp = () => useContext(AppContext);
 // -------------------------------------------------------
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  // In mock mode, just use defaults
   if (!IS_SUPABASE) {
     return <AppContext.Provider value={DEFAULT_VALUE}>{children}</AppContext.Provider>;
   }
-
   return <AppProviderSupabase>{children}</AppProviderSupabase>;
 }
 
