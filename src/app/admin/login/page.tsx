@@ -53,7 +53,7 @@ export default function AdminLoginPage() {
                 onChange={(e) => setUsername(e.target.value)}
                 required
                 disabled={loading}
-                autoComplete="username"
+                autoComplete="off"
                 className="w-full rounded-xl border border-white/15 bg-white/5 px-3.5 py-2.5 text-sm text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
                 placeholder="admin"
               />
