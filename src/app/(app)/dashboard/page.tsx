@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { TopBar } from "@/components/nav";
+import { Flag } from "@/components/flag";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useApp } from "@/components/app-context";
@@ -75,7 +76,7 @@ function MatchCard({ match }: { match: Match }) {
           </div>
           <div className="flex items-center gap-3">
             <div className="flex flex-1 items-center gap-2">
-              <span className="text-2xl">{match.homeTeam.flag}</span>
+              <Flag tla={match.homeTeam.id} size={40} className="w-7 h-auto shrink-0" />
               <p className="text-sm font-bold text-white leading-tight truncate">{match.homeTeam.name}</p>
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
@@ -93,7 +94,7 @@ function MatchCard({ match }: { match: Match }) {
             </div>
             <div className="flex flex-1 items-center gap-2 justify-end">
               <p className="text-sm font-bold text-white leading-tight truncate text-right">{match.awayTeam.name}</p>
-              <span className="text-2xl">{match.awayTeam.flag}</span>
+              <Flag tla={match.awayTeam.id} size={40} className="w-7 h-auto shrink-0" />
             </div>
           </div>
           <div className="mt-3 flex items-center justify-between border-t border-white/5 pt-2.5">
