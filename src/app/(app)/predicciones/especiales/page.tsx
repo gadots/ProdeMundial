@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useApp } from "@/components/app-context";
 import * as Q from "@/lib/supabase/queries";
 import { ALL_WC_TEAMS } from "@/lib/mock-data";
+import { Flag } from "@/components/flag";
 import { Lock, Save, Check, Info, Search } from "lucide-react";
 
 const SPECIAL_PREDICTIONS = [
@@ -45,7 +46,6 @@ function TeamSelector({
   disabled?: boolean;
 }) {
   const [search, setSearch] = useState("");
-  const [showAll, setShowAll] = useState(false);
 
   const filtered = search.trim()
     ? ALL_WC_TEAMS.filter(
@@ -55,9 +55,6 @@ function TeamSelector({
       )
     : ALL_WC_TEAMS;
 
-  const visible = showAll || search.trim() ? filtered : filtered.slice(0, 12);
-  const hiddenCount = filtered.length - 12;
-
   return (
     <div className="mt-3 space-y-2">
       <div className="relative">
@@ -65,14 +62,14 @@ function TeamSelector({
         <input
           type="text"
           value={search}
-          onChange={(e) => { setSearch(e.target.value); setShowAll(true); }}
+          onChange={(e) => setSearch(e.target.value)}
           placeholder="Buscar selección…"
           disabled={disabled}
           className="w-full h-9 rounded-xl border border-white/10 bg-white/5 pl-8 pr-3 text-xs text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-green-500 disabled:opacity-40"
         />
       </div>
       <div className="grid grid-cols-4 gap-1.5">
-        {visible.map((team) => (
+        {filtered.map((team) => (
           <button
             key={team.id}
             disabled={disabled}
@@ -83,19 +80,11 @@ function TeamSelector({
                 : "bg-white/5 border-white/8 text-white/60 hover:bg-white/10 hover:text-white/80"
             } ${disabled ? "opacity-40 cursor-not-allowed" : ""}`}
           >
-            <span className="text-lg leading-none">{team.flag}</span>
+            <Flag tla={team.id} size={40} className="w-6 h-auto rounded-[1px] mb-0.5" />
             <span className="font-semibold leading-tight text-center truncate w-full px-0.5">{team.shortName}</span>
           </button>
         ))}
       </div>
-      {!search.trim() && !showAll && hiddenCount > 0 && (
-        <button
-          onClick={() => setShowAll(true)}
-          className="w-full py-2 text-xs text-white/40 hover:text-white/60 transition-colors"
-        >
-          Ver {hiddenCount} selecciones más ↓
-        </button>
-      )}
     </div>
   );
 }

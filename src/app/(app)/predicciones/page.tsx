@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import Link from "next/link";
 import { TopBar } from "@/components/nav";
+import { Flag } from "@/components/flag";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -201,7 +202,7 @@ function MatchPredictionCard({
 
         <div className="flex items-center gap-3 mb-3">
           <div className="flex flex-1 items-center gap-2">
-            <span className="text-2xl">{homeFlag}</span>
+            {match.homeTeam.id ? <Flag tla={match.homeTeam.id} size={40} className="w-7 h-auto" /> : <span className="text-2xl">❓</span>}
             <p className="text-sm font-bold text-white leading-tight">{homeName}</p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -211,7 +212,7 @@ function MatchPredictionCard({
           </div>
           <div className="flex flex-1 items-center gap-2 justify-end">
             <p className="text-sm font-bold text-white leading-tight text-right">{awayName}</p>
-            <span className="text-2xl">{awayFlag}</span>
+            {match.awayTeam.id ? <Flag tla={match.awayTeam.id} size={40} className="w-7 h-auto" /> : <span className="text-2xl">❓</span>}
           </div>
         </div>
 
@@ -227,7 +228,7 @@ function MatchPredictionCard({
                     : "bg-white/5 border-white/10 text-white/40 hover:border-white/20 hover:text-white/60"
                 }`}
               >
-                <span>{homeFlag}</span>
+                <Flag tla={match.homeTeam.id} size={20} className="w-5 h-auto rounded-[1px]" />
                 <span className="truncate">{match.homeTeam.shortName || homeName}</span>
               </button>
               <button
@@ -238,7 +239,7 @@ function MatchPredictionCard({
                     : "bg-white/5 border-white/10 text-white/40 hover:border-white/20 hover:text-white/60"
                 }`}
               >
-                <span>{awayFlag}</span>
+                <Flag tla={match.awayTeam.id} size={20} className="w-5 h-auto rounded-[1px]" />
                 <span className="truncate">{match.awayTeam.shortName || awayName}</span>
               </button>
             </div>
@@ -579,22 +580,24 @@ export default function PrediccionesPage() {
         </div>
       </div>
 
-      {/* Racha counter */}
-      {streak.current >= 1 && (
-        <div className={`mx-4 mt-3 flex items-center justify-between rounded-xl px-4 py-2.5 border ${
-          streak.current >= 5 ? "bg-orange-500/15 border-orange-500/25" :
-          streak.current >= 3 ? "bg-orange-500/10 border-orange-500/15" :
-          "bg-white/5 border-white/8"
-        }`}>
-          <div className="flex items-center gap-2">
-            <span>🔥</span>
-            <span className="text-sm font-semibold text-white">Racha de {streak.current}</span>
-          </div>
-          {streakBonusPoints(streak.current) > 0 && (
-            <span className="text-xs font-bold text-orange-400">+{streakBonusPoints(streak.current)} en próximo acierto</span>
-          )}
+      {/* Racha counter — siempre visible */}
+      <div className={`mx-4 mt-3 flex items-center justify-between rounded-xl px-4 py-2.5 border ${
+        streak.current >= 5 ? "bg-orange-500/15 border-orange-500/25" :
+        streak.current >= 3 ? "bg-orange-500/10 border-orange-500/15" :
+        "bg-white/5 border-white/8"
+      }`}>
+        <div className="flex items-center gap-2">
+          <span>🔥</span>
+          <span className="text-sm font-semibold text-white">
+            {streak.current === 0 ? "Sin racha" : `Racha de ${streak.current}`}
+          </span>
         </div>
-      )}
+        {streakBonusPoints(streak.current) > 0 ? (
+          <span className="text-xs font-bold text-orange-400">+{streakBonusPoints(streak.current)} en próximo acierto</span>
+        ) : (
+          <span className="text-xs text-white/25">3 seguidos = +3 pts</span>
+        )}
+      </div>
 
       {/* Lista de partidos */}
       <div className="space-y-3 px-4 py-3 pb-6">
