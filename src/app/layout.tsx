@@ -4,6 +4,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "ProdeMundial 2026",
   description: "El prode del Mundial 2026 con tus amigos",
+  manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     title: "ProdeMundial",
