@@ -11,6 +11,9 @@ export const metadata: Metadata = {
     title: "ProdeMundial",
     statusBarStyle: "black-translucent",
   },
+  icons: {
+    apple: "/icons/icon-192.png",
+  },
 };
 
 export const viewport: Viewport = {
