@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Share2 } from "lucide-react";
 import { TopBar } from "@/components/nav";
 import { useApp } from "@/components/app-context";
 import { PHASE_LABELS, Phase } from "@/lib/types";
@@ -9,9 +10,40 @@ const PHASE_ORDER: Phase[] = [
   "GROUP", "ROUND_OF_16", "QUARTER_FINAL", "SEMI_FINAL", "THIRD_PLACE", "FINAL"
 ];
 
+const RANK_EMOJI = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"];
+
+function buildShareText(
+  members: { displayName: string; totalPoints: number; pointsPerPhase: Record<string, number> }[],
+  view: "total" | Phase,
+  prodeName: string
+): string {
+  const viewLabel = view === "total" ? "General" : PHASE_LABELS[view];
+  const lines: string[] = [
+    `🏆 *ProdeMundial · ${prodeName}*`,
+    `📊 Tabla ${viewLabel}`,
+    "",
+  ];
+
+  const sorted = [...members].sort((a, b) => {
+    const sa = view === "total" ? a.totalPoints : (a.pointsPerPhase[view] ?? 0);
+    const sb = view === "total" ? b.totalPoints : (b.pointsPerPhase[view] ?? 0);
+    return sb - sa;
+  });
+
+  sorted.forEach((m, i) => {
+    const pts = view === "total" ? m.totalPoints : (m.pointsPerPhase[view] ?? 0);
+    const medal = i < RANK_EMOJI.length ? RANK_EMOJI[i] : `#${i + 1}`;
+    lines.push(`${medal} ${m.displayName} · ${pts} pts`);
+  });
+
+  lines.push("", "⚽ Mundial 2026 · elprode.vercel.app");
+  return lines.join("\n");
+}
+
 export default function TablaPage() {
   const { user, prode, pointsToday } = useApp();
   const [view, setView] = useState<"total" | Phase>("total");
+  const [shared, setShared] = useState(false);
 
   const members = [...(prode?.members ?? [])].sort((a, b) => b.totalPoints - a.totalPoints);
 
@@ -22,13 +54,29 @@ export default function TablaPage() {
 
   const sortedByView = [...members].sort((a, b) => getMemberScore(b) - getMemberScore(a));
 
+  const handleShare = async () => {
+    const text = buildShareText(members, view, prode?.name ?? "Mi Prode");
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share({ text });
+        setShared(true);
+        setTimeout(() => setShared(false), 2000);
+        return;
+      } catch {
+        // user cancelled or API not supported — fall through to WA
+      }
+    }
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
+  };
+
   return (
     <div>
       <TopBar title="Posiciones" subtitle={prode?.name ?? "…"} />
 
-      {/* Selector de vista */}
+      {/* Selector de vista + share */}
       <div className="sticky top-[57px] z-30 border-b border-white/10 bg-[#0a1628]/95 backdrop-blur-lg">
-        <div className="overflow-x-auto">
+        <div className="flex items-center gap-2 pr-3">
+          <div className="overflow-x-auto flex-1">
           <div className="flex gap-1.5 p-3 min-w-max items-center">
             {/* General — destacado */}
             <button
@@ -63,6 +111,19 @@ export default function TablaPage() {
               );
             })}
           </div>
+          </div>
+          {/* Botón compartir */}
+          <button
+            onClick={handleShare}
+            className={`shrink-0 flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition-all ${
+              shared
+                ? "bg-green-500/20 text-green-400"
+                : "bg-white/8 text-white/60 hover:bg-white/12 hover:text-white/80"
+            }`}
+          >
+            <Share2 className="h-3.5 w-3.5" />
+            {shared ? "¡Enviado!" : "Compartir"}
+          </button>
         </div>
       </div>
 
