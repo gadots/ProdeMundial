@@ -1,129 +1,182 @@
-# ProdeMundial — Guía para Claude
+# ProdeMundial — Claude Guide
 
-## ¿Qué es este proyecto?
+## What is this project?
 
-App de prode para el Mundial 2026 (USA · MEX · CAN). Los usuarios forman grupos ("prodes"), predicen resultados partido a partido, acumulan puntos y compiten en una tabla de posiciones. Es una app mobile-first, completamente en español rioplatense.
+A World Cup 2026 prediction pool app (USA · MEX · CAN). Users form groups ("prodes"), predict match results, accumulate points, and compete on a leaderboard. Mobile-first, UI is in Rioplatense Spanish (Argentina/Uruguay dialect).
 
 ## Stack
 
-- **Next.js 16** (App Router, `src/app`)  
-- **TypeScript** estricto
-- **Tailwind CSS** con paleta oscura (`#0a1628` base)
-- **Supabase** (Auth + PostgreSQL + Realtime) — actualmente la app funciona con **datos mock** sin Supabase real
-- **shadcn/ui** componentes en `src/components/ui/`
+- **Next.js 16** (App Router, `src/app`)
+- **TypeScript** strict mode
+- **Tailwind CSS** with dark palette (`#0a1628` base)
+- **Supabase** (Auth + PostgreSQL + Realtime) — app works with **mock data** when Supabase is not configured
+- **shadcn/ui** components in `src/components/ui/`
 
-## Estructura de carpetas clave
+## Key folder structure
 
 ```
 src/
   app/
-    (app)/          ← rutas protegidas con layout (nav, etc.)
-      dashboard/    ← home con partidos, racha, tokens, wildcards
-      predicciones/ ← predicciones de partidos + selector de tokens
-        especiales/ ← campeón, goleador, etc.
-      tabla/        ← leaderboard con racha y tokens
-      desafios/     ← wildcards semanales + link a especiales
-      grupo/        ← info del prode, código de invitación
-      perfil/       ← perfil del usuario
-    (auth)/         ← login / registro
+    (app)/           ← protected routes with layout (nav, etc.)
+      dashboard/     ← home: live matches, streak, token alerts
+      predicciones/  ← match predictions + token selector
+        especiales/  ← champion, top scorer, etc.
+      tabla/         ← leaderboard with share button
+      grupo/         ← prode info, invite code
+      perfil/        ← user profile
+    (auth)/          ← login / register
+    admin/           ← admin panel (cookie-auth, not Supabase auth)
+      (panel)/       ← protected admin routes
+        dashboard/   ← stats overview
+        users/       ← user management
+        prodes/      ← prode management
+        matches/     ← match list + manual sync button
+      login/         ← admin login page
     api/
-      cron/sync-matches/ ← endpoint para sincronizar partidos
+      admin/
+        login/       ← sets admin session cookie
+        logout/      ← clears cookie
+        sync/        ← triggers match sync (accepts cookie OR Bearer CRON_SECRET)
+        users/[id]/  ← DELETE user
+        prodes/[id]/ ← DELETE prode
+      cron/sync-matches/ ← legacy GET endpoint (still used by direct calls)
   components/
-    nav.tsx         ← TopBar + BottomNav (5 ítems)
-    ui/             ← Badge, Button, Card (shadcn)
+    nav.tsx          ← TopBar + BottomNav (5 items)
+    flag.tsx         ← <Flag tla="ARG" /> renders country flag via flagcdn.com
+    service-worker-register.tsx ← registers /sw.js for PWA
+    ui/              ← shadcn components
   lib/
-    types.ts        ← todos los tipos TypeScript
-    mock-data.ts    ← datos de ejemplo (funciona sin Supabase)
-    scoring.ts      ← lógica de puntos, tokens, streaks
-    utils.ts
+    types.ts         ← all TypeScript types (Phase, Match, Member, etc.)
+    mock-data.ts     ← sample data (app works fully without Supabase)
+    scoring.ts       ← points logic, tokens, streaks
+    sync-matches.ts  ← core sync logic shared by cron and admin trigger
+    admin-auth.ts    ← cookie-based admin auth (ADMIN_USERNAME/ADMIN_PASSWORD)
+    supabase/
+      queries.ts     ← client-side Supabase queries
+      admin-queries.ts ← server-side admin queries (service role)
+public/
+  sw.js              ← static service worker (PWA, no build integration needed)
+  manifest.json      ← Web App Manifest
+  icons/             ← PWA icons (192, 512, maskable)
 supabase/
-  migrations/
-    001_initial_schema.sql  ← schema completo + RLS + funciones
+  migrations/        ← run in order: 001 → 007
 ```
 
-## Mecánicas de puntuación
+## Scoring mechanics
 
-### Puntos base por fase
+### Base points by phase
 
-| Fase         | Exacto | Ganador | Empate |
-|--------------|--------|---------|--------|
-| Grupos       | 3 pts  | 1 pt    | 2 pts  |
-| Ronda de 32  | 6 pts  | 2 pts   | —      |
-| Octavos      | 10 pts | 4 pts   | —      |
-| Cuartos      | 18 pts | 6 pts   | —      |
-| Semis        | 30 pts | 10 pts  | —      |
-| Final        | 50 pts | 20 pts  | —      |
+| Phase | Exact | Correct winner | Draw |
+|-------|-------|----------------|------|
+| Group stage | 3 pts | 1 pt | 2 pts |
+| Round of 32 | 6 pts | 2 pts | — |
+| Round of 16 | 10 pts | 4 pts | — |
+| Quarter-finals | 18 pts | 6 pts | — |
+| Semi-finals | 30 pts | 10 pts | — |
+| Third place | 30 pts | 10 pts | — |
+| Final | 50 pts | 20 pts | — |
 
-### Tokens multiplicadores (⚡2x / 🔥3x / 💥5x)
+### Multiplier tokens (⚡2x / 🔥3x / 💥5x)
 
-- Cada usuario recibe **1 token de cada tipo** al unirse a un prode
-- Se aplican a **cualquier partido** (sin restricción de fase)
-- Si no se usan antes del fin de la fase de grupos → **caducan** (pierden efecto)
-- Cada token solo se puede usar **una vez**
-- Se gestionan en `src/lib/mock-data.ts` (`MOCK_MY_TOKENS`) y en la página de predicciones
+- Each user gets **1 token of each type** when joining a prode
+- Can be applied to **any match** (no phase restriction)
+- If unused before end of group stage → **expire** (decay)
+- Each token can only be used **once**
+- Managed in `mock-data.ts` (`MOCK_MY_TOKENS`) and the predictions page
+- In the UI, tokens are called "Potenciadores" — TypeScript names (`MultiplierToken`, `TokenMultiplier`) are unchanged
 
-### Hot streak (racha)
+### Hot streak
 
-- +2 pts automáticos en la próxima predicción correcta si tenés racha de **3 aciertos consecutivos**
-- +5 pts si tenés **5+** consecutivos
-- La racha se rompe con cualquier predicción incorrecta o sin puntos
-- Ver `streakBonusPoints()` en `scoring.ts`
+- +2 pts automatic bonus on next correct prediction with **3 consecutive correct** predictions
+- +5 pts with **5+** consecutive
+- Streak resets on any wrong prediction or no-score prediction
+- See `streakBonusPoints()` in `scoring.ts`
 
-### Wildcards semanales
+### Special predictions
 
-- Desafíos de 3 tipos: `PICK_TEAM`, `NUMERIC`, `YES_NO`
-- Puntos fijos por desafío (8–25 pts)
-- Deadline de respuesta antes del cierre
-- Gestionados en `MOCK_WILDCARDS` y página `/desafios`
+- Champion: 60 pts · Top scorer: 40 pts · Finalist: 35 pts · Third place: 25 pts · Most goals country: 20 pts
+- Locked once the tournament starts
+- Page: `/predicciones/especiales`
 
-### Predicciones especiales
+## Code conventions
 
-- Campeón: 60 pts · Goleador: 40 pts · Finalista: 35 pts · Tercer puesto: 25 pts · País más goles: 20 pts
-- Se bloquean cuando el torneo arranca
-- Página `/predicciones/especiales`
+- **UI always in Rioplatense Spanish** (vos, pts, guardado, etc.)
+- Components: arrow functions + explicit `"use client"` where needed
+- Do not use `jokerUsed` (replaced by `multiplier: TokenMultiplier`)
+- Token palette: blue=2x, orange=3x, purple=5x
+- Mock data in `mock-data.ts` is used as fallback; in production everything comes from Supabase
+- Avoid circular imports: `types.ts` imports nothing from the project
+- Flags: always use `<Flag tla="..." />` component (flagcdn.com images) — never emoji flags (broken on Windows)
 
-## Convenciones de código
-
-- Siempre en **español rioplatense** en UI (vos, pts, guardado, etc.)
-- Componentes: arrow functions + `"use client"` explícito donde haga falta
-- No usar `jokerUsed` (reemplazado por `multiplier: TokenMultiplier`)
-- Paleta de tokens: azul=2x, naranja=3x, púrpura=5x
-- Los datos mock en `mock-data.ts` se usan como fallback; en producción todo viene de Supabase
-- Evitar imports circulares: `types.ts` no importa nada del proyecto
-
-## Comandos
+## Commands
 
 ```bash
-npm run dev      # desarrollo en localhost:3000
-npm run build    # build de producción (debe pasar sin errores TS)
+npm run dev      # development at localhost:3000 (Turbopack)
+npm run build    # production build (must pass with zero TS errors)
 npm run lint     # ESLint
+npm run test     # Vitest unit tests
+npm run test:e2e # Playwright E2E tests
 ```
 
-## Variables de entorno necesarias (en producción)
+## Environment variables (production)
 
 ```
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 FOOTBALL_DATA_API_KEY=      # football-data.org (free tier)
-CRON_SECRET=                # para proteger el endpoint /api/cron/sync-matches
+CRON_SECRET=                # shared secret: GitHub Actions ↔ /api/admin/sync
+ADMIN_USERNAME=             # admin panel username (default: "admin")
+ADMIN_PASSWORD=             # admin panel password — REQUIRED to enable admin
 ```
 
-Sin estas variables la app funciona igual con datos mock.
+Without these variables the app runs with mock data.
 
-## Base de datos
+## Database
 
-Toda la configuración está en `supabase/migrations/001_initial_schema.sql`:
-- RLS habilitado en todas las tablas
-- Trigger `on_auth_user_created` → crea perfil automáticamente
-- Trigger `on_prode_member_added` → asigna 3 tokens automáticamente
-- Función `calculate_match_points(match_id)` → calcula y acumula puntos con multiplier + streak bonus
+Migrations live in `supabase/migrations/` and must be run in order (001–007):
 
-## Estado actual del proyecto
+- `001_initial_schema.sql` — full schema, RLS, triggers, `calculate_match_points()`
+- `002_idempotent_points_and_decay.sql` — idempotent scoring + token decay
+- `003_fix_rls_recursion.sql` — fixes infinite recursion in RLS policies
+- `004_fix_prode_admin_select.sql` — fixes admin SELECT policy on prodes
+- `005_add_delete_policies.sql` — RLS policies for DELETE operations
+- `006_fix_leaderboard_security_invoker.sql` — leaderboard view uses `security_invoker=true` (fixes Supabase security alert)
+- `007_add_third_place_phase.sql` — adds THIRD_PLACE to phase CHECK constraints and scoring function
 
-- Prototipo completo con mock data, funciona sin Supabase
-- Falta conectar Supabase real (auth flows, queries a DB)
-- Falta integración football-data.org en producción
-- No hay modo negativo (predefinido que no se implementa)
-- Desafíos (wildcards semanales) fue removido del MVP. La carpeta `src/app/(app)/desafios/` fue eliminada y el slot del nav fue reemplazado por Especiales. El tipo `WildcardChallenge` y la lógica asociada siguen en `types.ts` y `mock-data.ts` por si se reactiva.
-- Los "Tokens" se llaman "Potenciadores" en la UI. Los nombres de tipos TypeScript (`MultiplierToken`, `TokenMultiplier`) no cambiaron.
+Key DB objects:
+- Trigger `on_auth_user_created` → auto-creates profile
+- Trigger `on_prode_member_added` → auto-assigns 3 tokens
+- Function `calculate_match_points(match_id)` → calculates points with multiplier + streak bonus
+- View `public.leaderboard` → cached rankings (security_invoker = true)
+
+## Admin panel
+
+- Route: `/admin` — uses cookie-based auth, **not** Supabase auth
+- Protected by `ADMIN_USERNAME` / `ADMIN_PASSWORD` env vars
+- `/api/admin/sync` accepts either admin cookie (manual button) OR `Authorization: Bearer CRON_SECRET` (GitHub Actions)
+- If `ADMIN_PASSWORD` is unset, all admin routes return 401
+
+## Match sync
+
+- GitHub Actions (`.github/workflows/sync-matches.yml`) calls `/api/admin/sync` via Bearer token
+- Runs every 5 minutes during the World Cup (Jun 11–Jul 19 2026), daily otherwise
+- Uses `football-data.org` competition ID 2000 (FIFA World Cup)
+- `mapStage()` in `sync-matches.ts` maps API stage names to our Phase type
+
+## PWA
+
+- `public/sw.js` — static service worker, no build integration, works with Turbopack
+- `public/manifest.json` — Web App Manifest with display standalone
+- `ServiceWorkerRegister` client component registers the SW on first load
+- Icons generated via `scripts/generate-icons.mjs` (requires `sharp`)
+
+## Current project state
+
+- Full UI with mock data — works without Supabase
+- Supabase auth + DB fully wired (queries.ts / admin-queries.ts)
+- football-data.org sync operational
+- Admin panel operational
+- PWA installable on Android/iOS
+- **Wildcards (weekly challenges) removed from MVP.** The `/desafios/` folder was deleted and its nav slot replaced by Especiales. `WildcardChallenge` type and related data remain in `types.ts` and `mock-data.ts` in case it's reactivated.
+- No negative scoring (by design, won't be implemented)
