@@ -9,6 +9,7 @@ const PHASE_LABELS: Record<string, string> = {
   ROUND_OF_16: "Octavos",
   QUARTER_FINAL: "Cuartos",
   SEMI_FINAL: "Semifinal",
+  THIRD_PLACE: "Tercer Puesto",
   FINAL: "Final",
 };
 
@@ -42,7 +43,7 @@ export default async function AdminMatchesPage() {
     return acc;
   }, {});
 
-  const phases = ["GROUP", "ROUND_OF_32", "ROUND_OF_16", "QUARTER_FINAL", "SEMI_FINAL", "FINAL"];
+  const phases = ["GROUP", "ROUND_OF_32", "ROUND_OF_16", "QUARTER_FINAL", "SEMI_FINAL", "THIRD_PLACE", "FINAL"];
 
   return (
     <div className="p-6 space-y-5">

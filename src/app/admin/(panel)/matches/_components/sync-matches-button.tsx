@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { RefreshCw, Loader2, CheckCircle, AlertCircle } from "lucide-react";
 
 export function SyncMatchesButton() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
+  const router = useRouter();
 
   const handleSync = async () => {
     setLoading(true);
@@ -15,6 +17,7 @@ export function SyncMatchesButton() {
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
         setResult({ ok: true, message: data.message ?? "Sincronización completada" });
+        router.refresh();
       } else {
         setResult({ ok: false, message: data.error ?? `Error ${res.status}` });
       }
