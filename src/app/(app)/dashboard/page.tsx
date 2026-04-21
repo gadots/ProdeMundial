@@ -10,6 +10,7 @@ import { useApp } from "@/components/app-context";
 import { PHASE_LABELS, PHASE_POINTS, Match } from "@/lib/types";
 import { streakBonusPoints } from "@/lib/scoring";
 import { ChevronRight, Zap, TrendingUp, Clock } from "lucide-react";
+import { PwaInstallBanner } from "@/components/pwa-install-banner";
 
 function useCountdown(targetDate: string) {
   const [timeLeft, setTimeLeft] = useState("");
@@ -156,6 +157,8 @@ export default function DashboardPage() {
         subtitle={`Hola, ${user?.displayName ?? "…"} 👋`}
         showNotification
       />
+
+      <PwaInstallBanner />
 
       <div className="px-4 py-5 lg:grid lg:grid-cols-[2fr_3fr] lg:gap-6 lg:items-start lg:max-w-5xl lg:mx-auto">
 
