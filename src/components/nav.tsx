@@ -3,17 +3,18 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Home, List, Trophy, Settings, Bell, Star, X, LogOut } from "lucide-react";
+import { Home, List, Trophy, Users, User, Bell, X, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useApp } from "@/components/app-context";
 import { createClient } from "@/lib/supabase/client";
 
 const navItems = [
-  { href: "/dashboard",               icon: Home,     label: "Dashboard"    },
-  { href: "/predicciones",            icon: List,     label: "Predicciones" },
-  { href: "/tabla",                   icon: Trophy,   label: "Posiciones"   },
-  { href: "/predicciones/especiales", icon: Star,     label: "Especiales"   },
-  { href: "/grupo",                   icon: Settings, label: "Config"       },
+  { href: "/dashboard",    icon: Home,   label: "Dashboard"    },
+  { href: "/predicciones", icon: List,   label: "Predicciones" },
+  { href: "/tabla",        icon: Trophy, label: "Posiciones"   },
+
+  { href: "/grupo",        icon: Users,  label: "Grupo"        },
+  { href: "/perfil",       icon: User,   label: "Perfil"       },
 ];
 
 interface Notification {
@@ -176,9 +177,7 @@ export function Sidebar() {
 
       <nav className="space-y-0.5 flex-1">
         {navItems.map(({ href, icon: Icon, label }) => {
-          const isActive = pathname === href || (pathname.startsWith(href + "/") && href !== "/predicciones");
-          const isPrediccionesActive = href === "/predicciones" && pathname.startsWith("/predicciones") && !pathname.startsWith("/predicciones/especiales");
-          const active = isActive || isPrediccionesActive;
+          const active = pathname === href || pathname.startsWith(href + "/");
           return (
             <Link
               key={href}
@@ -215,12 +214,7 @@ export function BottomNav() {
     <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-[#0a1628]/95 backdrop-blur-lg pb-safe">
       <div className="flex items-center justify-around px-2 py-2">
         {navItems.map(({ href, icon: Icon, label }) => {
-          const isActive =
-            href === "/predicciones"
-              ? pathname === href ||
-                (pathname.startsWith("/predicciones/") &&
-                  !pathname.startsWith("/predicciones/especiales"))
-              : pathname === href || pathname.startsWith(href + "/");
+          const isActive = pathname === href || pathname.startsWith(href + "/");
           return (
             <Link
               key={href}
