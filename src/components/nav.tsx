@@ -117,7 +117,7 @@ function NotificationsDrawer({ onClose }: { onClose: () => void }) {
           </div>
           <div className="flex items-center gap-3">
             {unreadCount > 0 && (
-              <button onClick={markAllRead} className="text-xs text-green-400 hover:text-green-300 transition-colors">
+              <button onClick={markAllRead} className="text-xs text-amber-400 hover:text-amber-300 transition-colors">
                 Marcar leídas
               </button>
             )}
@@ -147,7 +147,7 @@ function NotificationsDrawer({ onClose }: { onClose: () => void }) {
                 <p className="text-[10px] text-white/30 mt-0.5">{notif.time}</p>
               </div>
               {notif.unread && (
-                <span className="h-2 w-2 rounded-full bg-green-400 shrink-0 mt-1.5" />
+                <span className="h-2 w-2 rounded-full bg-amber-400 shrink-0 mt-1.5" />
               )}
             </div>
           ))}
@@ -170,7 +170,7 @@ export function Sidebar() {
   return (
     <div className="flex flex-col h-full px-3 py-6">
       <div className="mb-8 px-3">
-        <p className="text-lg font-black text-white">Prode <span className="text-green-400">26</span></p>
+        <p className="text-lg font-bold text-white">Prode <span className="text-amber-400">26</span></p>
         <p className="text-xs text-white/40">Mundial 2026</p>
       </div>
 
@@ -186,11 +186,11 @@ export function Sidebar() {
               className={cn(
                 "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-sm font-medium",
                 active
-                  ? "bg-green-600/20 text-green-400"
+                  ? "bg-amber-600/20 text-amber-400"
                   : "text-white/50 hover:text-white/80 hover:bg-white/5"
               )}
             >
-              <Icon className={cn("h-4.5 w-4.5 shrink-0 h-[18px] w-[18px]", active && "drop-shadow-[0_0_5px_rgba(74,222,128,0.5)]")} />
+              <Icon className={cn("h-4.5 w-4.5 shrink-0 h-[18px] w-[18px]", active && "drop-shadow-[0_0_5px_rgba(251,191,36,0.5)]")} />
               {label}
             </Link>
           );
@@ -227,12 +227,12 @@ export function BottomNav() {
               href={href}
               className={cn(
                 "flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-all",
-                isActive ? "text-green-400" : "text-white/40 hover:text-white/70"
+                isActive ? "text-amber-400" : "text-white/40 hover:text-white/70"
               )}
             >
-              <Icon className={cn("h-5 w-5", isActive && "drop-shadow-[0_0_6px_rgba(74,222,128,0.6)]")} />
+              <Icon className={cn("h-5 w-5", isActive && "drop-shadow-[0_0_6px_rgba(251,191,36,0.6)]")} />
               <span className="text-[10px] font-medium">{label}</span>
-              {isActive && <span className="block h-1 w-1 rounded-full bg-green-400 mt-0.5" />}
+              {isActive && <span className="block h-1 w-1 rounded-full bg-amber-400 mt-0.5" />}
             </Link>
           );
         })}

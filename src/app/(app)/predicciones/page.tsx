@@ -31,7 +31,7 @@ function ScoreInput({ value, onChange, disabled }: { value: string; onChange: (v
       type="number" min="0" max="20" value={value}
       onChange={(e) => onChange(e.target.value)}
       disabled={disabled}
-      className="h-12 w-12 rounded-xl border border-white/15 bg-white/5 text-center text-xl font-black text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all disabled:opacity-40"
+      className="h-12 w-12 rounded-xl border border-white/15 bg-white/5 text-center text-xl font-black text-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all disabled:opacity-40"
     />
   );
 }
@@ -151,18 +151,18 @@ function MatchPredictionCard({
     : maxPointsForMatch(match.phase);
 
   return (
-    <Card className={`overflow-hidden transition-all ${locked ? "opacity-70" : "hover:border-green-500/20"}`}>
+    <Card className={`overflow-hidden transition-all ${locked ? "opacity-70" : "hover:border-amber-500/20"}`}>
       <CardContent className="p-4">
         <div className="mb-1 flex items-center justify-between">
           <div className="flex items-center gap-2">
             {match.group ? (
               <Link href={`/grupos?g=${match.group}`}>
-                <Badge variant="phase" className="text-[10px] cursor-pointer hover:opacity-80 transition-opacity">
+                <Badge variant="phase" className="text-xs cursor-pointer hover:opacity-80 transition-opacity">
                   Grupo {match.group}
                 </Badge>
               </Link>
             ) : (
-              <Badge variant="phase" className="text-[10px]">
+              <Badge variant="phase" className="text-xs">
                 {PHASE_LABELS[match.phase]}
               </Badge>
             )}
@@ -179,10 +179,10 @@ function MatchPredictionCard({
               </span>
             )}
           </div>
-          <span className="text-xs font-bold text-green-400">hasta {potential} pts</span>
+          <span className="text-xs font-bold text-amber-400">hasta {potential} pts</span>
         </div>
 
-        <div className="flex items-center gap-2 text-[10px] text-white/30 mb-3">
+        <div className="flex items-center gap-2 text-xs text-white/30 mb-3">
           <span>
             {new Date(match.date).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })} hs
           </span>
@@ -224,7 +224,7 @@ function MatchPredictionCard({
                 onClick={() => { setPenaltyWinner("home"); setSaved(false); }}
                 className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border text-xs font-semibold transition-all ${
                   penaltyWinner === "home"
-                    ? "bg-green-500/20 border-green-500/40 text-green-300"
+                    ? "bg-amber-500/20 border-amber-500/40 text-amber-300"
                     : "bg-white/5 border-white/10 text-white/40 hover:border-white/20 hover:text-white/60"
                 }`}
               >
@@ -235,7 +235,7 @@ function MatchPredictionCard({
                 onClick={() => { setPenaltyWinner("away"); setSaved(false); }}
                 className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border text-xs font-semibold transition-all ${
                   penaltyWinner === "away"
-                    ? "bg-green-500/20 border-green-500/40 text-green-300"
+                    ? "bg-amber-500/20 border-amber-500/40 text-amber-300"
                     : "bg-white/5 border-white/10 text-white/40 hover:border-white/20 hover:text-white/60"
                 }`}
               >
@@ -336,7 +336,7 @@ function RulesModal({ onClose }: { onClose: () => void }) {
                     return (
                       <tr key={phase} className="text-white/80">
                         <td className="px-3 py-2 font-medium">{PHASE_SHORT[phase]}</td>
-                        <td className="px-2 py-2 text-center font-black text-green-400">{pts.exact}</td>
+                        <td className="px-2 py-2 text-center font-black text-amber-400">{pts.exact}</td>
                         <td className="px-2 py-2 text-center">
                           {isGroup
                             ? <span className="text-white/20">—</span>
@@ -403,7 +403,7 @@ function RulesModal({ onClose }: { onClose: () => void }) {
               ].map((s, i, arr) => (
                 <div key={s.label} className={`flex items-center justify-between px-3 py-2.5 ${i < arr.length - 1 ? "border-b border-white/5" : ""}`}>
                   <span className="text-xs text-white/70">{s.emoji} {s.label}</span>
-                  <span className="text-xs font-bold text-green-400">{s.pts} pts</span>
+                  <span className="text-xs font-bold text-amber-400">{s.pts} pts</span>
                 </div>
               ))}
             </div>
@@ -522,13 +522,13 @@ export default function PrediccionesPage() {
                     key={phase}
                     onClick={() => setActivePhase(phase)}
                     className={`relative rounded-xl px-3 py-1.5 text-xs font-semibold transition-all whitespace-nowrap shrink-0 ${
-                      isActive ? "bg-green-600 text-white" : "bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/80"
+                      isActive ? "bg-amber-600 text-white" : "bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/80"
                     }`}
                   >
                     {PHASE_SHORT[phase]}
                     {pendingCount > 0 && (
                       <span className={`absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full text-[8px] font-bold flex items-center justify-center ${
-                        isActive ? "bg-white text-green-700" : "bg-orange-500 text-white"
+                        isActive ? "bg-white text-amber-700" : "bg-orange-500 text-white"
                       }`}>{pendingCount}</span>
                     )}
                   </button>

@@ -42,29 +42,29 @@ function MatchCard({ match }: { match: Match }) {
 
   return (
     <Link href={`/predicciones?match=${match.id}`}>
-      <Card className="overflow-hidden transition-all hover:border-green-500/30 active:scale-[0.98]">
+      <Card className="overflow-hidden transition-all hover:border-amber-500/30 active:scale-[0.98]">
         <CardContent className="p-4">
           <div className="mb-1 flex items-center justify-between">
             {match.group ? (
               <Link href={`/grupos?g=${match.group}`} onClick={(e) => e.stopPropagation()}>
-                <Badge variant="phase" className="text-[10px] cursor-pointer hover:opacity-80 transition-opacity">
+                <Badge variant="phase" className="text-xs cursor-pointer hover:opacity-80 transition-opacity">
                   Grupo {match.group}
                 </Badge>
               </Link>
             ) : (
-              <Badge variant="phase" className="text-[10px]">
+              <Badge variant="phase" className="text-xs">
                 {PHASE_LABELS[match.phase]}
               </Badge>
             )}
             {isLive && <Badge variant="live">🔴 EN VIVO</Badge>}
-            {isFinished && <span className="text-[10px] text-white/30">Finalizado</span>}
+            {isFinished && <span className="text-xs text-white/30">Finalizado</span>}
             {!isLive && !isFinished && (
-              <span className="flex items-center gap-1 text-[10px] text-white/40">
+              <span className="flex items-center gap-1 text-xs text-white/40">
                 <Clock className="h-3 w-3" /> {countdown}
               </span>
             )}
           </div>
-          <div className="flex items-center gap-2 text-[10px] text-white/30 mb-3">
+          <div className="flex items-center gap-2 text-xs text-white/30 mb-3">
             <span>
               {new Date(match.date).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })} hs
             </span>
@@ -116,7 +116,7 @@ function MatchCard({ match }: { match: Match }) {
                   )}
                 </div>
                 {myPrediction.pointsEarned !== undefined && (
-                  <span className={`text-xs font-bold ${myPrediction.pointsEarned > 0 ? "text-green-400" : "text-white/30"}`}>
+                  <span className={`text-xs font-bold ${myPrediction.pointsEarned > 0 ? "text-amber-400" : "text-white/30"}`}>
                     {myPrediction.pointsEarned > 0 ? `+${myPrediction.pointsEarned} pts` : "0 pts"}
                   </span>
                 )}
@@ -124,7 +124,7 @@ function MatchCard({ match }: { match: Match }) {
             ) : (
               <div className="flex w-full items-center justify-between">
                 <span className="text-xs text-white/30">Sin predicción</span>
-                <div className="flex items-center gap-1 text-xs text-green-400">
+                <div className="flex items-center gap-1 text-xs text-amber-400">
                   <Zap className="h-3 w-3" />
                   <span>Hasta {pts.exact} pts</span>
                 </div>
@@ -168,15 +168,15 @@ export default function DashboardPage() {
           {/* Mi posición */}
           {me && (
             <Link href="/tabla" className="block">
-              <Card className="overflow-hidden hover:border-green-500/30 transition-colors">
-                <div className="bg-gradient-to-br from-green-600/20 to-blue-600/10 p-5">
+              <Card className="overflow-hidden hover:border-amber-500/30 transition-colors">
+                <div className="bg-gradient-to-br from-amber-600/20 to-blue-600/10 p-5">
                   <div className="flex items-start justify-between">
                     <div>
                       <p className="text-xs text-white/40 mb-0.5">Tu posición</p>
                       <div className="flex items-baseline gap-2">
                         <span className="text-4xl font-black text-white">#{me.rank}</span>
                         {me.previousRank && me.rank < me.previousRank && (
-                          <span className="flex items-center gap-0.5 text-xs text-green-400">
+                          <span className="flex items-center gap-0.5 text-xs text-amber-400">
                             <TrendingUp className="h-3 w-3" />
                             {me.previousRank - me.rank}
                           </span>
@@ -201,7 +201,7 @@ export default function DashboardPage() {
                           style={{ width: `${Math.max(5, (me.totalPoints / leader.totalPoints) * 100)}%` }}
                         />
                       </div>
-                      <p className="text-[10px] text-white/30 mt-2">
+                      <p className="text-xs text-white/30 mt-2">
                         La final sola vale hasta {remainingPotential} pts — cualquiera puede ganar
                       </p>
                     </div>
@@ -277,7 +277,7 @@ export default function DashboardPage() {
               </Card>
             </Link>
             <Link href="/predicciones">
-              <Card className="hover:border-green-500/30 transition-colors">
+              <Card className="hover:border-amber-500/30 transition-colors">
                 <div className="flex items-center gap-3 p-4">
                   <span className="text-xl">⚽</span>
                   <div>
@@ -296,7 +296,7 @@ export default function DashboardPage() {
             <h2 className="text-sm font-bold text-white">
               {live.length > 0 ? "Partidos" : "Próximos partidos"}
             </h2>
-            <Link href="/predicciones" className="text-xs text-green-400 hover:text-green-300 flex items-center gap-0.5">
+            <Link href="/predicciones" className="text-xs text-amber-400 hover:text-amber-300 flex items-center gap-0.5">
               Ver todos <ChevronRight className="h-3 w-3" />
             </Link>
           </div>

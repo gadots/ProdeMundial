@@ -65,7 +65,7 @@ function TeamSelector({
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Buscar selección…"
           disabled={disabled}
-          className="w-full h-9 rounded-xl border border-white/10 bg-white/5 pl-8 pr-3 text-xs text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-green-500 disabled:opacity-40"
+          className="w-full h-9 rounded-xl border border-white/10 bg-white/5 pl-8 pr-3 text-xs text-white placeholder:text-white/30 focus:outline-none focus:ring-1 focus:ring-amber-500 disabled:opacity-40"
         />
       </div>
       <div className="grid grid-cols-4 gap-1.5">
@@ -76,7 +76,7 @@ function TeamSelector({
             onClick={() => onChange(team.id)}
             className={`flex flex-col items-center gap-0.5 rounded-xl py-2 px-1 text-[10px] transition-all border ${
               value === team.id
-                ? "bg-green-600/20 border-green-500/40 text-green-300"
+                ? "bg-amber-600/20 border-amber-500/40 text-amber-300"
                 : "bg-white/5 border-white/8 text-white/60 hover:bg-white/10 hover:text-white/80"
             } ${disabled ? "opacity-40 cursor-not-allowed" : ""}`}
           >
@@ -115,7 +115,7 @@ function PlayerInput({
         onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
         disabled={disabled}
         placeholder="Escribí el nombre del jugador…"
-        className="w-full h-10 rounded-xl border border-white/15 bg-white/5 px-4 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-40"
+        className="w-full h-10 rounded-xl border border-white/15 bg-white/5 px-4 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-40"
       />
       {showSuggestions && filtered.length > 0 && (
         <div className="absolute z-10 mt-1 w-full rounded-xl border border-white/10 bg-[#0f1f3d] shadow-xl overflow-hidden">
@@ -198,11 +198,11 @@ export default function EspecialesPage() {
 
         <div className="flex items-center justify-between mb-1">
           <span className="text-xs text-white/50">{filled} de {SPECIAL_PREDICTIONS.length} completadas</span>
-          <span className="text-xs text-green-400 font-semibold">{totalPotential} pts disponibles</span>
+          <span className="text-xs text-amber-400 font-semibold">{totalPotential} pts disponibles</span>
         </div>
         <div className="h-1.5 rounded-full bg-white/10 mb-5">
           <div
-            className="h-full rounded-full bg-green-500 transition-all"
+            className="h-full rounded-full bg-amber-500 transition-all"
             style={{ width: `${(filled / SPECIAL_PREDICTIONS.length) * 100}%` }}
           />
         </div>
@@ -241,8 +241,8 @@ export default function EspecialesPage() {
 
               {predictions[pred.id] && (
                 <div className="mt-2.5 flex items-center gap-2">
-                  <Check className="h-3.5 w-3.5 text-green-400 shrink-0" />
-                  <span className="text-xs text-green-400">
+                  <Check className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+                  <span className="text-xs text-amber-400">
                     {pred.type === "team" ? getTeamName(predictions[pred.id]) : predictions[pred.id]}
                   </span>
                 </div>

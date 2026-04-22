@@ -80,9 +80,9 @@ export default function NuevaContrasenaPage() {
               )}
 
               {success && (
-                <div className="flex items-center gap-2 rounded-xl bg-green-500/10 border border-green-500/20 px-3 py-2.5">
-                  <CheckCircle2 className="h-4 w-4 text-green-400 shrink-0" />
-                  <p className="text-xs text-green-300">{success}</p>
+                <div className="flex items-center gap-2 rounded-xl bg-amber-500/10 border border-amber-500/20 px-3 py-2.5">
+                  <CheckCircle2 className="h-4 w-4 text-amber-400 shrink-0" />
+                  <p className="text-xs text-amber-300">{success}</p>
                 </div>
               )}
 

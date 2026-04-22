@@ -104,15 +104,15 @@ export default function LandingPage() {
     <div className="relative flex min-h-dvh flex-col items-center justify-center overflow-hidden bg-[#0a1628] px-4">
       {/* Background gradient orbs */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-green-500/10 blur-3xl" />
+        <div className="absolute -top-40 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-amber-500/10 blur-3xl" />
         <div className="absolute bottom-0 left-0 h-64 w-64 rounded-full bg-blue-600/10 blur-3xl" />
-        <div className="absolute bottom-0 right-0 h-64 w-64 rounded-full bg-green-600/10 blur-3xl" />
+        <div className="absolute bottom-0 right-0 h-64 w-64 rounded-full bg-amber-600/10 blur-3xl" />
       </div>
 
       <div className="relative z-10 w-full max-w-sm">
         {/* Logo */}
         <div className="mb-8 text-center">
-          <div className="mb-3 inline-flex items-center justify-center rounded-3xl bg-gradient-to-br from-green-400 to-green-700 p-4 shadow-lg shadow-green-500/30">
+          <div className="mb-3 inline-flex items-center justify-center rounded-3xl bg-gradient-to-br from-amber-400 to-amber-600 p-4 shadow-lg shadow-amber-500/30">
             <span className="text-4xl">⚽</span>
           </div>
           <h1 className="text-2xl font-black tracking-tight text-white">
@@ -131,7 +131,7 @@ export default function LandingPage() {
               onClick={() => switchMode("login")}
               className={`flex-1 rounded-lg py-2 text-sm font-semibold transition-all ${
                 mode === "login"
-                  ? "bg-green-600 text-white shadow-sm"
+                  ? "bg-amber-600 text-white shadow-sm"
                   : "text-white/50 hover:text-white/80"
               }`}
             >
@@ -141,7 +141,7 @@ export default function LandingPage() {
               onClick={() => switchMode("register")}
               className={`flex-1 rounded-lg py-2 text-sm font-semibold transition-all ${
                 mode === "register"
-                  ? "bg-green-600 text-white shadow-sm"
+                  ? "bg-amber-600 text-white shadow-sm"
                   : "text-white/50 hover:text-white/80"
               }`}
             >
@@ -217,7 +217,7 @@ export default function LandingPage() {
               <div className="text-right">
                 <button
                   type="button"
-                  className="text-xs text-green-400 hover:text-green-300 transition-colors"
+                  className="text-xs text-amber-400 hover:text-amber-300 transition-colors"
                   onClick={handleForgotPassword}
                   disabled={loading}
                 >
@@ -234,9 +234,9 @@ export default function LandingPage() {
               </div>
             )}
             {success && (
-              <div className="flex items-center gap-2 rounded-xl bg-green-500/10 border border-green-500/20 px-3 py-2.5">
-                <CheckCircle2 className="h-4 w-4 text-green-400 shrink-0" />
-                <p className="text-xs text-green-300">{success}</p>
+              <div className="flex items-center gap-2 rounded-xl bg-amber-500/10 border border-amber-500/20 px-3 py-2.5">
+                <CheckCircle2 className="h-4 w-4 text-amber-400 shrink-0" />
+                <p className="text-xs text-amber-300">{success}</p>
               </div>
             )}
 
@@ -255,7 +255,7 @@ export default function LandingPage() {
         {/* Join prode link */}
         <p className="mt-4 text-center text-sm text-white/40">
           ¿Tenés un código de invitación?{" "}
-          <Link href="/join" className="text-green-400 font-medium hover:text-green-300 transition-colors">
+          <Link href="/join" className="text-amber-400 font-medium hover:text-amber-300 transition-colors">
             Unirme al prode
           </Link>
         </p>
