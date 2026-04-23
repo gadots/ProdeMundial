@@ -4,7 +4,7 @@
  * Requires: npm install --save-dev sharp
  *
  * Design matches the favicon (src/app/icon.tsx):
- * dark blue background #0a1628, green circle #22c55e, "26" text in dark blue.
+ * dark blue background #0a1628, amber circle #f59e0b, "26" text in dark blue.
  */
 
 import sharp from "sharp";
@@ -26,8 +26,8 @@ const svgIcon = (size, safe = false) => {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
   <!-- Background -->
   <rect width="${size}" height="${size}" fill="#0a1628" rx="${cornerR}"/>
-  <!-- Green circle -->
-  <circle cx="${cx}" cy="${cy}" r="${circleR}" fill="#22c55e"/>
+  <!-- Amber circle -->
+  <circle cx="${cx}" cy="${cy}" r="${circleR}" fill="#f59e0b"/>
   <!-- "26" text -->
   <text x="${cx}" y="${cy + fontSize * 0.36}"
         font-family="system-ui, -apple-system, Arial, sans-serif"
