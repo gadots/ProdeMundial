@@ -103,7 +103,7 @@ function GroupTable({ group, standings, qualify }: {
                 <th className="text-center px-2 py-2 font-semibold">GF</th>
                 <th className="text-center px-2 py-2 font-semibold">GC</th>
                 <th className="text-center px-2 py-2 font-semibold">Dif</th>
-                <th className="text-center px-3 py-2 font-semibold text-green-400">Pts</th>
+                <th className="text-center px-3 py-2 font-semibold text-amber-400">Pts</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
@@ -113,10 +113,10 @@ function GroupTable({ group, standings, qualify }: {
                 return (
                   <tr
                     key={t.id}
-                    className={classifies ? "bg-green-500/5" : ""}
+                    className={classifies ? "bg-amber-500/5" : ""}
                   >
                     <td className="px-3 py-2.5">
-                      <span className={`text-[11px] font-bold ${classifies ? "text-green-400" : "text-white/30"}`}>
+                      <span className={`text-[11px] font-bold ${classifies ? "text-amber-400" : "text-white/30"}`}>
                         {i + 1}
                       </span>
                     </td>
@@ -138,7 +138,7 @@ function GroupTable({ group, standings, qualify }: {
                       {dif > 0 ? `+${dif}` : dif}
                     </td>
                     <td className="px-3 py-2.5 text-center">
-                      <span className={`font-black text-sm ${classifies ? "text-green-400" : "text-white"}`}>
+                      <span className={`font-black text-sm ${classifies ? "text-amber-400" : "text-white"}`}>
                         {t.pts}
                       </span>
                     </td>

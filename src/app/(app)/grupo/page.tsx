@@ -374,7 +374,7 @@ export default function GrupoPage() {
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
-                    <h2 className="text-lg font-black text-white leading-tight">{prodeName || prode.name}</h2>
+                    <h2 className="text-lg font-bold text-white leading-tight">{prodeName || prode.name}</h2>
                     {isAdmin && (
                       <button onClick={() => setEditingName(true)} className="text-white/30 hover:text-white/60 transition-colors shrink-0">
                         <Pencil className="h-3.5 w-3.5" />
@@ -413,13 +413,13 @@ export default function GrupoPage() {
                 onClick={() => handleSwitchProde(p.id)}
                 className={`w-full flex items-center justify-between rounded-xl px-3 py-2.5 text-sm transition-colors ${
                   p.id === prodeId
-                    ? "bg-green-500/10 border border-green-500/30 text-green-300"
+                    ? "bg-amber-500/10 border border-amber-500/30 text-amber-300"
                     : "bg-white/5 border border-white/10 text-white/60 hover:bg-white/10 hover:text-white/80"
                 }`}
               >
                 <span className="font-medium truncate">{p.name}</span>
                 {p.id === prodeId && (
-                  <span className="text-[10px] text-green-500 ml-2 shrink-0">activo</span>
+                  <span className="text-xs text-amber-500 ml-2 shrink-0">activo</span>
                 )}
               </button>
             ))}
@@ -451,7 +451,7 @@ export default function GrupoPage() {
               {isAdmin && (
                 <button
                   onClick={() => setEditingPrize(!editingPrize)}
-                  className="flex items-center gap-1 text-xs text-green-400 hover:text-green-300 transition-colors"
+                  className="flex items-center gap-1 text-xs text-amber-400 hover:text-amber-300 transition-colors"
                 >
                   <Settings2 className="h-3.5 w-3.5" />
                   {editingPrize ? "Cancelar" : "Editar"}
@@ -486,7 +486,7 @@ export default function GrupoPage() {
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2 pb-3">
-              <UserPlus className="h-4 w-4 text-green-400" />
+              <UserPlus className="h-4 w-4 text-amber-400" />
               <CardTitle className="text-sm">Invitar participantes</CardTitle>
             </div>
           </CardHeader>
@@ -497,7 +497,7 @@ export default function GrupoPage() {
             >
               <span className="block truncate">{inviteLink}</span>
               {copied && (
-                <span className="absolute inset-0 flex items-center justify-center bg-[#0d1f3c]/90 text-green-400 text-xs font-semibold rounded-xl gap-1">
+                <span className="absolute inset-0 flex items-center justify-center bg-[#0d1f3c]/90 text-amber-400 text-xs font-semibold rounded-xl gap-1">
                   <Check className="h-3.5 w-3.5" /> Copiado
                 </span>
               )}
@@ -528,7 +528,7 @@ export default function GrupoPage() {
               <div
                 key={member.id}
                 className={`flex items-center gap-3 rounded-xl p-3 transition-colors ${
-                  member.id === user?.id ? "bg-green-500/10" : "hover:bg-white/5"
+                  member.id === user?.id ? "bg-amber-500/10" : "hover:bg-white/5"
                 }`}
               >
                 <div className="relative shrink-0">
@@ -547,9 +547,9 @@ export default function GrupoPage() {
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className={`text-sm font-semibold truncate ${member.id === user?.id ? "text-green-300" : "text-white"}`}>
+                  <p className={`text-sm font-semibold truncate ${member.id === user?.id ? "text-amber-300" : "text-white"}`}>
                     {member.displayName}
-                    {member.id === user?.id && <span className="ml-1 text-[10px] text-green-500">(vos)</span>}
+                    {member.id === user?.id && <span className="ml-1 text-xs text-amber-500">(vos)</span>}
                   </p>
                   {prode.adminId === member.id && (
                     <p className="text-[10px] text-yellow-500/70">Admin</p>

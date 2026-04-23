@@ -28,7 +28,7 @@ export default function PerfilPage() {
         <Card>
           <CardContent className="p-5">
             <div className="flex items-center gap-4">
-              <div className="h-16 w-16 rounded-2xl overflow-hidden bg-gradient-to-br from-green-500 to-blue-600 flex items-center justify-center shrink-0">
+              <div className="h-16 w-16 rounded-2xl overflow-hidden bg-gradient-to-br from-amber-500 to-blue-600 flex items-center justify-center shrink-0">
                 {user?.avatarUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={user.avatarUrl} alt={user.displayName} className="h-full w-full object-cover" />
@@ -37,7 +37,7 @@ export default function PerfilPage() {
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <h2 className="text-lg font-black text-white truncate">{user?.displayName ?? "…"}</h2>
+                <h2 className="text-lg font-bold text-white truncate">{user?.displayName ?? "…"}</h2>
                 {user?.email && <p className="text-sm text-white/40">{user.email}</p>}
                 <div className="flex items-center gap-2 mt-2">
                   {me && (
@@ -59,16 +59,16 @@ export default function PerfilPage() {
               <p className="text-xs text-white/40 mb-3 font-semibold uppercase tracking-wider">Mis estadísticas</p>
               <div className="grid grid-cols-3 gap-3">
                 <div className="text-center rounded-xl bg-white/5 p-3">
-                  <p className="text-xl font-black text-green-400">{me.totalPoints}</p>
-                  <p className="text-[10px] text-white/40 mt-0.5">Pts totales</p>
+                  <p className="text-xl font-black text-amber-400">{me.totalPoints}</p>
+                  <p className="text-xs text-white/40 mt-0.5">Pts totales</p>
                 </div>
                 <div className="text-center rounded-xl bg-white/5 p-3">
                   <p className="text-xl font-black text-white">#{me.rank}</p>
-                  <p className="text-[10px] text-white/40 mt-0.5">Posición</p>
+                  <p className="text-xs text-white/40 mt-0.5">Posición</p>
                 </div>
                 <div className="text-center rounded-xl bg-white/5 p-3">
                   <p className="text-xl font-black text-orange-400">{me.streak.current}</p>
-                  <p className="text-[10px] text-white/40 mt-0.5">Racha actual</p>
+                  <p className="text-xs text-white/40 mt-0.5">Racha actual</p>
                 </div>
               </div>
             </CardContent>

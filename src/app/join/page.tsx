@@ -111,12 +111,12 @@ function JoinPageInner() {
   return (
     <div className="relative flex min-h-dvh flex-col items-center justify-center bg-[#0a1628] px-4">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute top-0 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-green-500/10 blur-3xl" />
+        <div className="absolute top-0 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-amber-500/10 blur-3xl" />
       </div>
 
       <div className="relative z-10 w-full max-w-sm">
         <div className="mb-8 text-center">
-          <div className="mb-3 inline-flex items-center justify-center rounded-3xl bg-gradient-to-br from-green-400 to-green-700 p-4 shadow-lg shadow-green-500/30">
+          <div className="mb-3 inline-flex items-center justify-center rounded-3xl bg-gradient-to-br from-amber-400 to-amber-600 p-4 shadow-lg shadow-amber-500/30">
             <span className="text-4xl">⚽</span>
           </div>
           <h1 className="text-2xl font-black tracking-tight text-white">

@@ -83,7 +83,7 @@ export default function TablaPage() {
               onClick={() => setView("total")}
               className={`rounded-xl px-5 py-2 text-sm font-bold transition-all ${
                 view === "total"
-                  ? "bg-green-600 text-white shadow-lg shadow-green-900/30"
+                  ? "bg-amber-600 text-white shadow-lg shadow-amber-900/30"
                   : "bg-white/8 text-white/60 hover:bg-white/12 hover:text-white/80"
               }`}
             >
@@ -117,7 +117,7 @@ export default function TablaPage() {
             onClick={handleShare}
             className={`shrink-0 flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition-all ${
               shared
-                ? "bg-green-500/20 text-green-400"
+                ? "bg-amber-500/20 text-amber-400"
                 : "bg-white/8 text-white/60 hover:bg-white/12 hover:text-white/80"
             }`}
           >
@@ -143,7 +143,7 @@ export default function TablaPage() {
       {/* Tabla */}
       <div className="pb-6">
         {/* Encabezado */}
-        <div className="flex items-center gap-2 px-4 pt-4 pb-2 border-b border-white/8 text-[10px] text-white/30 font-semibold uppercase tracking-wider">
+        <div className="flex items-center gap-2 px-4 pt-4 pb-2 border-b border-white/8 text-xs text-white/30 font-semibold uppercase tracking-wider">
           <div className="w-7 shrink-0" />
           <div className="w-8 shrink-0" />
           <div className="flex-1">Jugador</div>
@@ -164,7 +164,7 @@ export default function TablaPage() {
             <div
               key={member.id}
               className={`flex items-center gap-2 px-4 py-3 border-b border-white/5 transition-colors ${
-                isMe ? "bg-green-500/5" : ""
+                isMe ? "bg-amber-500/5" : ""
               }`}
             >
               {/* Medalla / número */}
@@ -186,15 +186,15 @@ export default function TablaPage() {
                   )}
                 </div>
                 {isMe && (
-                  <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-green-500 border-2 border-[#0a1628]" />
+                  <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-amber-500 border-2 border-[#0a1628]" />
                 )}
               </div>
 
               {/* Nombre */}
               <div className="flex-1 min-w-0">
-                <p className={`text-sm font-semibold truncate ${isMe ? "text-green-300" : "text-white"}`}>
+                <p className={`text-sm font-semibold truncate ${isMe ? "text-amber-300" : "text-white"}`}>
                   {member.displayName}
-                  {isMe && <span className="ml-1 text-[10px] text-green-500/50">(vos)</span>}
+                  {isMe && <span className="ml-1 text-[10px] text-amber-500/50">(vos)</span>}
                 </p>
               </div>
 
@@ -202,7 +202,7 @@ export default function TablaPage() {
               {view === "total" && (
                 <div className="w-14 text-right shrink-0">
                   {todayPts > 0 ? (
-                    <span className="text-xs font-bold text-green-400">+{todayPts}</span>
+                    <span className="text-xs font-bold text-amber-400">+{todayPts}</span>
                   ) : (
                     <span className="text-xs text-white/20">—</span>
                   )}
@@ -212,7 +212,7 @@ export default function TablaPage() {
               {/* Cambio de posición */}
               <div className="w-10 text-right shrink-0">
                 {view === "total" && rankChange !== 0 && (
-                  <span className={`text-xs font-bold ${rankChange > 0 ? "text-green-400" : "text-red-400"}`}>
+                  <span className={`text-xs font-bold ${rankChange > 0 ? "text-amber-400" : "text-red-400"}`}>
                     {rankChange > 0 ? "↑" : "↓"}{Math.abs(rankChange)}
                   </span>
                 )}
@@ -220,7 +220,7 @@ export default function TablaPage() {
 
               {/* Puntos */}
               <div className="w-16 text-right shrink-0">
-                <p className={`text-sm font-black ${isMe ? "text-green-300" : "text-white"}`}>{score}</p>
+                <p className={`text-sm font-black ${isMe ? "text-amber-300" : "text-white"}`}>{score}</p>
                 <p className="text-[10px] text-white/30">pts</p>
               </div>
             </div>
