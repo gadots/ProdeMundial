@@ -84,7 +84,7 @@ export const MOCK_MEMBERS: Member[] = [
     pointsPerPhase: { GROUP: 76, ROUND_OF_32: 0, ROUND_OF_16: 18, QUARTER_FINAL: 0, SEMI_FINAL: 0, THIRD_PLACE: 0, FINAL: 0 },
     rank: 1, previousRank: 2,
     tokens: makeTokens("m2"),
-    streak: { current: 4, best: 5, bonusNext: 2 },
+    streak: { current: 4, best: 5, bonusNext: 3 },
   },
   {
     id: "u2", displayName: "Sofía R.", avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sofia",

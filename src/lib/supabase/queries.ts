@@ -177,7 +177,7 @@ export async function getLeaderboard(prodeId: string): Promise<Member[]> {
       ? {
           current: memberStreak.current_streak,
           best: memberStreak.best_streak,
-          bonusNext: memberStreak.current_streak >= 5 ? 5 : memberStreak.current_streak >= 3 ? 2 : 0,
+          bonusNext: memberStreak.current_streak >= 5 ? 8 : memberStreak.current_streak >= 3 ? 3 : 0,
         }
       : { current: 0, best: 0, bonusNext: 0 };
 
@@ -345,7 +345,7 @@ export async function getMyStreak(userId: string, prodeId: string): Promise<Stre
   return {
     current,
     best: data.best_streak,
-    bonusNext: current >= 5 ? 5 : current >= 3 ? 2 : 0,
+    bonusNext: current >= 5 ? 8 : current >= 3 ? 3 : 0,
   };
 }
 
