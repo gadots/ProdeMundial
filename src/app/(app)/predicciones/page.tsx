@@ -23,7 +23,139 @@ const PHASE_SHORT: Record<Phase, string> = {
   QUARTER_FINAL: "Cuartos", SEMI_FINAL: "Semis", THIRD_PLACE: "3er Puesto", FINAL: "Final",
 };
 
-type FilterView = "all" | "pending" | "urgent";
+type FilterView = "all" | "pending" | "urgent" | "history";
+
+const PHASE_ORDER_DISPLAY: Phase[] = [
+  "GROUP", "ROUND_OF_32", "ROUND_OF_16", "QUARTER_FINAL", "SEMI_FINAL", "THIRD_PLACE", "FINAL"
+];
+
+interface HistorialStats {
+  totalPts: number;
+  exactos: number;
+  ganadores: number;
+  fallos: number;
+  sinPred: number;
+}
+
+function HistorialView({
+  matches,
+  predictions,
+  stats,
+}: {
+  matches: Match[];
+  predictions: Record<string, Prediction>;
+  stats: HistorialStats;
+}) {
+  const byPhase: Partial<Record<Phase, Match[]>> = {};
+  for (const m of matches) {
+    if (!byPhase[m.phase]) byPhase[m.phase] = [];
+    byPhase[m.phase]!.push(m);
+  }
+
+  if (matches.length === 0) {
+    return (
+      <div className="py-16 text-center text-white/30">
+        <p className="text-4xl mb-2">📋</p>
+        <p>Todavía no hay partidos finalizados</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="pb-6">
+      {/* Resumen */}
+      <div className="mx-4 mt-3 grid grid-cols-5 gap-1.5 rounded-xl bg-white/5 p-3 border border-white/8">
+        <div className="text-center">
+          <p className="text-sm font-black text-amber-400">{stats.totalPts}</p>
+          <p className="text-[10px] text-white/40 mt-0.5">pts</p>
+        </div>
+        <div className="text-center">
+          <p className="text-sm font-black text-green-400">{stats.exactos}</p>
+          <p className="text-[10px] text-white/40 mt-0.5">exactos</p>
+        </div>
+        <div className="text-center">
+          <p className="text-sm font-black text-white">{stats.ganadores}</p>
+          <p className="text-[10px] text-white/40 mt-0.5">ganador</p>
+        </div>
+        <div className="text-center">
+          <p className="text-sm font-black text-white/50">{stats.fallos}</p>
+          <p className="text-[10px] text-white/40 mt-0.5">fallos</p>
+        </div>
+        <div className="text-center">
+          <p className="text-sm font-black text-white/30">{stats.sinPred}</p>
+          <p className="text-[10px] text-white/40 mt-0.5">sin pred</p>
+        </div>
+      </div>
+
+      {/* Lista por fase */}
+      {PHASE_ORDER_DISPLAY.filter((p) => byPhase[p]?.length).map((phase) => (
+        <div key={phase}>
+          <p className="px-4 pt-4 pb-1.5 text-[10px] font-semibold text-white/30 uppercase tracking-wider">
+            {PHASE_LABELS[phase]}
+          </p>
+          <div className="border border-white/8 mx-4 rounded-xl overflow-hidden">
+            {byPhase[phase]!.map((match, idx) => {
+              const pred = predictions[match.id];
+              const pts = pred?.pointsEarned ?? 0;
+              const exacto =
+                pred !== undefined &&
+                pred.homeGoals === match.homeScore &&
+                pred.awayGoals === match.awayScore;
+              const ganador =
+                pred !== undefined &&
+                !exacto &&
+                Math.sign(pred.homeGoals - pred.awayGoals) ===
+                  Math.sign((match.homeScore ?? 0) - (match.awayScore ?? 0));
+              const resultIcon = !pred ? "—" : exacto ? "🎯" : ganador ? "✓" : "✗";
+              const tokenLabel =
+                pred?.multiplier === 5 ? " 💥" :
+                pred?.multiplier === 3 ? " 🔥" :
+                pred?.multiplier === 2 ? " ⚡" : "";
+
+              return (
+                <div
+                  key={match.id}
+                  className={`flex items-center gap-2 px-3 py-2.5 ${
+                    idx < byPhase[phase]!.length - 1 ? "border-b border-white/5" : ""
+                  }`}
+                >
+                  {/* Resultado real */}
+                  <div className="flex items-center gap-1 w-28 shrink-0">
+                    <Flag tla={match.homeTeam.id} size={20} className="w-4 h-auto shrink-0" />
+                    <span className="text-xs font-black text-white tabular-nums">
+                      {match.homeScore}–{match.awayScore}
+                    </span>
+                    <Flag tla={match.awayTeam.id} size={20} className="w-4 h-auto shrink-0" />
+                  </div>
+                  {/* Equipos */}
+                  <span className="flex-1 text-xs text-white/40 truncate min-w-0">
+                    {match.homeTeam.shortName} vs {match.awayTeam.shortName}
+                  </span>
+                  {/* Mi predicción */}
+                  <span className="text-xs text-white/50 shrink-0 tabular-nums">
+                    {pred ? `${pred.homeGoals}–${pred.awayGoals}${tokenLabel}` : "sin pred."}
+                  </span>
+                  {/* Icono resultado */}
+                  <span className={`w-5 text-center text-xs shrink-0 ${
+                    exacto ? "text-green-400" : ganador ? "text-white/60" : "text-white/25"
+                  }`}>
+                    {resultIcon}
+                  </span>
+                  {/* Puntos */}
+                  <span className={`w-10 text-right text-xs font-bold shrink-0 ${
+                    pts > 0 ? "text-amber-400" : "text-white/25"
+                  }`}>
+                    {!pred ? "—" : pts > 0 ? `+${pts}` : "0"}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 function ScoreInput({ value, onChange, disabled }: { value: string; onChange: (v: string) => void; disabled?: boolean }) {
   return (
@@ -451,6 +583,33 @@ export default function PrediccionesPage() {
     return diff > 0 && diff < 86400000;
   });
 
+  const finishedMatches = [...matches]
+    .filter((m) => m.status === "FINISHED")
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  const historialCount = finishedMatches.filter((m) => predictions[m.id]).length;
+
+  const historialStats = finishedMatches.reduce<HistorialStats>(
+    (acc, m) => {
+      const pred = predictions[m.id];
+      if (!pred) return { ...acc, sinPred: acc.sinPred + 1 };
+      const pts = pred.pointsEarned ?? 0;
+      const exacto = pred.homeGoals === m.homeScore && pred.awayGoals === m.awayScore;
+      const ganador =
+        !exacto &&
+        Math.sign(pred.homeGoals - pred.awayGoals) ===
+          Math.sign((m.homeScore ?? 0) - (m.awayScore ?? 0));
+      return {
+        totalPts: acc.totalPts + pts,
+        exactos: acc.exactos + (exacto ? 1 : 0),
+        ganadores: acc.ganadores + (ganador ? 1 : 0),
+        fallos: acc.fallos + (!exacto && !ganador ? 1 : 0),
+        sinPred: acc.sinPred,
+      };
+    },
+    { totalPts: 0, exactos: 0, ganadores: 0, fallos: 0, sinPred: 0 }
+  );
+
   const matchesToShow =
     filterView === "pending" ? allPending :
     filterView === "urgent"  ? allUrgent :
@@ -509,6 +668,21 @@ export default function PrediccionesPage() {
               </span>
             )}
           </button>
+          <button
+            onClick={() => setFilterView("history")}
+            className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition-all ${
+              filterView === "history" ? "bg-white/15 text-white" : "text-white/40 hover:text-white/60"
+            }`}
+          >
+            Historial
+            {historialCount > 0 && (
+              <span className={`rounded-full px-1.5 text-[10px] font-bold ${
+                filterView === "history" ? "bg-white/20" : "bg-white/10"
+              }`}>
+                {historialCount}
+              </span>
+            )}
+          </button>
         </div>
 
         {/* Fila 2: tabs de fase (solo en vista "todas") */}
@@ -554,7 +728,17 @@ export default function PrediccionesPage() {
         )}
       </div>
 
-      {/* Potenciadores — compact */}
+      {/* Potenciadores + Racha — ocultos en historial */}
+      {filterView === "history" && (
+        <HistorialView
+          matches={finishedMatches}
+          predictions={predictions}
+          stats={historialStats}
+        />
+      )}
+
+      {filterView !== "history" && (
+      <>
       <div className="px-4 pt-3">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-[11px] text-white/40 shrink-0">Mis potenciadores:</span>
@@ -629,6 +813,8 @@ export default function PrediccionesPage() {
           ))
         )}
       </div>
+      </>
+      )}
 
       {showRules && <RulesModal onClose={() => setShowRules(false)} />}
     </div>
