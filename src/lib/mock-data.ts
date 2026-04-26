@@ -370,3 +370,57 @@ export const MOCK_POINTS_TODAY: Record<string, number> = {
   u4: 0,
   u5: 2,
 };
+
+// -------------------------------------------------------
+// MATCH PREDICTIONS (all members, for reveal post-partido)
+// -------------------------------------------------------
+export const MOCK_MATCH_PREDICTIONS: Record<string, Record<string, Prediction>> = {
+  // m1: MEX 1-2 USA
+  m1: {
+    u1: { id: "p1",  userId: "u1", matchId: "m1", prodeId: "prode1", homeGoals: 1, awayGoals: 2, multiplier: 1, pointsEarned: 3 },
+    u2: { id: "p1b", userId: "u2", matchId: "m1", prodeId: "prode1", homeGoals: 0, awayGoals: 1, multiplier: 1, pointsEarned: 1 },
+    u3: { id: "p1c", userId: "u3", matchId: "m1", prodeId: "prode1", homeGoals: 2, awayGoals: 2, multiplier: 1, pointsEarned: 0 },
+    u4: { id: "p1d", userId: "u4", matchId: "m1", prodeId: "prode1", homeGoals: 1, awayGoals: 2, multiplier: 1, pointsEarned: 3 },
+    // u5 no predijo
+  },
+  // m2: ARG 3-1 URU
+  m2: {
+    u1: { id: "p2",  userId: "u1", matchId: "m2", prodeId: "prode1", homeGoals: 2, awayGoals: 1, multiplier: 2, pointsEarned: 2 },
+    u2: { id: "p2b", userId: "u2", matchId: "m2", prodeId: "prode1", homeGoals: 3, awayGoals: 1, multiplier: 1, pointsEarned: 3 },
+    u3: { id: "p2c", userId: "u3", matchId: "m2", prodeId: "prode1", homeGoals: 2, awayGoals: 0, multiplier: 1, pointsEarned: 1 },
+    u4: { id: "p2d", userId: "u4", matchId: "m2", prodeId: "prode1", homeGoals: 1, awayGoals: 0, multiplier: 1, pointsEarned: 1 },
+    u5: { id: "p2e", userId: "u5", matchId: "m2", prodeId: "prode1", homeGoals: 0, awayGoals: 1, multiplier: 1, pointsEarned: 0 },
+  },
+  // m3: BRA 2-2 GER
+  m3: {
+    u1: { id: "p3",  userId: "u1", matchId: "m3", prodeId: "prode1", homeGoals: 1, awayGoals: 1, multiplier: 1, pointsEarned: 2 },
+    u2: { id: "p3b", userId: "u2", matchId: "m3", prodeId: "prode1", homeGoals: 2, awayGoals: 2, multiplier: 3, pointsEarned: 9 },
+    u4: { id: "p3d", userId: "u4", matchId: "m3", prodeId: "prode1", homeGoals: 3, awayGoals: 1, multiplier: 1, pointsEarned: 0 },
+    u5: { id: "p3e", userId: "u5", matchId: "m3", prodeId: "prode1", homeGoals: 1, awayGoals: 2, multiplier: 1, pointsEarned: 0 },
+    // u3 no predijo
+  },
+  // m4: FRA 2-0 MAR
+  m4: {
+    u1: { id: "p4",  userId: "u1", matchId: "m4", prodeId: "prode1", homeGoals: 2, awayGoals: 0, multiplier: 1, pointsEarned: 3 },
+    u2: { id: "p4b", userId: "u2", matchId: "m4", prodeId: "prode1", homeGoals: 1, awayGoals: 0, multiplier: 1, pointsEarned: 1 },
+    u3: { id: "p4c", userId: "u3", matchId: "m4", prodeId: "prode1", homeGoals: 2, awayGoals: 1, multiplier: 1, pointsEarned: 1 },
+    u4: { id: "p4d", userId: "u4", matchId: "m4", prodeId: "prode1", homeGoals: 0, awayGoals: 1, multiplier: 1, pointsEarned: 0 },
+    u5: { id: "p4e", userId: "u5", matchId: "m4", prodeId: "prode1", homeGoals: 2, awayGoals: 0, multiplier: 1, pointsEarned: 3 },
+  },
+  // m5: ESP 1-1 NED
+  m5: {
+    u1: { id: "p5",  userId: "u1", matchId: "m5", prodeId: "prode1", homeGoals: 0, awayGoals: 0, multiplier: 1, pointsEarned: 2 },
+    u2: { id: "p5b", userId: "u2", matchId: "m5", prodeId: "prode1", homeGoals: 1, awayGoals: 1, multiplier: 1, pointsEarned: 3 },
+    u3: { id: "p5c", userId: "u3", matchId: "m5", prodeId: "prode1", homeGoals: 2, awayGoals: 0, multiplier: 1, pointsEarned: 0 },
+    u5: { id: "p5e", userId: "u5", matchId: "m5", prodeId: "prode1", homeGoals: 0, awayGoals: 2, multiplier: 1, pointsEarned: 0 },
+    // u4 no predijo
+  },
+  // m6: POR 1-0 ENG (LIVE) — predicciones bloqueadas
+  m6: {
+    u1: { id: "p6",  userId: "u1", matchId: "m6", prodeId: "prode1", homeGoals: 2, awayGoals: 1, multiplier: 1, pointsEarned: undefined },
+    u2: { id: "p6b", userId: "u2", matchId: "m6", prodeId: "prode1", homeGoals: 1, awayGoals: 0, multiplier: 1, pointsEarned: undefined },
+    u3: { id: "p6c", userId: "u3", matchId: "m6", prodeId: "prode1", homeGoals: 1, awayGoals: 1, multiplier: 1, pointsEarned: undefined },
+    u4: { id: "p6d", userId: "u4", matchId: "m6", prodeId: "prode1", homeGoals: 0, awayGoals: 2, multiplier: 1, pointsEarned: undefined },
+    // u5 no predijo
+  },
+};

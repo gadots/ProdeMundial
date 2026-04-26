@@ -1,16 +1,93 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { TopBar } from "@/components/nav";
 import { Flag } from "@/components/flag";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useApp } from "@/components/app-context";
-import { PHASE_LABELS, PHASE_POINTS, Match } from "@/lib/types";
+import { PHASE_LABELS, PHASE_POINTS, Match, Prediction, Member } from "@/lib/types";
 import { streakBonusPoints } from "@/lib/scoring";
 import { ChevronRight, Zap, TrendingUp, Clock } from "lucide-react";
 import { PwaInstallBanner } from "@/components/pwa-install-banner";
+import { getMatchPredictions } from "@/lib/supabase/queries";
+import { MOCK_MATCH_PREDICTIONS } from "@/lib/mock-data";
+
+const IS_SUPABASE = !!(
+  process.env.NEXT_PUBLIC_SUPABASE_URL &&
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY &&
+  !process.env.NEXT_PUBLIC_SUPABASE_URL.includes("<your-project>") &&
+  process.env.NEXT_PUBLIC_SUPABASE_URL.startsWith("https://")
+);
+
+async function fetchMatchPredictions(matchId: string, prodeId: string): Promise<Record<string, Prediction>> {
+  if (!IS_SUPABASE) return MOCK_MATCH_PREDICTIONS[matchId] ?? {};
+  return getMatchPredictions(matchId, prodeId);
+}
+
+function MemberPredictionsPanel({
+  match,
+  memberPreds,
+  members,
+  currentUserId,
+}: {
+  match: Match;
+  memberPreds: Record<string, Prediction>;
+  members: Member[];
+  currentUserId: string;
+}) {
+  const ranked = [...members].sort((a, b) => a.rank - b.rank);
+  const isFinished = match.status === "FINISHED";
+  return (
+    <div className="mt-2 border-t border-white/10 pt-2 space-y-1">
+      {ranked.map((member) => {
+        const pred = memberPreds[member.id];
+        const isMe = member.id === currentUserId;
+        const medal =
+          member.rank === 1 ? "🥇" :
+          member.rank === 2 ? "🥈" :
+          member.rank === 3 ? "🥉" :
+          `#${member.rank}`;
+        const isExact =
+          isFinished &&
+          pred !== undefined &&
+          pred.homeGoals === match.homeScore &&
+          pred.awayGoals === match.awayScore;
+        const multiplierLabel =
+          pred && pred.multiplier === 5 ? " 💥" :
+          pred && pred.multiplier === 3 ? " 🔥" :
+          pred && pred.multiplier === 2 ? " ⚡" : "";
+        return (
+          <div
+            key={member.id}
+            className={`flex items-center gap-2 text-xs py-0.5 ${isMe ? "text-amber-400" : "text-white/60"}`}
+          >
+            <span className="w-5 shrink-0 text-center">{medal}</span>
+            <span className="flex-1 truncate font-medium">{member.displayName}</span>
+            {pred ? (
+              <>
+                <span className="font-bold tabular-nums">
+                  {pred.homeGoals} - {pred.awayGoals}
+                  {multiplierLabel}
+                </span>
+                <span className="w-3 text-center text-green-400">{isExact ? "✓" : ""}</span>
+                {isFinished && (
+                  <span className={`w-8 text-right font-bold ${pred.pointsEarned ? "text-amber-400" : "text-white/30"}`}>
+                    {pred.pointsEarned ? `+${pred.pointsEarned}` : "0"}
+                  </span>
+                )}
+              </>
+            ) : (
+              <span className="text-white/30 italic">sin pred.</span>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 function useCountdown(targetDate: string) {
   const [timeLeft, setTimeLeft] = useState("");
@@ -33,15 +110,35 @@ function useCountdown(targetDate: string) {
 }
 
 function MatchCard({ match }: { match: Match }) {
-  const { predictions } = useApp();
+  const { user, prode, predictions } = useApp();
+  const router = useRouter();
   const countdown = useCountdown(match.date);
   const myPrediction = predictions[match.id];
   const isLive = match.status === "LIVE";
   const isFinished = match.status === "FINISHED";
   const pts = PHASE_POINTS[match.phase];
+  const canReveal = isLive || isFinished;
+
+  const [showReveal, setShowReveal] = useState(false);
+  const [memberPreds, setMemberPreds] = useState<Record<string, Prediction> | null>(null);
+  const [loadingReveal, setLoadingReveal] = useState(false);
+
+  async function handleReveal() {
+    if (showReveal) { setShowReveal(false); return; }
+    if (memberPreds !== null) { setShowReveal(true); return; }
+    if (!prode) return;
+    setLoadingReveal(true);
+    const data = await fetchMatchPredictions(match.id, prode.id);
+    setMemberPreds(data);
+    setLoadingReveal(false);
+    setShowReveal(true);
+  }
 
   return (
-    <Link href={`/predicciones?match=${match.id}`}>
+    <div
+      className="cursor-pointer"
+      onClick={() => router.push(`/predicciones?match=${match.id}`)}
+    >
       <Card className="overflow-hidden transition-all hover:border-amber-500/30 active:scale-[0.98]">
         <CardContent className="p-4">
           <div className="mb-1 flex items-center justify-between">
@@ -124,16 +221,34 @@ function MatchCard({ match }: { match: Match }) {
             ) : (
               <div className="flex w-full items-center justify-between">
                 <span className="text-xs text-white/30">Sin predicción</span>
-                <div className="flex items-center gap-1 text-xs text-amber-400">
-                  <Zap className="h-3 w-3" />
-                  <span>Hasta {pts.exact} pts</span>
-                </div>
+                {!canReveal && (
+                  <div className="flex items-center gap-1 text-xs text-amber-400">
+                    <Zap className="h-3 w-3" />
+                    <span>Hasta {pts.exact} pts</span>
+                  </div>
+                )}
               </div>
             )}
           </div>
+          {canReveal && (
+            <button
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleReveal(); }}
+              className="mt-2 w-full text-xs text-white/35 hover:text-white/60 transition-colors text-center py-1 border-t border-white/5"
+            >
+              {loadingReveal ? "Cargando…" : showReveal ? "▲ Ocultar predicciones" : "▼ Ver predicciones del prode"}
+            </button>
+          )}
+          {showReveal && memberPreds !== null && prode && user && (
+            <MemberPredictionsPanel
+              match={match}
+              memberPreds={memberPreds}
+              members={prode.members}
+              currentUserId={user.id}
+            />
+          )}
         </CardContent>
       </Card>
-    </Link>
+    </div>
   );
 }
 
