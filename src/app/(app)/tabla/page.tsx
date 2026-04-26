@@ -7,7 +7,7 @@ import { useApp } from "@/components/app-context";
 import { PHASE_LABELS, Phase, Member } from "@/lib/types";
 
 const PHASE_ORDER: Phase[] = [
-  "GROUP", "ROUND_OF_16", "QUARTER_FINAL", "SEMI_FINAL", "THIRD_PLACE", "FINAL"
+  "GROUP", "ROUND_OF_32", "ROUND_OF_16", "QUARTER_FINAL", "SEMI_FINAL", "THIRD_PLACE", "FINAL"
 ];
 
 const PHASE_SHORT: Record<Phase, string> = {

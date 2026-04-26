@@ -87,8 +87,8 @@ supabase/
 
 ### Hot streak
 
-- +2 pts automatic bonus on next correct prediction with **3 consecutive correct** predictions
-- +5 pts with **5+** consecutive
+- +3 pts automatic bonus on next correct prediction with **3 consecutive correct** predictions
+- +8 pts with **5+** consecutive
 - Streak resets on any wrong prediction or no-score prediction
 - See `streakBonusPoints()` in `scoring.ts`
 
