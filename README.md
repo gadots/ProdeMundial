@@ -167,7 +167,7 @@ Since Vercel's Hobby plan doesn't support cron jobs, match data is synced automa
 | Secret | Value |
 |--------|-------|
 | `CRON_SECRET` | Same value as your `CRON_SECRET` env var in Vercel |
-| `APP_URL` | Your Vercel app URL (e.g. `https://elprofe.vercel.app`) |
+| `APP_URL` | Your Vercel app URL (e.g. `https://elprode.vercel.app`) |
 
 ---
 

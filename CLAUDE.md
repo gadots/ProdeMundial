@@ -184,4 +184,4 @@ Key DB objects:
 - **Perfil (`/perfil`)**: edit display name (calls `updateDisplayName` + `refreshUser` from context) + change password inline. Avatar/initials button in TopBar (`showProfile` prop) links to `/perfil` from all pages
 - **Wildcards (weekly challenges) removed from MVP.** The `/desafios/` folder was deleted and its nav slot replaced by Especiales. `WildcardChallenge` type and related data remain in `types.ts` and `mock-data.ts` in case it's reactivated.
 - No negative scoring (by design, won't be implemented)
-- Production URL: `https://elprofe.vercel.app`
+- Production URL: `https://elprode.vercel.app`
