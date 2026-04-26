@@ -1,10 +1,11 @@
-const CACHE = "prode-v1";
+const CACHE = "prode-v2";
 const PRECACHE = [
   "/",
   "/dashboard",
   "/manifest.json",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
+  "/icons/icon-maskable-512.png",
 ];
 
 self.addEventListener("install", (e) => {
@@ -27,25 +28,38 @@ self.addEventListener("activate", (e) => {
   );
 });
 
+// Allow the client to trigger skipWaiting (used by the update banner)
+self.addEventListener("message", (e) => {
+  if (e.data?.type === "SKIP_WAITING") self.skipWaiting();
+});
+
 self.addEventListener("fetch", (e) => {
   const req = e.request;
   if (req.method !== "GET") return;
 
-  // For navigation requests use network-first so we never serve stale HTML
+  // Navigation: network-first with 3s timeout, then fall back to cache
   if (req.mode === "navigate") {
     e.respondWith(
-      fetch(req)
-        .then((res) => {
+      (async () => {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 3000);
+        try {
+          const res = await fetch(req, { signal: controller.signal });
+          clearTimeout(timeout);
           const copy = res.clone();
           caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
           return res;
-        })
-        .catch(() => caches.match(req).then((cached) => cached || caches.match("/")))
+        } catch {
+          clearTimeout(timeout);
+          const cached = await caches.match(req);
+          return cached || await caches.match("/") || new Response("Offline", { status: 503 });
+        }
+      })()
     );
     return;
   }
 
-  // For everything else: cache-first with network fallback
+  // Everything else: cache-first with network fallback
   e.respondWith(
     caches.match(req).then((cached) => {
       if (cached) return cached;
