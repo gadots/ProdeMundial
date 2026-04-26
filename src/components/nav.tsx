@@ -245,14 +245,18 @@ export function TopBar({
   title,
   subtitle,
   showNotification = false,
+  showProfile = false,
 }: {
   title: string;
   subtitle?: string;
   showNotification?: boolean;
+  showProfile?: boolean;
 }) {
+  const router = useRouter();
   const [showDrawer, setShowDrawer] = useState(false);
   const notifications = useNotifications();
   const hasUnread = notifications.some((n) => n.unread);
+  const { user } = useApp();
 
   return (
     <>
@@ -262,16 +266,34 @@ export function TopBar({
             <h1 className="text-base font-bold text-white">{title}</h1>
             {subtitle && <p className="text-xs text-white/50">{subtitle}</p>}
           </div>
-          {showNotification && (
-            <button
-              onClick={() => setShowDrawer(true)}
-              className="relative p-2 rounded-xl hover:bg-white/10 transition-colors"
-              aria-label="Ver notificaciones"
-            >
-              <Bell className="h-5 w-5 text-white/70" />
-              {hasUnread && <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-red-500" />}
-            </button>
-          )}
+          <div className="flex items-center gap-1">
+            {showNotification && (
+              <button
+                onClick={() => setShowDrawer(true)}
+                className="relative p-2 rounded-xl hover:bg-white/10 transition-colors"
+                aria-label="Ver notificaciones"
+              >
+                <Bell className="h-5 w-5 text-white/70" />
+                {hasUnread && <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-red-500" />}
+              </button>
+            )}
+            {showProfile && user && (
+              <button
+                onClick={() => router.push("/perfil")}
+                className="h-8 w-8 rounded-full overflow-hidden bg-gradient-to-br from-amber-500 to-blue-600 flex items-center justify-center hover:opacity-80 transition-opacity ml-1 shrink-0"
+                aria-label="Mi perfil"
+              >
+                {user.avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={user.avatarUrl} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <span className="text-xs font-bold text-white select-none">
+                    {user.displayName.charAt(0).toUpperCase()}
+                  </span>
+                )}
+              </button>
+            )}
+          </div>
         </div>
       </header>
       {showDrawer && <NotificationsDrawer onClose={() => setShowDrawer(false)} />}

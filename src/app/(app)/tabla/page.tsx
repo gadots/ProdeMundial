@@ -248,7 +248,7 @@ export default function TablaPage() {
 
   return (
     <div>
-      <TopBar title="Posiciones" subtitle={prode?.name ?? "…"} />
+      <TopBar title="Posiciones" subtitle={prode?.name ?? "…"} showProfile />
 
       {/* Selector de vista + share */}
       <div className="sticky top-[57px] z-30 border-b border-white/10 bg-[#0a1628]/95 backdrop-blur-lg">

@@ -60,6 +60,8 @@ export interface AppContextValue {
   submitWildcardAnswer: (challengeId: string, answer: string) => Promise<{ error: string | null }>;
   // Points today (keyed by userId)
   pointsToday: Record<string, number>;
+  // Re-fetch user profile (e.g. after updating display name)
+  refreshUser: () => Promise<void>;
 }
 
 // -------------------------------------------------------
@@ -92,6 +94,7 @@ const DEFAULT_VALUE: AppContextValue = {
   wildcardsLoading: false,
   submitWildcardAnswer: async () => ({ error: null }),
   pointsToday: MOCK_POINTS_TODAY,
+  refreshUser: async () => {},
 };
 
 // -------------------------------------------------------
@@ -180,42 +183,42 @@ function AppProviderSupabase({ children }: { children: React.ReactNode }) {
   // Load user session
   // -------------------------------------------------------
 
-  useEffect(() => {
+  const refreshUser = useCallback(async () => {
     const supabase = createClient();
-
-    const loadUser = async () => {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      if (!authUser) {
-        setUser(null);
-        setUserLoading(false);
-        userIdRef.current = null;
-        return;
-      }
-      const profile = await Q.getMyProfile(authUser.id);
-      const appUser: AppUser = {
-        id: authUser.id,
-        email: authUser.email,
-        displayName: profile?.displayName ?? authUser.email?.split("@")[0] ?? "Usuario",
-        avatarUrl: profile?.avatarUrl,
-      };
-      setUser(appUser);
-      userIdRef.current = authUser.id;
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) {
+      setUser(null);
       setUserLoading(false);
+      userIdRef.current = null;
+      return;
+    }
+    const profile = await Q.getMyProfile(authUser.id);
+    const appUser: AppUser = {
+      id: authUser.id,
+      email: authUser.email,
+      displayName: profile?.displayName ?? authUser.email?.split("@")[0] ?? "Usuario",
+      avatarUrl: profile?.avatarUrl,
     };
+    setUser(appUser);
+    userIdRef.current = authUser.id;
+    setUserLoading(false);
+  }, []);
 
-    loadUser();
+  useEffect(() => {
+    refreshUser();
 
+    const supabase = createClient();
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === "SIGNED_OUT") {
         setUser(null);
         userIdRef.current = null;
       } else {
-        loadUser();
+        refreshUser();
       }
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [refreshUser]);
 
   // -------------------------------------------------------
   // Load matches + Realtime subscription
@@ -454,6 +457,7 @@ function AppProviderSupabase({ children }: { children: React.ReactNode }) {
     wildcardsLoading,
     submitWildcardAnswer,
     pointsToday,
+    refreshUser,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
