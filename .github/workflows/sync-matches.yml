@@ -8,7 +8,7 @@
 # Requisito: crear el secret CRON_SECRET en
 #   GitHub → Settings → Secrets and variables → Actions
 # con el mismo valor que la variable de entorno CRON_SECRET en Vercel.
-# También crear APP_URL con la URL de tu app (ej: https://prodemundial.vercel.app)
+# También crear APP_URL con la URL de tu app (ej: https://elprofe.vercel.app)
 
 name: Sync Matches
 

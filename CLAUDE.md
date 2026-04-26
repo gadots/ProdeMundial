@@ -178,5 +178,10 @@ Key DB objects:
 - football-data.org sync operational
 - Admin panel operational
 - PWA installable on Android/iOS
+- **Color palette**: dark navy `#0a1628` base, amber accent (`amber-500`) throughout — replaced all green accents
+- **Leaderboard (`/tabla`)** has two views: total points table + 📊 Stats tab (best streak, best phase, token status, points today per member)
+- **Reveal post-partido**: in dashboard MatchCards, a "Ver predicciones del prode" button expands inline for LIVE and FINISHED matches — shows all members' predictions and points. Query: `getMatchPredictions(matchId, prodeId)` in `queries.ts`; mock data in `MOCK_MATCH_PREDICTIONS` in `mock-data.ts`
+- **Perfil (`/perfil`)**: edit display name (calls `updateDisplayName` + `refreshUser` from context) + change password inline. Avatar/initials button in TopBar (`showProfile` prop) links to `/perfil` from all pages
 - **Wildcards (weekly challenges) removed from MVP.** The `/desafios/` folder was deleted and its nav slot replaced by Especiales. `WildcardChallenge` type and related data remain in `types.ts` and `mock-data.ts` in case it's reactivated.
 - No negative scoring (by design, won't be implemented)
+- Production URL: `https://elprofe.vercel.app`
