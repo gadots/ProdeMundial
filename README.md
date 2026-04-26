@@ -43,7 +43,7 @@ Open http://localhost:3000 — it works immediately with sample data.
 | `/predicciones/especiales` | Champion, top scorer, finalist, third place, most goals country |
 | `/tabla` | Leaderboard with rank changes, today's points, and share button |
 | `/grupo` | Prode info, invite code, member list |
-| `/perfil` | User profile, prediction history, notifications |
+| `/perfil` | User profile, edit display name, change password, logout |
 | `/admin` | Admin panel: manage users, prodes, matches, and trigger manual sync |
 
 ---
