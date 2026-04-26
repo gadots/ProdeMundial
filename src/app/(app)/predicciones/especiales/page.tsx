@@ -174,6 +174,7 @@ export default function EspecialesPage() {
       <TopBar
         title="Predicciones Especiales"
         subtitle={`Hasta ${totalPotential} pts en juego`}
+        showProfile
       />
 
       <div className="mx-auto max-w-lg px-4 pt-4">

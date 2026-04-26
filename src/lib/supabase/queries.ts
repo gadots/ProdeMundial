@@ -580,6 +580,18 @@ export async function createProde(
   return { error: "No se pudo generar un código único. Intentá de nuevo.", prodeId: null };
 }
 
+export async function updateDisplayName(
+  userId: string,
+  displayName: string
+): Promise<{ error: string | null }> {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("profiles")
+    .update({ display_name: displayName })
+    .eq("id", userId);
+  return { error: error?.message ?? null };
+}
+
 export async function leaveProde(
   userId: string,
   prodeId: string

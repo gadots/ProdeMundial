@@ -271,6 +271,7 @@ export default function DashboardPage() {
         title="Dashboard"
         subtitle={`Hola, ${user?.displayName ?? "…"} 👋`}
         showNotification
+        showProfile
       />
 
       <PwaInstallBanner />

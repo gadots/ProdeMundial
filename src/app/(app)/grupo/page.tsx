@@ -335,7 +335,7 @@ export default function GrupoPage() {
   if (!prode) {
     return (
       <div>
-        <TopBar title="Configuraciones" />
+        <TopBar title="Configuraciones" showProfile />
         <div className="flex items-center justify-center h-40 text-white/30 text-sm">Cargando…</div>
       </div>
     );
@@ -343,7 +343,7 @@ export default function GrupoPage() {
 
   return (
     <div>
-      <TopBar title="Configuraciones" subtitle={prodeName || prode.name} />
+      <TopBar title="Configuraciones" subtitle={prodeName || prode.name} showProfile />
 
       <div className="mx-auto max-w-lg space-y-4 px-4 py-4">
 

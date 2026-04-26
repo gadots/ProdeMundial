@@ -463,6 +463,7 @@ export default function PrediccionesPage() {
       <TopBar
         title="Predicciones"
         subtitle={allPending.length > 0 ? `${allPending.length} sin predecir` : "Todo cargado ✓"}
+        showProfile
       />
 
       {/* Filtros rápidos + tabs de fase */}
