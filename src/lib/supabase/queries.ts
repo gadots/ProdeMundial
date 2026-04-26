@@ -245,6 +245,34 @@ export async function getMyPredictions(
   );
 }
 
+export async function getMatchPredictions(
+  matchId: string,
+  prodeId: string
+): Promise<Record<string, Prediction>> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("predictions")
+    .select("*")
+    .eq("match_id", matchId)
+    .eq("prode_id", prodeId);
+  if (error || !data) return {};
+  return Object.fromEntries(
+    data.map((row) => [
+      row.user_id,
+      {
+        id: row.id,
+        userId: row.user_id,
+        matchId: row.match_id,
+        prodeId: row.prode_id,
+        homeGoals: row.home_goals,
+        awayGoals: row.away_goals,
+        multiplier: row.multiplier as TokenMultiplier,
+        pointsEarned: (row.points_earned as number | null) ?? undefined,
+      } as Prediction,
+    ])
+  );
+}
+
 export async function upsertPrediction(pred: {
   userId: string;
   matchId: string;
