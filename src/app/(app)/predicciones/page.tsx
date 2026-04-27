@@ -169,8 +169,15 @@ function HistorialView({
 function ScoreInput({ value, onChange, disabled }: { value: string; onChange: (v: string) => void; disabled?: boolean }) {
   return (
     <input
-      type="number" min="0" max="20" value={value}
-      onChange={(e) => onChange(e.target.value)}
+      type="text"
+      inputMode="numeric"
+      pattern="[0-9]*"
+      maxLength={2}
+      value={value}
+      onChange={(e) => {
+        const v = e.target.value.replace(/[^0-9]/g, "");
+        if (v === "" || Number(v) <= 20) onChange(v);
+      }}
       disabled={disabled}
       className="h-12 w-12 rounded-xl border border-white/15 bg-white/5 text-center text-xl font-black text-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all disabled:opacity-40"
     />
