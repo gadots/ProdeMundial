@@ -8,9 +8,18 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useApp } from "@/components/app-context";
-import { PHASE_LABELS, PHASE_POINTS, Phase, Match, MultiplierToken, TokenMultiplier, Prediction } from "@/lib/types";
+import { PHASE_LABELS, PHASE_POINTS, Phase, Match, Member, MultiplierToken, TokenMultiplier, Prediction } from "@/lib/types";
 import { maxPointsForMatch, streakBonusPoints } from "@/lib/scoring";
 import { Save, Lock, Check, Flame, HelpCircle, X } from "lucide-react";
+import { getMatchPredictions } from "@/lib/supabase/queries";
+import { MOCK_MATCH_PREDICTIONS } from "@/lib/mock-data";
+
+const IS_SUPABASE = !!(
+  process.env.NEXT_PUBLIC_SUPABASE_URL &&
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY &&
+  !process.env.NEXT_PUBLIC_SUPABASE_URL.includes("<your-project>") &&
+  process.env.NEXT_PUBLIC_SUPABASE_URL.startsWith("https://")
+);
 
 const MODULE_LOAD_TIME = Date.now();
 
@@ -216,6 +225,68 @@ function TokenPicker({
   );
 }
 
+function MemberPredictionsPanel({
+  match,
+  memberPreds,
+  members,
+  currentUserId,
+}: {
+  match: Match;
+  memberPreds: Record<string, Prediction>;
+  members: Member[];
+  currentUserId: string;
+}) {
+  const ranked = [...members].sort((a, b) => a.rank - b.rank);
+  const isFinished = match.status === "FINISHED";
+  return (
+    <div className="mt-2 border-t border-white/10 pt-2 space-y-1">
+      {ranked.map((member) => {
+        const pred = memberPreds[member.id];
+        const isMe = member.id === currentUserId;
+        const medal =
+          member.rank === 1 ? "🥇" :
+          member.rank === 2 ? "🥈" :
+          member.rank === 3 ? "🥉" :
+          `#${member.rank}`;
+        const isExact =
+          isFinished &&
+          pred !== undefined &&
+          pred.homeGoals === match.homeScore &&
+          pred.awayGoals === match.awayScore;
+        const multiplierLabel =
+          pred && pred.multiplier === 5 ? " 💥" :
+          pred && pred.multiplier === 3 ? " 🔥" :
+          pred && pred.multiplier === 2 ? " ⚡" : "";
+        return (
+          <div
+            key={member.id}
+            className={`flex items-center gap-2 text-xs py-0.5 ${isMe ? "text-amber-400" : "text-white/60"}`}
+          >
+            <span className="w-5 shrink-0 text-center">{medal}</span>
+            <span className="flex-1 truncate font-medium">{member.displayName}</span>
+            {pred ? (
+              <>
+                <span className="font-bold tabular-nums">
+                  {pred.homeGoals} - {pred.awayGoals}
+                  {multiplierLabel}
+                </span>
+                <span className="w-3 text-center text-green-400">{isExact ? "✓" : ""}</span>
+                {isFinished && (
+                  <span className={`w-8 text-right font-bold ${pred.pointsEarned ? "text-amber-400" : "text-white/30"}`}>
+                    {pred.pointsEarned ? `+${pred.pointsEarned}` : "0"}
+                  </span>
+                )}
+              </>
+            ) : (
+              <span className="text-white/30 italic">sin pred.</span>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function MatchPredictionCard({
   match,
   tokens,
@@ -231,12 +302,30 @@ function MatchPredictionCard({
   onTokenChange: (matchId: string, prev: TokenMultiplier, next: TokenMultiplier) => void;
   onSave: (matchId: string, home: number, away: number, multiplier: TokenMultiplier, penaltyWinner?: "home" | "away") => Promise<{ error: string | null }>;
 }) {
+  const { prode, user, isMockMode } = useApp();
+
   const [home, setHome] = useState(existing?.homeGoals?.toString() ?? "");
   const [away, setAway] = useState(existing?.awayGoals?.toString() ?? "");
   const [multiplier, setMultiplier] = useState<TokenMultiplier>(existing?.multiplier ?? 1);
   const [penaltyWinner, setPenaltyWinner] = useState<"home" | "away" | undefined>(existing?.penaltyWinner);
   const [saved, setSaved] = useState(!!existing);
   const [saving, setSaving] = useState(false);
+  const [showReveal, setShowReveal] = useState(false);
+  const [memberPreds, setMemberPreds] = useState<Record<string, Prediction> | null>(null);
+  const [loadingReveal, setLoadingReveal] = useState(false);
+
+  const handleReveal = async () => {
+    if (showReveal) { setShowReveal(false); return; }
+    if (memberPreds !== null) { setShowReveal(true); return; }
+    if (!prode) return;
+    setLoadingReveal(true);
+    const data = (!IS_SUPABASE || isMockMode)
+      ? (MOCK_MATCH_PREDICTIONS[match.id] ?? {})
+      : await getMatchPredictions(match.id, prode.id);
+    setMemberPreds(data);
+    setLoadingReveal(false);
+    setShowReveal(true);
+  };
 
   const teamsKnown = !!match.homeTeam.id && !!match.awayTeam.id;
   const isFinished = match.status === "FINISHED";
@@ -425,6 +514,24 @@ function MatchPredictionCard({
               ? `Exacto: ${pts.exact} pts · Ganador: ${pts.winner} pts${pts.draw > 0 ? ` · Empate: ${pts.draw} pts` : ""}`
               : `Exacto: ${pts.exact} pts · Penales: ${pts.penales} pts · Ganador: ${pts.winner} pts`}
           </div>
+        )}
+
+        {(isLive || isFinished) && (
+          <button
+            onClick={handleReveal}
+            className="mt-2 w-full text-xs text-white/35 hover:text-white/60 transition-colors text-center py-1 border-t border-white/5"
+          >
+            {loadingReveal ? "Cargando…" : showReveal ? "▲ Ocultar predicciones" : "▼ Ver predicciones del prode"}
+          </button>
+        )}
+
+        {showReveal && memberPreds !== null && prode && user && (
+          <MemberPredictionsPanel
+            match={match}
+            memberPreds={memberPreds}
+            members={prode.members}
+            currentUserId={user.id}
+          />
         )}
       </CardContent>
     </Card>
