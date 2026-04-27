@@ -1,4 +1,4 @@
-const CACHE = "prode-v3";
+const CACHE = "prode-v4";
 const PRECACHE = [
   "/",
   "/dashboard",
@@ -37,6 +37,11 @@ self.addEventListener("fetch", (e) => {
   const req = e.request;
   if (req.method !== "GET") return;
 
+  // Only intercept same-origin requests — never cache cross-origin API calls
+  // (Supabase REST/realtime calls are cross-origin and must always hit the network)
+  const url = new URL(req.url);
+  if (url.origin !== self.location.origin) return;
+
   // Navigation: network-first with 3s timeout, then fall back to cache
   if (req.mode === "navigate") {
     e.respondWith(
@@ -59,7 +64,7 @@ self.addEventListener("fetch", (e) => {
     return;
   }
 
-  // Everything else: cache-first with network fallback
+  // Same-origin static assets: cache-first with network fallback
   e.respondWith(
     caches.match(req).then((cached) => {
       if (cached) return cached;
