@@ -10,6 +10,7 @@ import { useApp } from "@/components/app-context";
 import { LogOut, ChevronRight, User, CheckCircle2, AlertCircle, Loader2, KeyRound } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { updateDisplayName } from "@/lib/supabase/queries";
+import { signOut } from "./actions";
 
 export default function PerfilPage() {
   const { user, prode, refreshUser } = useApp();
@@ -64,10 +65,7 @@ export default function PerfilPage() {
     }
   };
 
-  const handleLogout = async () => {
-    await createClient().auth.signOut();
-    window.location.href = "/";
-  };
+  const handleLogout = () => signOut();
 
   return (
     <div>
