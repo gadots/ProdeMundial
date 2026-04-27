@@ -10,6 +10,8 @@ import {
   CURRENT_USER_ID, CURRENT_USER_NAME,
 } from "@/lib/mock-data";
 
+export const MOCK_USER_EMAIL = "test@elprode.app";
+
 const IS_SUPABASE = !!(
   process.env.NEXT_PUBLIC_SUPABASE_URL &&
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY &&
@@ -62,6 +64,7 @@ export interface AppContextValue {
   pointsToday: Record<string, number>;
   // Re-fetch user profile (e.g. after updating display name)
   refreshUser: () => Promise<void>;
+  isMockMode: boolean;
 }
 
 // -------------------------------------------------------
@@ -95,6 +98,7 @@ const DEFAULT_VALUE: AppContextValue = {
   submitWildcardAnswer: async () => ({ error: null }),
   pointsToday: MOCK_POINTS_TODAY,
   refreshUser: async () => {},
+  isMockMode: true,
 };
 
 // -------------------------------------------------------
@@ -118,6 +122,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 function AppProviderSupabase({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
   const [userLoading, setUserLoading] = useState(true);
+  const [isMockMode, setIsMockMode] = useState(false);
 
   const [prode, setProde] = useState<Prode | null>(null);
   const [prodeId, setProdeId] = useState<string | null>(null);
@@ -190,6 +195,11 @@ function AppProviderSupabase({ children }: { children: React.ReactNode }) {
       setUser(null);
       setUserLoading(false);
       userIdRef.current = null;
+      return;
+    }
+    if (authUser.email === MOCK_USER_EMAIL) {
+      setIsMockMode(true);
+      setUserLoading(false);
       return;
     }
     const profile = await Q.getMyProfile(authUser.id);
@@ -458,7 +468,12 @@ function AppProviderSupabase({ children }: { children: React.ReactNode }) {
     submitWildcardAnswer,
     pointsToday,
     refreshUser,
+    isMockMode: false,
   };
+
+  if (isMockMode) {
+    return <AppContext.Provider value={DEFAULT_VALUE}>{children}</AppContext.Provider>;
+  }
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }

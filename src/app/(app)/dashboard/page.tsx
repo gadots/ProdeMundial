@@ -22,10 +22,6 @@ const IS_SUPABASE = !!(
   process.env.NEXT_PUBLIC_SUPABASE_URL.startsWith("https://")
 );
 
-async function fetchMatchPredictions(matchId: string, prodeId: string): Promise<Record<string, Prediction>> {
-  if (!IS_SUPABASE) return MOCK_MATCH_PREDICTIONS[matchId] ?? {};
-  return getMatchPredictions(matchId, prodeId);
-}
 
 function MemberPredictionsPanel({
   match,
@@ -110,7 +106,7 @@ function useCountdown(targetDate: string) {
 }
 
 function MatchCard({ match }: { match: Match }) {
-  const { user, prode, predictions } = useApp();
+  const { user, prode, predictions, isMockMode } = useApp();
   const router = useRouter();
   const countdown = useCountdown(match.date);
   const myPrediction = predictions[match.id];
@@ -128,7 +124,9 @@ function MatchCard({ match }: { match: Match }) {
     if (memberPreds !== null) { setShowReveal(true); return; }
     if (!prode) return;
     setLoadingReveal(true);
-    const data = await fetchMatchPredictions(match.id, prode.id);
+    const data = (!IS_SUPABASE || isMockMode)
+      ? (MOCK_MATCH_PREDICTIONS[match.id] ?? {})
+      : await getMatchPredictions(match.id, prode.id);
     setMemberPreds(data);
     setLoadingReveal(false);
     setShowReveal(true);
