@@ -285,17 +285,19 @@ export async function upsertPrediction(pred: {
   penaltyWinner?: "home" | "away";
 }): Promise<{ error: string | null }> {
   const supabase = createClient();
+  const row: Record<string, unknown> = {
+    user_id: pred.userId,
+    match_id: pred.matchId,
+    prode_id: pred.prodeId,
+    home_goals: pred.homeGoals,
+    away_goals: pred.awayGoals,
+    multiplier: pred.multiplier,
+    updated_at: new Date().toISOString(),
+  };
+  // Only include penalty_winner when set — column requires migration 008
+  if (pred.penaltyWinner) row.penalty_winner = pred.penaltyWinner;
   const { error } = await supabase.from("predictions").upsert(
-    {
-      user_id: pred.userId,
-      match_id: pred.matchId,
-      prode_id: pred.prodeId,
-      home_goals: pred.homeGoals,
-      away_goals: pred.awayGoals,
-      multiplier: pred.multiplier,
-      penalty_winner: pred.penaltyWinner ?? null,
-      updated_at: new Date().toISOString(),
-    },
+    row,
     { onConflict: "user_id,match_id,prode_id" }
   );
   return { error: error?.message ?? null };
