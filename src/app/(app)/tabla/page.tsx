@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import Link from "next/link";
 import { Share2 } from "lucide-react";
 import { TopBar } from "@/components/nav";
 import { useApp } from "@/components/app-context";
@@ -355,9 +356,10 @@ export default function TablaPage() {
             const todayPts = pointsToday[member.id] ?? 0;
 
             return (
-              <div
+              <Link
                 key={member.id}
-                className={`flex items-center gap-2 px-4 py-3 border-b border-white/5 transition-colors ${
+                href={`/tabla/${member.id}`}
+                className={`flex items-center gap-2 px-4 py-3 border-b border-white/5 transition-colors hover:bg-white/5 ${
                   isMe ? "bg-amber-500/5" : ""
                 }`}
               >
@@ -411,7 +413,7 @@ export default function TablaPage() {
                   <p className={`text-sm font-black ${isMe ? "text-amber-300" : "text-white"}`}>{score}</p>
                   <p className="text-[10px] text-white/30">pts</p>
                 </div>
-              </div>
+              </Link>
             );
           })}
         </div>
