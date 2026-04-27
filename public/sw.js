@@ -1,4 +1,4 @@
-const CACHE = "prode-v2";
+const CACHE = "prode-v3";
 const PRECACHE = [
   "/",
   "/dashboard",
