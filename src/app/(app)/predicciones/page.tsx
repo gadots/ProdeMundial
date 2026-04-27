@@ -292,6 +292,9 @@ function MatchPredictionCard({
   tokens,
   existing,
   myStreak,
+  prode,
+  user,
+  isMockMode,
   onTokenChange,
   onSave,
 }: {
@@ -299,10 +302,12 @@ function MatchPredictionCard({
   tokens: MultiplierToken[];
   existing?: Prediction;
   myStreak: number;
+  prode: ReturnType<typeof useApp>["prode"];
+  user: ReturnType<typeof useApp>["user"];
+  isMockMode: boolean;
   onTokenChange: (matchId: string, prev: TokenMultiplier, next: TokenMultiplier) => void;
   onSave: (matchId: string, home: number, away: number, multiplier: TokenMultiplier, penaltyWinner?: "home" | "away") => Promise<{ error: string | null }>;
 }) {
-  const { prode, user, isMockMode } = useApp();
 
   const [home, setHome] = useState(existing?.homeGoals?.toString() ?? "");
   const [away, setAway] = useState(existing?.awayGoals?.toString() ?? "");
@@ -310,6 +315,7 @@ function MatchPredictionCard({
   const [penaltyWinner, setPenaltyWinner] = useState<"home" | "away" | undefined>(existing?.penaltyWinner);
   const [saved, setSaved] = useState(!!existing);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [showReveal, setShowReveal] = useState(false);
   const [memberPreds, setMemberPreds] = useState<Record<string, Prediction> | null>(null);
   const [loadingReveal, setLoadingReveal] = useState(false);
@@ -361,9 +367,16 @@ function MatchPredictionCard({
   const handleSave = async () => {
     if (!canSave) return;
     setSaving(true);
-    const result = await onSave(match.id, Number(home), Number(away), multiplier, showPenaltySelector ? penaltyWinner : undefined);
-    setSaving(false);
-    if (!result.error) setSaved(true);
+    setSaveError(null);
+    try {
+      const result = await onSave(match.id, Number(home), Number(away), multiplier, showPenaltySelector ? penaltyWinner : undefined);
+      if (!result.error) setSaved(true);
+      else setSaveError(result.error);
+    } catch {
+      setSaveError("Error al guardar");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const activeMultiplier = isGroupPhase ? multiplier : 1;
@@ -505,6 +518,10 @@ function MatchPredictionCard({
               )}
             </Button>
           </div>
+        )}
+
+        {saveError && (
+          <p className="mt-1 text-[10px] text-red-400">{saveError}</p>
         )}
 
         {/* Resumen de puntos posibles */}
@@ -655,7 +672,7 @@ function RulesModal({ onClose }: { onClose: () => void }) {
 }
 
 export default function PrediccionesPage() {
-  const { matches, predictions, tokens, setTokens, updateTokenUsage, streak, savePrediction } = useApp();
+  const { matches, predictions, tokens, setTokens, updateTokenUsage, streak, savePrediction, prode, user, isMockMode } = useApp();
 
   const [activePhase, setActivePhase] = useState<Phase>("GROUP");
   const [filterView, setFilterView] = useState<FilterView>("all");
@@ -914,6 +931,9 @@ export default function PrediccionesPage() {
               tokens={tokens}
               existing={predictions[match.id]}
               myStreak={streak.current}
+              prode={prode}
+              user={user}
+              isMockMode={isMockMode}
               onTokenChange={handleTokenChange}
               onSave={handleSave}
             />
