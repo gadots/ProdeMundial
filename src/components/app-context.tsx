@@ -302,15 +302,25 @@ function AppProviderSupabase({ children }: { children: React.ReactNode }) {
         .channel(`realtime-predictions-${user.id}`)
         .on(
           "postgres_changes",
-          { event: "UPDATE", schema: "public", table: "predictions", filter: `user_id=eq.${user.id}` },
+          { event: "*", schema: "public", table: "predictions", filter: `user_id=eq.${user.id}` },
           (payload) => {
             const row = payload.new as Record<string, unknown>;
+            if (!row?.match_id) return; // DELETE events have no .new
             const matchId = row.match_id as string;
-            const pointsEarned = row.points_earned as number | null;
-            setPredictions((prev) => {
-              if (!prev[matchId]) return prev;
-              return { ...prev, [matchId]: { ...prev[matchId], pointsEarned: pointsEarned ?? undefined } };
-            });
+            setPredictions((prev) => ({
+              ...prev,
+              [matchId]: {
+                id: row.id as string,
+                userId: row.user_id as string,
+                matchId,
+                prodeId: row.prode_id as string,
+                homeGoals: row.home_goals as number,
+                awayGoals: row.away_goals as number,
+                multiplier: row.multiplier as TokenMultiplier,
+                penaltyWinner: (row.penalty_winner as "home" | "away") ?? undefined,
+                pointsEarned: (row.points_earned as number | null) ?? undefined,
+              },
+            }));
           }
         )
         .subscribe();

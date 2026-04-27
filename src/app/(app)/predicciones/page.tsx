@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
 import { TopBar } from "@/components/nav";
 import { Flag } from "@/components/flag";
@@ -320,12 +320,32 @@ function MatchPredictionCard({
   const [away, setAway] = useState(existing?.awayGoals?.toString() ?? "");
   const [multiplier, setMultiplier] = useState<TokenMultiplier>(existing?.multiplier ?? 1);
   const [penaltyWinner, setPenaltyWinner] = useState<"home" | "away" | undefined>(existing?.penaltyWinner);
-  const [saved, setSaved] = useState(!!existing);
+  const [lastSaved, setLastSaved] = useState<{ home: string; away: string; multiplier: TokenMultiplier } | null>(
+    existing
+      ? { home: existing.homeGoals?.toString() ?? "", away: existing.awayGoals?.toString() ?? "", multiplier: existing.multiplier ?? 1 }
+      : null
+  );
+  const saved = lastSaved !== null && home === lastSaved.home && away === lastSaved.away && multiplier === lastSaved.multiplier;
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [showReveal, setShowReveal] = useState(false);
   const [memberPreds, setMemberPreds] = useState<Record<string, Prediction> | null>(null);
   const [loadingReveal, setLoadingReveal] = useState(false);
+
+  // Sync inputs when realtime update arrives from another device
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!existing) return;
+    const newHome = existing.homeGoals?.toString() ?? "";
+    const newAway = existing.awayGoals?.toString() ?? "";
+    const newMult = existing.multiplier ?? 1;
+    if (saved) {
+      setHome(newHome);
+      setAway(newAway);
+      setMultiplier(newMult);
+      setLastSaved({ home: newHome, away: newAway, multiplier: newMult });
+    }
+  }, [existing?.homeGoals, existing?.awayGoals, existing?.multiplier]); // `saved` intentionally omitted
 
   const handleReveal = async () => {
     if (showReveal) { setShowReveal(false); return; }
@@ -367,7 +387,6 @@ function MatchPredictionCard({
   const handleTokenSelect = (next: TokenMultiplier) => {
     const prev = multiplier;
     setMultiplier(next);
-    setSaved(false);
     onTokenChange(match.id, prev, next);
   };
 
@@ -377,7 +396,7 @@ function MatchPredictionCard({
     setSaveError(null);
     try {
       const result = await onSave(match.id, Number(home), Number(away), multiplier, showPenaltySelector ? penaltyWinner : undefined);
-      if (!result.error) setSaved(true);
+      if (!result.error) setLastSaved({ home, away, multiplier });
       else setSaveError(result.error);
     } catch {
       setSaveError("Error al guardar");
@@ -447,9 +466,9 @@ function MatchPredictionCard({
             <p className="text-sm font-bold text-white leading-tight">{homeName}</p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <ScoreInput value={home} onChange={(v) => { setHome(v); setSaved(false); if (Number(v) !== Number(away)) setPenaltyWinner(undefined); }} disabled={locked} />
+            <ScoreInput value={home} onChange={(v) => { setHome(v); if (Number(v) !== Number(away)) setPenaltyWinner(undefined); }} disabled={locked} />
             <span className="text-white/30 font-bold text-lg">-</span>
-            <ScoreInput value={away} onChange={(v) => { setAway(v); setSaved(false); if (Number(home) !== Number(v)) setPenaltyWinner(undefined); }} disabled={locked} />
+            <ScoreInput value={away} onChange={(v) => { setAway(v); if (Number(home) !== Number(v)) setPenaltyWinner(undefined); }} disabled={locked} />
           </div>
           <div className="flex flex-1 items-center gap-2 justify-end">
             <p className="text-sm font-bold text-white leading-tight text-right">{awayName}</p>
@@ -462,7 +481,7 @@ function MatchPredictionCard({
             <p className="text-[10px] text-white/40 mb-2 text-center">¿Quién gana en penales?</p>
             <div className="flex gap-2">
               <button
-                onClick={() => { setPenaltyWinner("home"); setSaved(false); }}
+                onClick={() => { setPenaltyWinner("home"); }}
                 className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border text-xs font-semibold transition-all ${
                   penaltyWinner === "home"
                     ? "bg-amber-500/20 border-amber-500/40 text-amber-300"
@@ -473,7 +492,7 @@ function MatchPredictionCard({
                 <span className="truncate">{match.homeTeam.shortName || homeName}</span>
               </button>
               <button
-                onClick={() => { setPenaltyWinner("away"); setSaved(false); }}
+                onClick={() => { setPenaltyWinner("away"); }}
                 className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border text-xs font-semibold transition-all ${
                   penaltyWinner === "away"
                     ? "bg-amber-500/20 border-amber-500/40 text-amber-300"
