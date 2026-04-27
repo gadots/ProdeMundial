@@ -239,6 +239,7 @@ export async function getMyPredictions(
         homeGoals: row.home_goals,
         awayGoals: row.away_goals,
         multiplier: row.multiplier as TokenMultiplier,
+        penaltyWinner: (row.penalty_winner as "home" | "away" | null) ?? undefined,
         pointsEarned: (row.points_earned as number | null) ?? undefined,
       } as Prediction,
     ])
@@ -267,6 +268,7 @@ export async function getMatchPredictions(
         homeGoals: row.home_goals,
         awayGoals: row.away_goals,
         multiplier: row.multiplier as TokenMultiplier,
+        penaltyWinner: (row.penalty_winner as "home" | "away" | null) ?? undefined,
         pointsEarned: (row.points_earned as number | null) ?? undefined,
       } as Prediction,
     ])
@@ -280,6 +282,7 @@ export async function upsertPrediction(pred: {
   homeGoals: number;
   awayGoals: number;
   multiplier: TokenMultiplier;
+  penaltyWinner?: "home" | "away";
 }): Promise<{ error: string | null }> {
   const supabase = createClient();
   const { error } = await supabase.from("predictions").upsert(
@@ -290,6 +293,7 @@ export async function upsertPrediction(pred: {
       home_goals: pred.homeGoals,
       away_goals: pred.awayGoals,
       multiplier: pred.multiplier,
+      penalty_winner: pred.penaltyWinner ?? null,
       updated_at: new Date().toISOString(),
     },
     { onConflict: "user_id,match_id,prode_id" }

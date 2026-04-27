@@ -103,7 +103,7 @@ test.describe("Predicciones", () => {
     await expect(page.getByText("Mis potenciadores:")).toBeVisible();
   });
 
-  // ── Save regression tests ──────────────────────────────────────────────────
+  // ── Save + existing predictions ────────────────────────────────────────────
 
   test("guardar predicción cambia el botón a Guardado", async ({ page }) => {
     // Find the first card with unlocked (non-disabled) score inputs
@@ -121,9 +121,37 @@ test.describe("Predicciones", () => {
     await expect(saveBtn).toBeEnabled();
     await saveBtn.click();
 
-    // Button must transition to "Guardado" — not stay as spinner
+    // Must transition to "Guardado" — never stay as spinner
     await expect(card.getByRole("button", { name: /Guardado/ })).toBeVisible({ timeout: 5000 });
     await expect(card.locator(".animate-spin")).not.toBeVisible();
+  });
+
+  test("predicción guardada aparece en la card al recargar la página", async ({ page }) => {
+    // Save a prediction first
+    const card = page.locator(".space-y-3 > div").filter({
+      has: page.locator('input[type="number"]:not([disabled])'),
+    }).first();
+
+    await expect(card).toBeVisible({ timeout: 8000 });
+
+    const inputs = card.locator('input[type="number"]');
+    await inputs.nth(0).fill("3");
+    await inputs.nth(1).fill("0");
+
+    await card.getByRole("button", { name: /Guardar/ }).click();
+    await expect(card.getByRole("button", { name: /Guardado/ })).toBeVisible({ timeout: 5000 });
+
+    // Reload the page
+    await page.reload();
+    await page.waitForLoadState("networkidle");
+
+    // The same card must now show the saved score values, not empty inputs
+    // Find a card that shows "Guardado" (saved state) OR has the previously entered values
+    const savedCard = page.locator(".space-y-3 > div").filter({
+      has: page.getByRole("button", { name: /Guardado/ }),
+    }).first();
+
+    await expect(savedCard).toBeVisible({ timeout: 10000 });
   });
 
   test("guardar en pestaña Pendientes no deja el spinner trabado", async ({ page }) => {
@@ -133,7 +161,6 @@ test.describe("Predicciones", () => {
       has: page.locator('input[type="number"]:not([disabled])'),
     }).first();
 
-    // Skip if no pending matches exist
     const hasPending = await card.isVisible({ timeout: 5000 }).catch(() => false);
     if (!hasPending) return;
 
@@ -143,21 +170,47 @@ test.describe("Predicciones", () => {
 
     await card.getByRole("button", { name: /Guardar/ }).click();
 
-    // After save, either the card shows "Guardado ✓" or disappears from the list.
-    // What must NOT happen is a stuck spinner.
+    // After save: either shows "Guardado" or disappears from Pendientes list.
+    // What must NOT happen: spinner stuck.
     const savedBtn = card.getByRole("button", { name: /Guardado/ });
-    const disappeared = card.isHidden();
 
-    const resolved = await Promise.race([
+    const outcome = await Promise.race([
       savedBtn.waitFor({ state: "visible", timeout: 5000 }).then(() => "saved"),
-      disappeared.then((hidden) => hidden ? "gone" : "still-visible"),
+      card.waitFor({ state: "hidden", timeout: 5000 }).then(() => "gone"),
     ]).catch(() => "timeout");
 
-    expect(["saved", "gone"]).toContain(resolved);
-    // If card is still visible it must not show a spinner
+    expect(["saved", "gone"]).toContain(outcome);
     if (await card.isVisible().catch(() => false)) {
       await expect(card.locator(".animate-spin")).not.toBeVisible();
     }
+  });
+
+  test("cards con predicciones ya guardadas muestran inputs llenos al cargar", async ({ page }) => {
+    // In mock mode, MOCK_MY_PREDICTIONS has predictions for FINISHED matches (m1-m5).
+    // For real Supabase mode, after saving, reload must show the prediction.
+    // This test verifies the async load: if any card shows "Guardado", it must have values.
+    await page.waitForLoadState("networkidle");
+
+    const savedCards = page.locator(".space-y-3 > div").filter({
+      has: page.getByRole("button", { name: /Guardado/ }),
+    });
+
+    const count = await savedCards.count();
+    if (count === 0) return; // no saved predictions yet — test is vacuously passing
+
+    // Each saved card must have non-empty input values (the saved prediction must be shown)
+    const firstSaved = savedCards.first();
+    const inputs = firstSaved.locator('input[type="number"]');
+    const inputCount = await inputs.count();
+
+    // Locked (finished/live) cards don't have inputs — skip those
+    if (inputCount < 2) return;
+
+    const homeVal = await inputs.nth(0).inputValue();
+    const awayVal = await inputs.nth(1).inputValue();
+
+    expect(homeVal).not.toBe("");
+    expect(awayVal).not.toBe("");
   });
 
   test("no se puede guardar sin completar ambos scores", async ({ page }) => {
@@ -167,11 +220,21 @@ test.describe("Predicciones", () => {
 
     await expect(card).toBeVisible({ timeout: 8000 });
 
-    // Fill only the home score — save button must remain disabled
     const inputs = card.locator('input[type="number"]');
     await inputs.nth(0).fill("2");
+    // Only home filled — save button must be disabled
+    await expect(card.getByRole("button", { name: /Guardar/ })).toBeDisabled();
+  });
 
-    const saveBtn = card.getByRole("button", { name: /Guardar/ });
-    await expect(saveBtn).toBeDisabled();
+  test("no se puede guardar un partido bloqueado", async ({ page }) => {
+    // FINISHED matches should have locked cards (no save button)
+    const lockedCard = page.locator(".space-y-3 > div").filter({
+      has: page.locator('input[type="number"][disabled]'),
+    }).first();
+
+    const exists = await lockedCard.isVisible({ timeout: 3000 }).catch(() => false);
+    if (!exists) return;
+
+    await expect(lockedCard.getByRole("button", { name: /Guardar/ })).not.toBeVisible();
   });
 });

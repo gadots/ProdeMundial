@@ -926,7 +926,7 @@ export default function PrediccionesPage() {
         ) : (
           matchesToShow.map((match) => (
             <MatchPredictionCard
-              key={match.id}
+              key={`${match.id}-${!!predictions[match.id]}`}
               match={match}
               tokens={tokens}
               existing={predictions[match.id]}
