@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { TopBar } from "@/components/nav";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +18,10 @@ export default function PerfilPage() {
 
   // ── Edit name ──
   const [nameValue, setNameValue] = useState(user?.displayName ?? "");
+  // Sync when user loads asynchronously (context was still loading on first render)
+  useEffect(() => {
+    if (user?.displayName) setNameValue(user.displayName);
+  }, [user?.displayName]);
   const [nameSaving, setNameSaving] = useState(false);
   const [nameSuccess, setNameSuccess] = useState(false);
   const [nameError, setNameError] = useState("");
