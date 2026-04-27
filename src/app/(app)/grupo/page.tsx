@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { TopBar } from "@/components/nav";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -251,6 +251,14 @@ export default function GrupoPage() {
 
   const [editingName, setEditingName] = useState(false);
   const [prodeName, setProdeName] = useState(prode?.name ?? "");
+
+  // Sync when prode loads asynchronously; don't override while user is actively editing
+  useEffect(() => {
+    if (!editingPrize && prode?.prizeDescription !== undefined) setPrize(prode.prizeDescription ?? "");
+  }, [prode?.prizeDescription, editingPrize]);
+  useEffect(() => {
+    if (!editingName && prode?.name) setProdeName(prode.name);
+  }, [prode?.name, editingName]);
   const [savedName, setSavedName] = useState(false);
 
   const [switching, setSwitching] = useState(false);
