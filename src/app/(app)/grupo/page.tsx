@@ -264,7 +264,9 @@ export default function GrupoPage() {
   const [switching, setSwitching] = useState(false);
 
   const isAdmin = prode?.adminId === user?.id;
-  const inviteLink = prode ? `https://prodemundial.app/join/${prode.inviteCode}` : "";
+  const inviteLink = prode
+    ? `${typeof window !== "undefined" ? window.location.origin : ""}/join/${prode.inviteCode}`
+    : "";
 
   const handleCopyLink = async () => {
     await navigator.clipboard.writeText(inviteLink).catch(() => {});
