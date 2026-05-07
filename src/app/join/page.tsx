@@ -30,8 +30,13 @@ function JoinPageInner() {
     if (t === "crear" || t === "unirse") setTab(t);
   }, [searchParams]);
 
+  useEffect(() => {
+    const c = searchParams.get("code");
+    if (c) setCode(c.toUpperCase());
+  }, [searchParams]);
+
   // Join
-  const [code, setCode] = useState("");
+  const [code, setCode] = useState(() => (searchParams.get("code") ?? "").toUpperCase());
   const [joinLoading, setJoinLoading] = useState(false);
   const [joinError, setJoinError] = useState("");
 
@@ -45,6 +50,28 @@ function JoinPageInner() {
     process.env.NEXT_PUBLIC_SUPABASE_URL.startsWith("https://") &&
     !process.env.NEXT_PUBLIC_SUPABASE_URL.includes("<your-project>")
   );
+
+  const handleAutoJoin = async (inviteCode: string, userId: string) => {
+    setJoinLoading(true);
+    setJoinError("");
+    const result = await Q.joinProde(userId, inviteCode);
+    if (result.error) {
+      setJoinError(result.error);
+      setJoinLoading(false);
+    } else {
+      window.location.href = "/dashboard";
+    }
+  };
+
+  useEffect(() => {
+    const c = searchParams.get("code");
+    if (!c || !isSupabase) return;
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) handleAutoJoin(c.toUpperCase(), user.id);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleJoin = async (e: React.FormEvent) => {
     e.preventDefault();
