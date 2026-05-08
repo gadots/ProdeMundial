@@ -43,7 +43,7 @@ function buildShareText(
     lines.push(`${medal} ${m.displayName} · ${pts} pts`);
   });
 
-  lines.push("", "⚽ Mundial 2026 · elprode.vercel.app");
+  lines.push("", `⚽ Mundial 2026 · ${process.env.NEXT_PUBLIC_APP_URL ?? "elprode.vercel.app"}`);
   return lines.join("\n");
 }
 

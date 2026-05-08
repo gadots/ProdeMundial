@@ -15,22 +15,13 @@ test.describe("Dashboard", () => {
     await expect(page.getByText("Puntos")).toBeVisible();
   });
 
-  test("desafios chip is visible and links to /desafios", async ({ page }) => {
-    // Scope to the main content (not nav) - look for the chip by its div content
-    const chip = page.locator('a[href="/desafios"]').filter({ has: page.locator("div") }).first();
-    await expect(chip).toBeVisible();
-    await expect(chip).toHaveAttribute("href", "/desafios");
+  test("especiales chip is visible and links to /predicciones/especiales", async ({ page }) => {
+    const chip = page.locator('a[href="/predicciones/especiales"]').first();
+    await expect(chip).toBeVisible({ timeout: 8000 });
+    await expect(chip).toHaveAttribute("href", "/predicciones/especiales");
   });
 
-  test("desafios chip has consistent height with other chips", async ({ page }) => {
-    const desafiosChip = page.locator('a[href="/desafios"] > div').first();
-    const box = await desafiosChip.boundingBox();
-    expect(box).not.toBeNull();
-    // Should be at least 44px tall (comfortable touch target)
-    expect(box!.height).toBeGreaterThanOrEqual(44);
-  });
-
-  test("tokens chip links to predicciones when tokens available", async ({ page }) => {
+  test("tokens chip links to /predicciones when tokens available", async ({ page }) => {
     const tokenChip = page.locator('a[href="/predicciones"]').filter({
       has: page.locator('span', { hasText: /token/i }),
     }).first();
@@ -56,14 +47,5 @@ test.describe("Dashboard", () => {
     await expect(posCard).toBeVisible({ timeout: 12000 });
     await posCard.click();
     await expect(page).toHaveURL(/\/tabla/);
-  });
-
-  test("all three action chips have consistent height", async ({ page }) => {
-    // Racha, Tokens, Desafíos — all should have two lines and similar height
-    const desafiosChip = page.locator('a[href="/desafios"] > div').first();
-    const box = await desafiosChip.boundingBox();
-    expect(box).not.toBeNull();
-    // Two-line chips should be taller than a single-line element
-    expect(box!.height).toBeGreaterThanOrEqual(52);
   });
 });

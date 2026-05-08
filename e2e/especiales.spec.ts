@@ -88,8 +88,8 @@ test.describe("Predicciones Especiales", () => {
 
   // ── Progress bar ──────────────────────────────────────────────────────────
 
-  test("progress bar is visible", async ({ page }) => {
-    const bar = page.locator(".bg-green-500").first();
+  test("progress bar is visible with amber color", async ({ page }) => {
+    const bar = page.locator(".bg-amber-500").first();
     await expect(bar).toBeVisible();
   });
 

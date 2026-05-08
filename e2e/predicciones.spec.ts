@@ -50,7 +50,7 @@ test.describe("Predicciones", () => {
     const firstTab = tabsContainer.locator("button").first();
     const exists = await firstTab.isVisible().catch(() => false);
     if (exists) {
-      await expect(firstTab).toHaveClass(/bg-green-600/);
+      await expect(firstTab).toHaveClass(/bg-amber-600/);
     }
   });
 
@@ -68,7 +68,7 @@ test.describe("Predicciones", () => {
 
     // All section headings should be in the modal
     await expect(page.getByText("Puntos por fase")).toBeVisible();
-    await expect(page.getByText("Tokens multiplicadores")).toBeVisible();
+    await expect(page.getByText("Potenciadores")).toBeVisible();
     await expect(page.getByText("Bonus de racha")).toBeVisible();
     await expect(page.getByText("Predicciones especiales")).toBeVisible();
   });
@@ -107,6 +107,6 @@ test.describe("Predicciones", () => {
   });
 
   test("token status bar is visible", async ({ page }) => {
-    await expect(page.getByText("Mis tokens:")).toBeVisible();
+    await expect(page.getByText("Mis potenciadores:")).toBeVisible();
   });
 });
