@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { useApp } from "@/components/app-context";
 import { PHASE_LABELS, PHASE_POINTS, Phase, Match, Member, MultiplierToken, TokenMultiplier, Prediction } from "@/lib/types";
 import { maxPointsForMatch } from "@/lib/scoring";
+import { formatMatchDay } from "@/lib/utils";
 import { Save, Lock, Check, Flame, HelpCircle, X } from "lucide-react";
 import { getMatchPredictions } from "@/lib/supabase/queries";
 import { MOCK_MATCH_PREDICTIONS } from "@/lib/mock-data";
@@ -443,7 +444,7 @@ function MatchPredictionCard({
 
         <div className="flex items-center gap-2 text-xs text-white/30 mb-3">
           <span>
-            {new Date(match.date).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })} hs
+            {formatMatchDay(match.date)} · {new Date(match.date).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })} hs
           </span>
           {match.venue && (
             <>
@@ -949,20 +950,40 @@ export default function PrediccionesPage() {
             </p>
           </div>
         ) : (
-          matchesToShow.map((match) => (
-            <MatchPredictionCard
-              key={`${match.id}-${!!predictions[match.id]}`}
-              match={match}
-              tokens={tokens}
-              existing={predictions[match.id]}
-              streakBonus={streak.bonusNext}
-              prode={prode}
-              user={user}
-              isMockMode={isMockMode}
-              onTokenChange={handleTokenChange}
-              onSave={handleSave}
-            />
-          ))
+          (() => {
+            const groups: { dayKey: string; label: string; matches: typeof matchesToShow }[] = [];
+            for (const match of matchesToShow) {
+              const dayKey = new Date(match.date).toLocaleDateString("es-AR");
+              const last = groups[groups.length - 1];
+              if (last?.dayKey === dayKey) {
+                last.matches.push(match);
+              } else {
+                groups.push({ dayKey, label: formatMatchDay(match.date), matches: [match] });
+              }
+            }
+            return groups.map(({ dayKey, label, matches: dayMatches }) => (
+              <div key={dayKey}>
+                <div className="flex items-center gap-3 px-4 pt-4 pb-1">
+                  <span className="text-[11px] font-semibold text-white/35 uppercase tracking-wider">{label}</span>
+                  <div className="flex-1 h-px bg-white/8" />
+                </div>
+                {dayMatches.map((match) => (
+                  <MatchPredictionCard
+                    key={`${match.id}-${!!predictions[match.id]}`}
+                    match={match}
+                    tokens={tokens}
+                    existing={predictions[match.id]}
+                    streakBonus={streak.bonusNext}
+                    prode={prode}
+                    user={user}
+                    isMockMode={isMockMode}
+                    onTokenChange={handleTokenChange}
+                    onSave={handleSave}
+                  />
+                ))}
+              </div>
+            ));
+          })()
         )}
       </div>
       </>
