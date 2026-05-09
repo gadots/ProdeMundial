@@ -9,7 +9,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useApp } from "@/components/app-context";
 import { PHASE_LABELS, PHASE_POINTS, Match, Prediction, Member } from "@/lib/types";
-import { streakBonusPoints } from "@/lib/scoring";
 import { ChevronRight, Zap, TrendingUp, Clock } from "lucide-react";
 import { PwaInstallBanner } from "@/components/pwa-install-banner";
 import { getMatchPredictions } from "@/lib/supabase/queries";
@@ -260,7 +259,7 @@ export default function DashboardPage() {
   const gap = leader && me ? leader.totalPoints - me.totalPoints : 0;
 
   const tokensAvailable = tokens.filter((t) => !t.usedOnMatchId && !t.decayed);
-  const streakBonus = streakBonusPoints(streak.current);
+  const streakBonus = streak.bonusNext;
   const remainingPotential = 50 + 30 * 2 + 18;
 
   return (

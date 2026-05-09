@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useApp } from "@/components/app-context";
 import { PHASE_LABELS, PHASE_POINTS, Phase, Match, Member, MultiplierToken, TokenMultiplier, Prediction } from "@/lib/types";
-import { maxPointsForMatch, streakBonusPoints } from "@/lib/scoring";
+import { maxPointsForMatch } from "@/lib/scoring";
 import { Save, Lock, Check, Flame, HelpCircle, X } from "lucide-react";
 import { getMatchPredictions } from "@/lib/supabase/queries";
 import { MOCK_MATCH_PREDICTIONS } from "@/lib/mock-data";
@@ -298,7 +298,7 @@ function MatchPredictionCard({
   match,
   tokens,
   existing,
-  myStreak,
+  streakBonus,
   prode,
   user,
   isMockMode,
@@ -308,7 +308,7 @@ function MatchPredictionCard({
   match: Match;
   tokens: MultiplierToken[];
   existing?: Prediction;
-  myStreak: number;
+  streakBonus: number;
   prode: ReturnType<typeof useApp>["prode"];
   user: ReturnType<typeof useApp>["user"];
   isMockMode: boolean;
@@ -367,7 +367,6 @@ function MatchPredictionCard({
   const pts = PHASE_POINTS[match.phase];
   const isGroupPhase = match.phase === "GROUP";
   const isKnockout = !isGroupPhase;
-  const streakBonus = streakBonusPoints(myStreak);
 
   const predictedDraw = home !== "" && away !== "" && Number(home) === Number(away);
   const showPenaltySelector = isKnockout && !locked && predictedDraw;
@@ -407,7 +406,7 @@ function MatchPredictionCard({
 
   const activeMultiplier = isGroupPhase ? multiplier : 1;
   const potential = isGroupPhase
-    ? maxPointsForMatch(match.phase, multiplier, myStreak >= 3 && !locked ? streakBonus : 0)
+    ? maxPointsForMatch(match.phase, multiplier, !locked ? streakBonus : 0)
     : maxPointsForMatch(match.phase);
 
   return (
@@ -523,7 +522,7 @@ function MatchPredictionCard({
             {isGroupPhase && (
               <TokenPicker tokens={localTokens} activeMultiplier={activeMultiplier} onSelect={handleTokenSelect} disabled={locked} />
             )}
-            {myStreak >= 3 && (
+            {streakBonus > 0 && (
               <span className="flex items-center gap-1 text-[10px] text-orange-400">
                 <Flame className="h-3 w-3" />+{streakBonus} racha
               </span>
@@ -927,8 +926,8 @@ export default function PrediccionesPage() {
             {streak.current === 0 ? "Sin racha" : `Racha de ${streak.current}`}
           </span>
         </div>
-        {streakBonusPoints(streak.current) > 0 ? (
-          <span className="text-xs font-bold text-orange-400">+{streakBonusPoints(streak.current)} en próximo acierto</span>
+        {streak.bonusNext > 0 ? (
+          <span className="text-xs font-bold text-orange-400">+{streak.bonusNext} en próximo acierto</span>
         ) : (
           <span className="text-xs text-white/25">3 seguidos = +3 pts</span>
         )}
@@ -956,7 +955,7 @@ export default function PrediccionesPage() {
               match={match}
               tokens={tokens}
               existing={predictions[match.id]}
-              myStreak={streak.current}
+              streakBonus={streak.bonusNext}
               prode={prode}
               user={user}
               isMockMode={isMockMode}
