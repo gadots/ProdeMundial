@@ -18,13 +18,13 @@ export const PHASE_LABELS: Record<Phase, string> = {
 };
 
 export const PHASE_POINTS: Record<Phase, { exact: number; winner: number; draw: number; penales?: number }> = {
-  GROUP:         { exact: 3,  winner: 1,  draw: 1 },
-  ROUND_OF_32:   { exact: 5,  winner: 2,  draw: 0, penales: 3 },
-  ROUND_OF_16:   { exact: 12, winner: 5,  draw: 0, penales: 7 },
-  QUARTER_FINAL: { exact: 20, winner: 8,  draw: 0, penales: 12 },
-  SEMI_FINAL:    { exact: 35, winner: 12, draw: 0, penales: 18 },
-  THIRD_PLACE:   { exact: 35, winner: 12, draw: 0, penales: 18 },
-  FINAL:         { exact: 60, winner: 25, draw: 0, penales: 35 },
+  GROUP:         { exact: 3,  winner: 1,  draw: 2 },
+  ROUND_OF_32:   { exact: 6,  winner: 2,  draw: 0, penales: 4 },
+  ROUND_OF_16:   { exact: 10, winner: 4,  draw: 0, penales: 7 },
+  QUARTER_FINAL: { exact: 18, winner: 6,  draw: 0, penales: 12 },
+  SEMI_FINAL:    { exact: 30, winner: 10, draw: 0, penales: 20 },
+  THIRD_PLACE:   { exact: 30, winner: 10, draw: 0, penales: 20 },
+  FINAL:         { exact: 50, winner: 20, draw: 0, penales: 35 },
 };
 
 export type MatchStatus = "SCHEDULED" | "LIVE" | "FINISHED" | "POSTPONED";
