@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useApp } from "@/components/app-context";
 import { PHASE_LABELS, PHASE_POINTS, Match, Prediction, Member } from "@/lib/types";
+import { formatMatchDay } from "@/lib/utils";
 import { ChevronRight, Zap, TrendingUp, Clock } from "lucide-react";
 import { PwaInstallBanner } from "@/components/pwa-install-banner";
 import { getMatchPredictions } from "@/lib/supabase/queries";
@@ -160,7 +161,7 @@ function MatchCard({ match }: { match: Match }) {
           </div>
           <div className="flex items-center gap-2 text-xs text-white/30 mb-3">
             <span>
-              {new Date(match.date).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })} hs
+              {formatMatchDay(match.date)} · {new Date(match.date).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })} hs
             </span>
             {match.venue && (
               <>
@@ -183,7 +184,7 @@ function MatchCard({ match }: { match: Match }) {
                 </>
               ) : (
                 <span className="text-sm text-white/30 font-medium px-1">
-                  {new Date(match.date).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}
+                  {new Date(match.date).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })} hs
                 </span>
               )}
             </div>
