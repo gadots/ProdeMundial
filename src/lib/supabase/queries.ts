@@ -177,7 +177,7 @@ export async function getLeaderboard(prodeId: string): Promise<Member[]> {
       ? {
           current: memberStreak.current_streak,
           best: memberStreak.best_streak,
-          bonusNext: memberStreak.current_streak >= 5 ? 5 : memberStreak.current_streak >= 3 ? 2 : 0,
+          bonusNext: memberStreak.current_streak >= 5 ? 8 : memberStreak.current_streak >= 3 ? 3 : 0,
         }
       : { current: 0, best: 0, bonusNext: 0 };
 
@@ -239,6 +239,7 @@ export async function getMyPredictions(
         homeGoals: row.home_goals,
         awayGoals: row.away_goals,
         multiplier: row.multiplier as TokenMultiplier,
+        penaltyWinner: (row.penalty_winner as "home" | "away" | null) ?? undefined,
         pointsEarned: (row.points_earned as number | null) ?? undefined,
       } as Prediction,
     ])
@@ -267,6 +268,7 @@ export async function getMatchPredictions(
         homeGoals: row.home_goals,
         awayGoals: row.away_goals,
         multiplier: row.multiplier as TokenMultiplier,
+        penaltyWinner: (row.penalty_winner as "home" | "away" | null) ?? undefined,
         pointsEarned: (row.points_earned as number | null) ?? undefined,
       } as Prediction,
     ])
@@ -280,18 +282,22 @@ export async function upsertPrediction(pred: {
   homeGoals: number;
   awayGoals: number;
   multiplier: TokenMultiplier;
+  penaltyWinner?: "home" | "away";
 }): Promise<{ error: string | null }> {
   const supabase = createClient();
+  const row: Record<string, unknown> = {
+    user_id: pred.userId,
+    match_id: pred.matchId,
+    prode_id: pred.prodeId,
+    home_goals: pred.homeGoals,
+    away_goals: pred.awayGoals,
+    multiplier: pred.multiplier,
+    updated_at: new Date().toISOString(),
+  };
+  // Only include penalty_winner when set — column requires migration 008
+  if (pred.penaltyWinner) row.penalty_winner = pred.penaltyWinner;
   const { error } = await supabase.from("predictions").upsert(
-    {
-      user_id: pred.userId,
-      match_id: pred.matchId,
-      prode_id: pred.prodeId,
-      home_goals: pred.homeGoals,
-      away_goals: pred.awayGoals,
-      multiplier: pred.multiplier,
-      updated_at: new Date().toISOString(),
-    },
+    row,
     { onConflict: "user_id,match_id,prode_id" }
   );
   return { error: error?.message ?? null };
@@ -345,7 +351,7 @@ export async function getMyStreak(userId: string, prodeId: string): Promise<Stre
   return {
     current,
     best: data.best_streak,
-    bonusNext: current >= 5 ? 5 : current >= 3 ? 2 : 0,
+    bonusNext: current >= 5 ? 8 : current >= 3 ? 3 : 0,
   };
 }
 
@@ -578,6 +584,18 @@ export async function createProde(
   }
 
   return { error: "No se pudo generar un código único. Intentá de nuevo.", prodeId: null };
+}
+
+export async function updateDisplayName(
+  userId: string,
+  displayName: string
+): Promise<{ error: string | null }> {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("profiles")
+    .update({ display_name: displayName })
+    .eq("id", userId);
+  return { error: error?.message ?? null };
 }
 
 export async function leaveProde(

@@ -182,7 +182,7 @@ function GruposContent() {
 
   return (
     <div>
-      <TopBar title="Grupos" subtitle={subtitle} />
+      <TopBar title="Grupos" subtitle={subtitle} showProfile />
       <div className="px-4 py-4 pb-24 space-y-4">
         {groupStandings.size === 0 && (
           <div className="flex flex-col items-center justify-center py-16 text-white/30 text-sm gap-3">

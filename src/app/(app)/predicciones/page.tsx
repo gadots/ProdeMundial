@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
 import { TopBar } from "@/components/nav";
 import { Flag } from "@/components/flag";
@@ -8,9 +8,18 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useApp } from "@/components/app-context";
-import { PHASE_LABELS, PHASE_POINTS, Phase, Match, MultiplierToken, TokenMultiplier, Prediction } from "@/lib/types";
+import { PHASE_LABELS, PHASE_POINTS, Phase, Match, Member, MultiplierToken, TokenMultiplier, Prediction } from "@/lib/types";
 import { maxPointsForMatch, streakBonusPoints } from "@/lib/scoring";
 import { Save, Lock, Check, Flame, HelpCircle, X } from "lucide-react";
+import { getMatchPredictions } from "@/lib/supabase/queries";
+import { MOCK_MATCH_PREDICTIONS } from "@/lib/mock-data";
+
+const IS_SUPABASE = !!(
+  process.env.NEXT_PUBLIC_SUPABASE_URL &&
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY &&
+  !process.env.NEXT_PUBLIC_SUPABASE_URL.includes("<your-project>") &&
+  process.env.NEXT_PUBLIC_SUPABASE_URL.startsWith("https://")
+);
 
 const MODULE_LOAD_TIME = Date.now();
 
@@ -23,13 +32,152 @@ const PHASE_SHORT: Record<Phase, string> = {
   QUARTER_FINAL: "Cuartos", SEMI_FINAL: "Semis", THIRD_PLACE: "3er Puesto", FINAL: "Final",
 };
 
-type FilterView = "all" | "pending" | "urgent";
+type FilterView = "all" | "pending" | "urgent" | "history";
+
+const PHASE_ORDER_DISPLAY: Phase[] = [
+  "GROUP", "ROUND_OF_32", "ROUND_OF_16", "QUARTER_FINAL", "SEMI_FINAL", "THIRD_PLACE", "FINAL"
+];
+
+interface HistorialStats {
+  totalPts: number;
+  exactos: number;
+  ganadores: number;
+  fallos: number;
+  sinPred: number;
+}
+
+function HistorialView({
+  matches,
+  predictions,
+  stats,
+}: {
+  matches: Match[];
+  predictions: Record<string, Prediction>;
+  stats: HistorialStats;
+}) {
+  const byPhase: Partial<Record<Phase, Match[]>> = {};
+  for (const m of matches) {
+    if (!byPhase[m.phase]) byPhase[m.phase] = [];
+    byPhase[m.phase]!.push(m);
+  }
+
+  if (matches.length === 0) {
+    return (
+      <div className="py-16 text-center text-white/30">
+        <p className="text-4xl mb-2">📋</p>
+        <p>Todavía no hay partidos finalizados</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="pb-6">
+      {/* Resumen */}
+      <div className="mx-4 mt-3 grid grid-cols-5 gap-1.5 rounded-xl bg-white/5 p-3 border border-white/8">
+        <div className="text-center">
+          <p className="text-sm font-black text-amber-400">{stats.totalPts}</p>
+          <p className="text-[10px] text-white/40 mt-0.5">pts</p>
+        </div>
+        <div className="text-center">
+          <p className="text-sm font-black text-green-400">{stats.exactos}</p>
+          <p className="text-[10px] text-white/40 mt-0.5">exactos</p>
+        </div>
+        <div className="text-center">
+          <p className="text-sm font-black text-white">{stats.ganadores}</p>
+          <p className="text-[10px] text-white/40 mt-0.5">ganador</p>
+        </div>
+        <div className="text-center">
+          <p className="text-sm font-black text-white/50">{stats.fallos}</p>
+          <p className="text-[10px] text-white/40 mt-0.5">fallos</p>
+        </div>
+        <div className="text-center">
+          <p className="text-sm font-black text-white/30">{stats.sinPred}</p>
+          <p className="text-[10px] text-white/40 mt-0.5">sin pred</p>
+        </div>
+      </div>
+
+      {/* Lista por fase */}
+      {PHASE_ORDER_DISPLAY.filter((p) => byPhase[p]?.length).map((phase) => (
+        <div key={phase}>
+          <p className="px-4 pt-4 pb-1.5 text-[10px] font-semibold text-white/30 uppercase tracking-wider">
+            {PHASE_LABELS[phase]}
+          </p>
+          <div className="border border-white/8 mx-4 rounded-xl overflow-hidden">
+            {byPhase[phase]!.map((match, idx) => {
+              const pred = predictions[match.id];
+              const pts = pred?.pointsEarned ?? 0;
+              const exacto =
+                pred !== undefined &&
+                pred.homeGoals === match.homeScore &&
+                pred.awayGoals === match.awayScore;
+              const ganador =
+                pred !== undefined &&
+                !exacto &&
+                Math.sign(pred.homeGoals - pred.awayGoals) ===
+                  Math.sign((match.homeScore ?? 0) - (match.awayScore ?? 0));
+              const resultIcon = !pred ? "—" : exacto ? "🎯" : ganador ? "✓" : "✗";
+              const tokenLabel =
+                pred?.multiplier === 5 ? " 💥" :
+                pred?.multiplier === 3 ? " 🔥" :
+                pred?.multiplier === 2 ? " ⚡" : "";
+
+              return (
+                <div
+                  key={match.id}
+                  className={`flex items-center gap-2 px-3 py-2.5 ${
+                    idx < byPhase[phase]!.length - 1 ? "border-b border-white/5" : ""
+                  }`}
+                >
+                  {/* Resultado real */}
+                  <div className="flex items-center gap-1 w-28 shrink-0">
+                    <Flag tla={match.homeTeam.id} size={20} className="w-4 h-auto shrink-0" />
+                    <span className="text-xs font-black text-white tabular-nums">
+                      {match.homeScore}–{match.awayScore}
+                    </span>
+                    <Flag tla={match.awayTeam.id} size={20} className="w-4 h-auto shrink-0" />
+                  </div>
+                  {/* Equipos */}
+                  <span className="flex-1 text-xs text-white/40 truncate min-w-0">
+                    {match.homeTeam.shortName} vs {match.awayTeam.shortName}
+                  </span>
+                  {/* Mi predicción */}
+                  <span className="text-xs text-white/50 shrink-0 tabular-nums">
+                    {pred ? `${pred.homeGoals}–${pred.awayGoals}${tokenLabel}` : "sin pred."}
+                  </span>
+                  {/* Icono resultado */}
+                  <span className={`w-5 text-center text-xs shrink-0 ${
+                    exacto ? "text-green-400" : ganador ? "text-white/60" : "text-white/25"
+                  }`}>
+                    {resultIcon}
+                  </span>
+                  {/* Puntos */}
+                  <span className={`w-10 text-right text-xs font-bold shrink-0 ${
+                    pts > 0 ? "text-amber-400" : "text-white/25"
+                  }`}>
+                    {!pred ? "—" : pts > 0 ? `+${pts}` : "0"}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 function ScoreInput({ value, onChange, disabled }: { value: string; onChange: (v: string) => void; disabled?: boolean }) {
   return (
     <input
-      type="number" min="0" max="20" value={value}
-      onChange={(e) => onChange(e.target.value)}
+      type="text"
+      inputMode="numeric"
+      pattern="[0-9]*"
+      maxLength={2}
+      value={value}
+      onChange={(e) => {
+        const v = e.target.value.replace(/[^0-9]/g, "");
+        if (v === "" || Number(v) <= 20) onChange(v);
+      }}
       disabled={disabled}
       className="h-12 w-12 rounded-xl border border-white/15 bg-white/5 text-center text-xl font-black text-white focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all disabled:opacity-40"
     />
@@ -84,11 +232,76 @@ function TokenPicker({
   );
 }
 
+function MemberPredictionsPanel({
+  match,
+  memberPreds,
+  members,
+  currentUserId,
+}: {
+  match: Match;
+  memberPreds: Record<string, Prediction>;
+  members: Member[];
+  currentUserId: string;
+}) {
+  const ranked = [...members].sort((a, b) => a.rank - b.rank);
+  const isFinished = match.status === "FINISHED";
+  return (
+    <div className="mt-2 border-t border-white/10 pt-2 space-y-1">
+      {ranked.map((member) => {
+        const pred = memberPreds[member.id];
+        const isMe = member.id === currentUserId;
+        const medal =
+          member.rank === 1 ? "🥇" :
+          member.rank === 2 ? "🥈" :
+          member.rank === 3 ? "🥉" :
+          `#${member.rank}`;
+        const isExact =
+          isFinished &&
+          pred !== undefined &&
+          pred.homeGoals === match.homeScore &&
+          pred.awayGoals === match.awayScore;
+        const multiplierLabel =
+          pred && pred.multiplier === 5 ? " 💥" :
+          pred && pred.multiplier === 3 ? " 🔥" :
+          pred && pred.multiplier === 2 ? " ⚡" : "";
+        return (
+          <div
+            key={member.id}
+            className={`flex items-center gap-2 text-xs py-0.5 ${isMe ? "text-amber-400" : "text-white/60"}`}
+          >
+            <span className="w-5 shrink-0 text-center">{medal}</span>
+            <span className="flex-1 truncate font-medium">{member.displayName}</span>
+            {pred ? (
+              <>
+                <span className="font-bold tabular-nums">
+                  {pred.homeGoals} - {pred.awayGoals}
+                  {multiplierLabel}
+                </span>
+                <span className="w-3 text-center text-green-400">{isExact ? "✓" : ""}</span>
+                {isFinished && (
+                  <span className={`w-8 text-right font-bold ${pred.pointsEarned ? "text-amber-400" : "text-white/30"}`}>
+                    {pred.pointsEarned ? `+${pred.pointsEarned}` : "0"}
+                  </span>
+                )}
+              </>
+            ) : (
+              <span className="text-white/30 italic">sin pred.</span>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function MatchPredictionCard({
   match,
   tokens,
   existing,
   myStreak,
+  prode,
+  user,
+  isMockMode,
   onTokenChange,
   onSave,
 }: {
@@ -96,15 +309,56 @@ function MatchPredictionCard({
   tokens: MultiplierToken[];
   existing?: Prediction;
   myStreak: number;
+  prode: ReturnType<typeof useApp>["prode"];
+  user: ReturnType<typeof useApp>["user"];
+  isMockMode: boolean;
   onTokenChange: (matchId: string, prev: TokenMultiplier, next: TokenMultiplier) => void;
   onSave: (matchId: string, home: number, away: number, multiplier: TokenMultiplier, penaltyWinner?: "home" | "away") => Promise<{ error: string | null }>;
 }) {
+
   const [home, setHome] = useState(existing?.homeGoals?.toString() ?? "");
   const [away, setAway] = useState(existing?.awayGoals?.toString() ?? "");
   const [multiplier, setMultiplier] = useState<TokenMultiplier>(existing?.multiplier ?? 1);
   const [penaltyWinner, setPenaltyWinner] = useState<"home" | "away" | undefined>(existing?.penaltyWinner);
-  const [saved, setSaved] = useState(!!existing);
+  const [lastSaved, setLastSaved] = useState<{ home: string; away: string; multiplier: TokenMultiplier } | null>(
+    existing
+      ? { home: existing.homeGoals?.toString() ?? "", away: existing.awayGoals?.toString() ?? "", multiplier: existing.multiplier ?? 1 }
+      : null
+  );
+  const saved = lastSaved !== null && home === lastSaved.home && away === lastSaved.away && multiplier === lastSaved.multiplier;
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [showReveal, setShowReveal] = useState(false);
+  const [memberPreds, setMemberPreds] = useState<Record<string, Prediction> | null>(null);
+  const [loadingReveal, setLoadingReveal] = useState(false);
+
+  // Sync inputs when realtime update arrives from another device
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!existing) return;
+    const newHome = existing.homeGoals?.toString() ?? "";
+    const newAway = existing.awayGoals?.toString() ?? "";
+    const newMult = existing.multiplier ?? 1;
+    if (saved) {
+      setHome(newHome);
+      setAway(newAway);
+      setMultiplier(newMult);
+      setLastSaved({ home: newHome, away: newAway, multiplier: newMult });
+    }
+  }, [existing?.homeGoals, existing?.awayGoals, existing?.multiplier]); // `saved` intentionally omitted
+
+  const handleReveal = async () => {
+    if (showReveal) { setShowReveal(false); return; }
+    if (memberPreds !== null) { setShowReveal(true); return; }
+    if (!prode) return;
+    setLoadingReveal(true);
+    const data = (!IS_SUPABASE || isMockMode)
+      ? (MOCK_MATCH_PREDICTIONS[match.id] ?? {})
+      : await getMatchPredictions(match.id, prode.id);
+    setMemberPreds(data);
+    setLoadingReveal(false);
+    setShowReveal(true);
+  };
 
   const teamsKnown = !!match.homeTeam.id && !!match.awayTeam.id;
   const isFinished = match.status === "FINISHED";
@@ -133,16 +387,22 @@ function MatchPredictionCard({
   const handleTokenSelect = (next: TokenMultiplier) => {
     const prev = multiplier;
     setMultiplier(next);
-    setSaved(false);
     onTokenChange(match.id, prev, next);
   };
 
   const handleSave = async () => {
     if (!canSave) return;
     setSaving(true);
-    const result = await onSave(match.id, Number(home), Number(away), multiplier, showPenaltySelector ? penaltyWinner : undefined);
-    setSaving(false);
-    if (!result.error) setSaved(true);
+    setSaveError(null);
+    try {
+      const result = await onSave(match.id, Number(home), Number(away), multiplier, showPenaltySelector ? penaltyWinner : undefined);
+      if (!result.error) setLastSaved({ home, away, multiplier });
+      else setSaveError(result.error);
+    } catch {
+      setSaveError("Error al guardar");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const activeMultiplier = isGroupPhase ? multiplier : 1;
@@ -206,9 +466,9 @@ function MatchPredictionCard({
             <p className="text-sm font-bold text-white leading-tight">{homeName}</p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <ScoreInput value={home} onChange={(v) => { setHome(v); setSaved(false); if (Number(v) !== Number(away)) setPenaltyWinner(undefined); }} disabled={locked} />
+            <ScoreInput value={home} onChange={(v) => { setHome(v); if (Number(v) !== Number(away)) setPenaltyWinner(undefined); }} disabled={locked} />
             <span className="text-white/30 font-bold text-lg">-</span>
-            <ScoreInput value={away} onChange={(v) => { setAway(v); setSaved(false); if (Number(home) !== Number(v)) setPenaltyWinner(undefined); }} disabled={locked} />
+            <ScoreInput value={away} onChange={(v) => { setAway(v); if (Number(home) !== Number(v)) setPenaltyWinner(undefined); }} disabled={locked} />
           </div>
           <div className="flex flex-1 items-center gap-2 justify-end">
             <p className="text-sm font-bold text-white leading-tight text-right">{awayName}</p>
@@ -221,7 +481,7 @@ function MatchPredictionCard({
             <p className="text-[10px] text-white/40 mb-2 text-center">¿Quién gana en penales?</p>
             <div className="flex gap-2">
               <button
-                onClick={() => { setPenaltyWinner("home"); setSaved(false); }}
+                onClick={() => { setPenaltyWinner("home"); }}
                 className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border text-xs font-semibold transition-all ${
                   penaltyWinner === "home"
                     ? "bg-amber-500/20 border-amber-500/40 text-amber-300"
@@ -232,7 +492,7 @@ function MatchPredictionCard({
                 <span className="truncate">{match.homeTeam.shortName || homeName}</span>
               </button>
               <button
-                onClick={() => { setPenaltyWinner("away"); setSaved(false); }}
+                onClick={() => { setPenaltyWinner("away"); }}
                 className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg border text-xs font-semibold transition-all ${
                   penaltyWinner === "away"
                     ? "bg-amber-500/20 border-amber-500/40 text-amber-300"
@@ -286,6 +546,10 @@ function MatchPredictionCard({
           </div>
         )}
 
+        {saveError && (
+          <p className="mt-1 text-[10px] text-red-400">{saveError}</p>
+        )}
+
         {/* Resumen de puntos posibles */}
         {!locked && pts && (
           <div className="mt-1 text-[10px] text-white/20">
@@ -293,6 +557,24 @@ function MatchPredictionCard({
               ? `Exacto: ${pts.exact} pts · Ganador: ${pts.winner} pts${pts.draw > 0 ? ` · Empate: ${pts.draw} pts` : ""}`
               : `Exacto: ${pts.exact} pts · Penales: ${pts.penales} pts · Ganador: ${pts.winner} pts`}
           </div>
+        )}
+
+        {(isLive || isFinished) && (
+          <button
+            onClick={handleReveal}
+            className="mt-2 w-full text-xs text-white/35 hover:text-white/60 transition-colors text-center py-1 border-t border-white/5"
+          >
+            {loadingReveal ? "Cargando…" : showReveal ? "▲ Ocultar predicciones" : "▼ Ver predicciones del prode"}
+          </button>
+        )}
+
+        {showReveal && memberPreds !== null && prode && user && (
+          <MemberPredictionsPanel
+            match={match}
+            memberPreds={memberPreds}
+            members={prode.members}
+            currentUserId={user.id}
+          />
         )}
       </CardContent>
     </Card>
@@ -416,7 +698,7 @@ function RulesModal({ onClose }: { onClose: () => void }) {
 }
 
 export default function PrediccionesPage() {
-  const { matches, predictions, tokens, setTokens, updateTokenUsage, streak, savePrediction } = useApp();
+  const { matches, predictions, tokens, setTokens, updateTokenUsage, streak, savePrediction, prode, user, isMockMode } = useApp();
 
   const [activePhase, setActivePhase] = useState<Phase>("GROUP");
   const [filterView, setFilterView] = useState<FilterView>("all");
@@ -451,6 +733,33 @@ export default function PrediccionesPage() {
     return diff > 0 && diff < 86400000;
   });
 
+  const finishedMatches = [...matches]
+    .filter((m) => m.status === "FINISHED")
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  const historialCount = finishedMatches.filter((m) => predictions[m.id]).length;
+
+  const historialStats = finishedMatches.reduce<HistorialStats>(
+    (acc, m) => {
+      const pred = predictions[m.id];
+      if (!pred) return { ...acc, sinPred: acc.sinPred + 1 };
+      const pts = pred.pointsEarned ?? 0;
+      const exacto = pred.homeGoals === m.homeScore && pred.awayGoals === m.awayScore;
+      const ganador =
+        !exacto &&
+        Math.sign(pred.homeGoals - pred.awayGoals) ===
+          Math.sign((m.homeScore ?? 0) - (m.awayScore ?? 0));
+      return {
+        totalPts: acc.totalPts + pts,
+        exactos: acc.exactos + (exacto ? 1 : 0),
+        ganadores: acc.ganadores + (ganador ? 1 : 0),
+        fallos: acc.fallos + (!exacto && !ganador ? 1 : 0),
+        sinPred: acc.sinPred,
+      };
+    },
+    { totalPts: 0, exactos: 0, ganadores: 0, fallos: 0, sinPred: 0 }
+  );
+
   const matchesToShow =
     filterView === "pending" ? allPending :
     filterView === "urgent"  ? allUrgent :
@@ -463,6 +772,7 @@ export default function PrediccionesPage() {
       <TopBar
         title="Predicciones"
         subtitle={allPending.length > 0 ? `${allPending.length} sin predecir` : "Todo cargado ✓"}
+        showProfile
       />
 
       {/* Filtros rápidos + tabs de fase */}
@@ -505,6 +815,21 @@ export default function PrediccionesPage() {
             {allUrgent.length > 0 && (
               <span className={`rounded-full px-1.5 text-[10px] font-bold ${filterView === "urgent" ? "bg-white/20" : "bg-red-500/20"}`}>
                 {allUrgent.length}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setFilterView("history")}
+            className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition-all ${
+              filterView === "history" ? "bg-white/15 text-white" : "text-white/40 hover:text-white/60"
+            }`}
+          >
+            Historial
+            {historialCount > 0 && (
+              <span className={`rounded-full px-1.5 text-[10px] font-bold ${
+                filterView === "history" ? "bg-white/20" : "bg-white/10"
+              }`}>
+                {historialCount}
               </span>
             )}
           </button>
@@ -553,7 +878,17 @@ export default function PrediccionesPage() {
         )}
       </div>
 
-      {/* Potenciadores — compact */}
+      {/* Potenciadores + Racha — ocultos en historial */}
+      {filterView === "history" && (
+        <HistorialView
+          matches={finishedMatches}
+          predictions={predictions}
+          stats={historialStats}
+        />
+      )}
+
+      {filterView !== "history" && (
+      <>
       <div className="px-4 pt-3">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-[11px] text-white/40 shrink-0">Mis potenciadores:</span>
@@ -617,17 +952,22 @@ export default function PrediccionesPage() {
         ) : (
           matchesToShow.map((match) => (
             <MatchPredictionCard
-              key={match.id}
+              key={`${match.id}-${!!predictions[match.id]}`}
               match={match}
               tokens={tokens}
               existing={predictions[match.id]}
               myStreak={streak.current}
+              prode={prode}
+              user={user}
+              isMockMode={isMockMode}
               onTokenChange={handleTokenChange}
               onSave={handleSave}
             />
           ))
         )}
       </div>
+      </>
+      )}
 
       {showRules && <RulesModal onClose={() => setShowRules(false)} />}
     </div>

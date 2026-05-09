@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import Link from "next/link";
 import { Share2 } from "lucide-react";
 import { TopBar } from "@/components/nav";
 import { useApp } from "@/components/app-context";
 import { PHASE_LABELS, Phase, Member } from "@/lib/types";
 
 const PHASE_ORDER: Phase[] = [
-  "GROUP", "ROUND_OF_16", "QUARTER_FINAL", "SEMI_FINAL", "THIRD_PLACE", "FINAL"
+  "GROUP", "ROUND_OF_32", "ROUND_OF_16", "QUARTER_FINAL", "SEMI_FINAL", "THIRD_PLACE", "FINAL"
 ];
 
 const PHASE_SHORT: Record<Phase, string> = {
@@ -248,7 +249,7 @@ export default function TablaPage() {
 
   return (
     <div>
-      <TopBar title="Posiciones" subtitle={prode?.name ?? "…"} />
+      <TopBar title="Posiciones" subtitle={prode?.name ?? "…"} showProfile />
 
       {/* Selector de vista + share */}
       <div className="sticky top-[57px] z-30 border-b border-white/10 bg-[#0a1628]/95 backdrop-blur-lg">
@@ -355,9 +356,10 @@ export default function TablaPage() {
             const todayPts = pointsToday[member.id] ?? 0;
 
             return (
-              <div
+              <Link
                 key={member.id}
-                className={`flex items-center gap-2 px-4 py-3 border-b border-white/5 transition-colors ${
+                href={`/tabla/${member.id}`}
+                className={`flex items-center gap-2 px-4 py-3 border-b border-white/5 transition-colors hover:bg-white/5 ${
                   isMe ? "bg-amber-500/5" : ""
                 }`}
               >
@@ -411,7 +413,7 @@ export default function TablaPage() {
                   <p className={`text-sm font-black ${isMe ? "text-amber-300" : "text-white"}`}>{score}</p>
                   <p className="text-[10px] text-white/30">pts</p>
                 </div>
-              </div>
+              </Link>
             );
           })}
         </div>

@@ -26,14 +26,14 @@ const TOP_PLAYERS = [
   "Lionel Messi", "Kylian Mbappé", "Vinicius Jr.", "Erling Haaland",
   "Harry Kane", "Cristiano Ronaldo", "Pedri", "Jude Bellingham",
   "Rodri", "Mohamed Salah", "Lamine Yamal", "Phil Foden",
-  "Bukayo Saka", "Federico Valverde", "Vinícius Jr.", "Raphinha",
+  "Bukayo Saka", "Federico Valverde", "Raphinha",
   "Antoine Griezmann", "Bernardo Silva", "Bruno Fernandes", "Rúben Dias",
-  "Gavi", "Dani Olmo", "Alvaro Morata", "Robert Lewandowski",
+  "Gavi", "Dani Olmo", "Alvaro Morata",
   "Romelu Lukaku", "Cody Gakpo", "Wout Weghorst", "Julian Alvarez",
   "Paulo Dybala", "Lautaro Martínez", "Darwin Núñez", "Luis Suárez",
   "Neymar Jr.", "Raphael Veiga", "Son Heung-min", "Takumi Minamino",
-  "Achraf Hakimi", "Hakim Ziyech", "Victor Osimhen", "Mohamed Salah",
-  "Sadio Mané", "Vincent Aboubakar", "André Ayew",
+  "Achraf Hakimi", "Hakim Ziyech", "Sadio Mané", "André Ayew",
+  "Edin Džeko", "Thiago Almada",
 ];
 
 function TeamSelector({
@@ -174,6 +174,7 @@ export default function EspecialesPage() {
       <TopBar
         title="Predicciones Especiales"
         subtitle={`Hasta ${totalPotential} pts en juego`}
+        showProfile
       />
 
       <div className="mx-auto max-w-lg px-4 pt-4">

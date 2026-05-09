@@ -10,6 +10,8 @@ import {
   CURRENT_USER_ID, CURRENT_USER_NAME,
 } from "@/lib/mock-data";
 
+export const MOCK_USER_EMAIL = "test@elprode.app";
+
 const IS_SUPABASE = !!(
   process.env.NEXT_PUBLIC_SUPABASE_URL &&
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY &&
@@ -60,6 +62,9 @@ export interface AppContextValue {
   submitWildcardAnswer: (challengeId: string, answer: string) => Promise<{ error: string | null }>;
   // Points today (keyed by userId)
   pointsToday: Record<string, number>;
+  // Re-fetch user profile (e.g. after updating display name)
+  refreshUser: () => Promise<void>;
+  isMockMode: boolean;
 }
 
 // -------------------------------------------------------
@@ -92,6 +97,8 @@ const DEFAULT_VALUE: AppContextValue = {
   wildcardsLoading: false,
   submitWildcardAnswer: async () => ({ error: null }),
   pointsToday: MOCK_POINTS_TODAY,
+  refreshUser: async () => {},
+  isMockMode: true,
 };
 
 // -------------------------------------------------------
@@ -115,6 +122,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 function AppProviderSupabase({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
   const [userLoading, setUserLoading] = useState(true);
+  const [isMockMode, setIsMockMode] = useState(false);
 
   const [prode, setProde] = useState<Prode | null>(null);
   const [prodeId, setProdeId] = useState<string | null>(null);
@@ -180,42 +188,47 @@ function AppProviderSupabase({ children }: { children: React.ReactNode }) {
   // Load user session
   // -------------------------------------------------------
 
-  useEffect(() => {
+  const refreshUser = useCallback(async () => {
     const supabase = createClient();
-
-    const loadUser = async () => {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      if (!authUser) {
-        setUser(null);
-        setUserLoading(false);
-        userIdRef.current = null;
-        return;
-      }
-      const profile = await Q.getMyProfile(authUser.id);
-      const appUser: AppUser = {
-        id: authUser.id,
-        email: authUser.email,
-        displayName: profile?.displayName ?? authUser.email?.split("@")[0] ?? "Usuario",
-        avatarUrl: profile?.avatarUrl,
-      };
-      setUser(appUser);
-      userIdRef.current = authUser.id;
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) {
+      setUser(null);
       setUserLoading(false);
+      userIdRef.current = null;
+      return;
+    }
+    if (authUser.email === MOCK_USER_EMAIL) {
+      setIsMockMode(true);
+      setUserLoading(false);
+      return;
+    }
+    const profile = await Q.getMyProfile(authUser.id);
+    const appUser: AppUser = {
+      id: authUser.id,
+      email: authUser.email,
+      displayName: profile?.displayName ?? authUser.email?.split("@")[0] ?? "Usuario",
+      avatarUrl: profile?.avatarUrl,
     };
+    setUser(appUser);
+    userIdRef.current = authUser.id;
+    setUserLoading(false);
+  }, []);
 
-    loadUser();
+  useEffect(() => {
+    refreshUser();
 
+    const supabase = createClient();
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === "SIGNED_OUT") {
         setUser(null);
         userIdRef.current = null;
       } else {
-        loadUser();
+        refreshUser();
       }
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [refreshUser]);
 
   // -------------------------------------------------------
   // Load matches + Realtime subscription
@@ -289,15 +302,25 @@ function AppProviderSupabase({ children }: { children: React.ReactNode }) {
         .channel(`realtime-predictions-${user.id}`)
         .on(
           "postgres_changes",
-          { event: "UPDATE", schema: "public", table: "predictions", filter: `user_id=eq.${user.id}` },
+          { event: "*", schema: "public", table: "predictions", filter: `user_id=eq.${user.id}` },
           (payload) => {
             const row = payload.new as Record<string, unknown>;
+            if (!row?.match_id) return; // DELETE events have no .new
             const matchId = row.match_id as string;
-            const pointsEarned = row.points_earned as number | null;
-            setPredictions((prev) => {
-              if (!prev[matchId]) return prev;
-              return { ...prev, [matchId]: { ...prev[matchId], pointsEarned: pointsEarned ?? undefined } };
-            });
+            setPredictions((prev) => ({
+              ...prev,
+              [matchId]: {
+                id: row.id as string,
+                userId: row.user_id as string,
+                matchId,
+                prodeId: row.prode_id as string,
+                homeGoals: row.home_goals as number,
+                awayGoals: row.away_goals as number,
+                multiplier: row.multiplier as TokenMultiplier,
+                penaltyWinner: (row.penalty_winner as "home" | "away") ?? undefined,
+                pointsEarned: (row.points_earned as number | null) ?? undefined,
+              },
+            }));
           }
         )
         .subscribe();
@@ -454,7 +477,13 @@ function AppProviderSupabase({ children }: { children: React.ReactNode }) {
     wildcardsLoading,
     submitWildcardAnswer,
     pointsToday,
+    refreshUser,
+    isMockMode: false,
   };
+
+  if (isMockMode) {
+    return <AppContext.Provider value={DEFAULT_VALUE}>{children}</AppContext.Provider>;
+  }
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }

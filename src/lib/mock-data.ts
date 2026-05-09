@@ -84,7 +84,7 @@ export const MOCK_MEMBERS: Member[] = [
     pointsPerPhase: { GROUP: 76, ROUND_OF_32: 0, ROUND_OF_16: 18, QUARTER_FINAL: 0, SEMI_FINAL: 0, THIRD_PLACE: 0, FINAL: 0 },
     rank: 1, previousRank: 2,
     tokens: makeTokens("m2"),
-    streak: { current: 4, best: 5, bonusNext: 2 },
+    streak: { current: 4, best: 5, bonusNext: 3 },
   },
   {
     id: "u2", displayName: "Sofía R.", avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sofia",
@@ -210,60 +210,60 @@ export const CURRENT_USER_NAME = "Guido G.";
 // -------------------------------------------------------
 export const ALL_WC_TEAMS = [
   // Anfitriones
-  { id: "USA", name: "EE.UU.",          shortName: "USA", flag: "🇺🇸" },
-  { id: "MEX", name: "México",           shortName: "MEX", flag: "🇲🇽" },
-  { id: "CAN", name: "Canadá",           shortName: "CAN", flag: "🇨🇦" },
-  // CONMEBOL
-  { id: "ARG", name: "Argentina",        shortName: "ARG", flag: "🇦🇷" },
-  { id: "BRA", name: "Brasil",           shortName: "BRA", flag: "🇧🇷" },
-  { id: "URU", name: "Uruguay",          shortName: "URU", flag: "🇺🇾" },
-  { id: "COL", name: "Colombia",         shortName: "COL", flag: "🇨🇴" },
-  { id: "ECU", name: "Ecuador",          shortName: "ECU", flag: "🇪🇨" },
-  { id: "VEN", name: "Venezuela",        shortName: "VEN", flag: "🇻🇪" },
-  // UEFA
-  { id: "ENG", name: "Inglaterra",       shortName: "ENG", flag: "🏴󠁧󠁢󠁥󠁮󠁧󠁿" },
-  { id: "FRA", name: "Francia",          shortName: "FRA", flag: "🇫🇷" },
-  { id: "ESP", name: "España",           shortName: "ESP", flag: "🇪🇸" },
-  { id: "GER", name: "Alemania",         shortName: "GER", flag: "🇩🇪" },
-  { id: "POR", name: "Portugal",         shortName: "POR", flag: "🇵🇹" },
-  { id: "NED", name: "Países Bajos",     shortName: "NED", flag: "🇳🇱" },
-  { id: "ITA", name: "Italia",           shortName: "ITA", flag: "🇮🇹" },
-  { id: "BEL", name: "Bélgica",          shortName: "BEL", flag: "🇧🇪" },
-  { id: "CRO", name: "Croacia",          shortName: "CRO", flag: "🇭🇷" },
-  { id: "POL", name: "Polonia",          shortName: "POL", flag: "🇵🇱" },
-  { id: "SUI", name: "Suiza",            shortName: "SUI", flag: "🇨🇭" },
-  { id: "AUT", name: "Austria",          shortName: "AUT", flag: "🇦🇹" },
-  { id: "SCO", name: "Escocia",          shortName: "SCO", flag: "🏴󠁧󠁢󠁳󠁣󠁴󠁿" },
-  { id: "SER", name: "Serbia",           shortName: "SER", flag: "🇷🇸" },
-  { id: "TUR", name: "Turquía",          shortName: "TUR", flag: "🇹🇷" },
-  { id: "DEN", name: "Dinamarca",        shortName: "DEN", flag: "🇩🇰" },
-  { id: "UKR", name: "Ucrania",          shortName: "UKR", flag: "🇺🇦" },
-  { id: "HUN", name: "Hungría",          shortName: "HUN", flag: "🇭🇺" },
-  // CAF
-  { id: "MAR", name: "Marruecos",        shortName: "MAR", flag: "🇲🇦" },
-  { id: "SEN", name: "Senegal",          shortName: "SEN", flag: "🇸🇳" },
-  { id: "CMR", name: "Camerún",          shortName: "CMR", flag: "🇨🇲" },
-  { id: "NGA", name: "Nigeria",          shortName: "NGA", flag: "🇳🇬" },
-  { id: "EGY", name: "Egipto",           shortName: "EGY", flag: "🇪🇬" },
-  { id: "CIV", name: "Costa de Marfil",  shortName: "CIV", flag: "🇨🇮" },
-  { id: "GHA", name: "Ghana",            shortName: "GHA", flag: "🇬🇭" },
-  { id: "TUN", name: "Túnez",            shortName: "TUN", flag: "🇹🇳" },
-  { id: "RSA", name: "Sudáfrica",        shortName: "RSA", flag: "🇿🇦" },
-  // AFC
-  { id: "JPN", name: "Japón",            shortName: "JPN", flag: "🇯🇵" },
-  { id: "KOR", name: "Corea del Sur",    shortName: "KOR", flag: "🇰🇷" },
-  { id: "IRN", name: "Irán",             shortName: "IRN", flag: "🇮🇷" },
-  { id: "AUS", name: "Australia",        shortName: "AUS", flag: "🇦🇺" },
-  { id: "SAU", name: "Arabia Saudita",   shortName: "SAU", flag: "🇸🇦" },
-  { id: "JOR", name: "Jordania",         shortName: "JOR", flag: "🇯🇴" },
-  { id: "IRQ", name: "Irak",             shortName: "IRQ", flag: "🇮🇶" },
-  { id: "UZB", name: "Uzbekistán",       shortName: "UZB", flag: "🇺🇿" },
-  // CONCACAF (no anfitriones)
-  { id: "CRC", name: "Costa Rica",       shortName: "CRC", flag: "🇨🇷" },
-  { id: "PAN", name: "Panamá",           shortName: "PAN", flag: "🇵🇦" },
-  { id: "JAM", name: "Jamaica",          shortName: "JAM", flag: "🇯🇲" },
-  // OFC
-  { id: "NZL", name: "Nueva Zelanda",    shortName: "NZL", flag: "🇳🇿" },
+  { id: "USA", name: "EE.UU.",                shortName: "USA", flag: "🇺🇸" },
+  { id: "MEX", name: "México",                shortName: "MEX", flag: "🇲🇽" },
+  { id: "CAN", name: "Canadá",                shortName: "CAN", flag: "🇨🇦" },
+  // CONMEBOL (6)
+  { id: "ARG", name: "Argentina",             shortName: "ARG", flag: "🇦🇷" },
+  { id: "BRA", name: "Brasil",                shortName: "BRA", flag: "🇧🇷" },
+  { id: "URU", name: "Uruguay",               shortName: "URU", flag: "🇺🇾" },
+  { id: "COL", name: "Colombia",              shortName: "COL", flag: "🇨🇴" },
+  { id: "ECU", name: "Ecuador",               shortName: "ECU", flag: "🇪🇨" },
+  { id: "PAR", name: "Paraguay",              shortName: "PAR", flag: "🇵🇾" },
+  // UEFA (16)
+  { id: "ENG", name: "Inglaterra",            shortName: "ENG", flag: "🏴󠁧󠁢󠁥󠁮󠁧󠁿" },
+  { id: "FRA", name: "Francia",               shortName: "FRA", flag: "🇫🇷" },
+  { id: "ESP", name: "España",                shortName: "ESP", flag: "🇪🇸" },
+  { id: "GER", name: "Alemania",              shortName: "GER", flag: "🇩🇪" },
+  { id: "POR", name: "Portugal",              shortName: "POR", flag: "🇵🇹" },
+  { id: "NED", name: "Países Bajos",          shortName: "NED", flag: "🇳🇱" },
+  { id: "BEL", name: "Bélgica",               shortName: "BEL", flag: "🇧🇪" },
+  { id: "CRO", name: "Croacia",               shortName: "CRO", flag: "🇭🇷" },
+  { id: "SUI", name: "Suiza",                 shortName: "SUI", flag: "🇨🇭" },
+  { id: "AUT", name: "Austria",               shortName: "AUT", flag: "🇦🇹" },
+  { id: "SCO", name: "Escocia",               shortName: "SCO", flag: "🏴󠁧󠁢󠁳󠁣󠁴󠁿" },
+  { id: "TUR", name: "Turquía",               shortName: "TUR", flag: "🇹🇷" },
+  { id: "NOR", name: "Noruega",               shortName: "NOR", flag: "🇳🇴" },
+  { id: "BIH", name: "Bosnia y Herzegovina",  shortName: "BIH", flag: "🇧🇦" },
+  { id: "SWE", name: "Suecia",                shortName: "SWE", flag: "🇸🇪" },
+  { id: "CZE", name: "Chequia",               shortName: "CZE", flag: "🇨🇿" },
+  // CAF (10)
+  { id: "MAR", name: "Marruecos",             shortName: "MAR", flag: "🇲🇦" },
+  { id: "SEN", name: "Senegal",               shortName: "SEN", flag: "🇸🇳" },
+  { id: "EGY", name: "Egipto",                shortName: "EGY", flag: "🇪🇬" },
+  { id: "CIV", name: "Costa de Marfil",       shortName: "CIV", flag: "🇨🇮" },
+  { id: "GHA", name: "Ghana",                 shortName: "GHA", flag: "🇬🇭" },
+  { id: "TUN", name: "Túnez",                 shortName: "TUN", flag: "🇹🇳" },
+  { id: "RSA", name: "Sudáfrica",             shortName: "RSA", flag: "🇿🇦" },
+  { id: "ALG", name: "Argelia",               shortName: "ALG", flag: "🇩🇿" },
+  { id: "CPV", name: "Cabo Verde",            shortName: "CPV", flag: "🇨🇻" },
+  { id: "COD", name: "RD Congo",              shortName: "COD", flag: "🇨🇩" },
+  // AFC (9)
+  { id: "JPN", name: "Japón",                 shortName: "JPN", flag: "🇯🇵" },
+  { id: "KOR", name: "Corea del Sur",         shortName: "KOR", flag: "🇰🇷" },
+  { id: "IRN", name: "Irán",                  shortName: "IRN", flag: "🇮🇷" },
+  { id: "AUS", name: "Australia",             shortName: "AUS", flag: "🇦🇺" },
+  { id: "SAU", name: "Arabia Saudita",        shortName: "SAU", flag: "🇸🇦" },
+  { id: "JOR", name: "Jordania",              shortName: "JOR", flag: "🇯🇴" },
+  { id: "IRQ", name: "Irak",                  shortName: "IRQ", flag: "🇮🇶" },
+  { id: "UZB", name: "Uzbekistán",            shortName: "UZB", flag: "🇺🇿" },
+  { id: "QAT", name: "Qatar",                 shortName: "QAT", flag: "🇶🇦" },
+  // CONCACAF (no anfitriones, 3)
+  { id: "PAN", name: "Panamá",                shortName: "PAN", flag: "🇵🇦" },
+  { id: "CUW", name: "Curazao",               shortName: "CUW", flag: "🇨🇼" },
+  { id: "HAI", name: "Haití",                 shortName: "HAI", flag: "🇭🇹" },
+  // OFC (1)
+  { id: "NZL", name: "Nueva Zelanda",         shortName: "NZL", flag: "🇳🇿" },
 ];
 
 // Extra TLA codes for teams that may appear in football-data.org API responses
@@ -273,16 +273,27 @@ export const EXTRA_FLAGS: Record<string, string> = {
   // Alternate codes for teams already in ALL_WC_TEAMS
   "SRB": "🇷🇸", // Serbia — football-data.org usa SRB, nosotros SER
   "WAL": "🏴󠁧󠁢󠁷󠁬󠁳󠁿", // Gales
+  "PRY": "🇵🇾", // Paraguay — football-data.org puede usar PRY, nosotros PAR
+  "SVE": "🇸🇪", // Suecia — código alternativo
+  "HTI": "🇭🇹", // Haití — código alternativo
+  // Selecciones que no clasificaron a 2026 (para mostrar banderas en partidos amistosos, etc.)
+  "ITA": "🇮🇹", // Italia
+  "POL": "🇵🇱", // Polonia
+  "SER": "🇷🇸", // Serbia (nuestro código, ya en SRB arriba)
+  "DEN": "🇩🇰", // Dinamarca
+  "UKR": "🇺🇦", // Ucrania
+  "HUN": "🇭🇺", // Hungría
+  "VEN": "🇻🇪", // Venezuela
+  "CMR": "🇨🇲", // Camerún
+  "NGA": "🇳🇬", // Nigeria
+  "CRC": "🇨🇷", // Costa Rica
+  "JAM": "🇯🇲", // Jamaica
   // CONMEBOL no clasificados
   "CHI": "🇨🇱", "CHL": "🇨🇱", // Chile
   "BOL": "🇧🇴", // Bolivia
-  "PAR": "🇵🇾", "PRY": "🇵🇾", // Paraguay
   "PER": "🇵🇪", // Perú
   // UEFA no clasificados
-  "NOR": "🇳🇴", // Noruega
-  "SWE": "🇸🇪", "SVE": "🇸🇪", // Suecia
   "SVN": "🇸🇮", "SLO": "🇸🇮", // Eslovenia
-  "CZE": "🇨🇿", // República Checa
   "SVK": "🇸🇰", "SLK": "🇸🇰", // Eslovaquia
   "ROU": "🇷🇴", "ROM": "🇷🇴", // Rumania
   "GRE": "🇬🇷", "GRC": "🇬🇷", // Grecia
@@ -292,7 +303,6 @@ export const EXTRA_FLAGS: Record<string, string> = {
   "GEO": "🇬🇪", // Georgia
   "MKD": "🇲🇰", // Macedonia del Norte
   "MNE": "🇲🇪", // Montenegro
-  "BIH": "🇧🇦", // Bosnia
   "ALB": "🇦🇱", // Albania
   "KSV": "🇽🇰", // Kosovo
   "ARM": "🇦🇲", // Armenia
@@ -302,9 +312,8 @@ export const EXTRA_FLAGS: Record<string, string> = {
   "LVA": "🇱🇻", // Letonia
   "EST": "🇪🇪", // Estonia
   // CAF no clasificados
-  "ALG": "🇩🇿", // Argelia
-  "CGO": "🇨🇬", "COG": "🇨🇬", // Congo
-  "COD": "🇨🇩", // RD Congo
+  "CPV": "🇨🇻", "CVI": "🇨🇻", // Cabo Verde — código alternativo
+  "CGO": "🇨🇬", "COG": "🇨🇬", // Congo (no clasificado)
   "MLI": "🇲🇱", // Malí
   "BFA": "🇧🇫", // Burkina Faso
   "GNB": "🇬🇼", // Guinea-Bisáu
@@ -324,7 +333,6 @@ export const EXTRA_FLAGS: Record<string, string> = {
   "UGA": "🇺🇬", // Uganda
   "LIB": "🇱🇾", // Libia
   // AFC no clasificados
-  "QAT": "🇶🇦", // Qatar
   "CHN": "🇨🇳", // China
   "THA": "🇹🇭", // Tailandia
   "VNM": "🇻🇳", "VIE": "🇻🇳", // Vietnam
@@ -343,7 +351,6 @@ export const EXTRA_FLAGS: Record<string, string> = {
   "SYR": "🇸🇾", // Siria
   "PAL": "🇵🇸", // Palestina
   // CONCACAF no clasificados
-  "HAI": "🇭🇹", "HTI": "🇭🇹", // Haití
   "HON": "🇭🇳", "HND": "🇭🇳", // Honduras
   "GTM": "🇬🇹", "GUA": "🇬🇹", // Guatemala
   "SLV": "🇸🇻", // El Salvador

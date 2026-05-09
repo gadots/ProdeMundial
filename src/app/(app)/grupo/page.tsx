@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { TopBar } from "@/components/nav";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -251,12 +251,22 @@ export default function GrupoPage() {
 
   const [editingName, setEditingName] = useState(false);
   const [prodeName, setProdeName] = useState(prode?.name ?? "");
+
+  // Sync when prode loads asynchronously; don't override while user is actively editing
+  useEffect(() => {
+    if (!editingPrize && prode?.prizeDescription !== undefined) setPrize(prode.prizeDescription ?? "");
+  }, [prode?.prizeDescription, editingPrize]);
+  useEffect(() => {
+    if (!editingName && prode?.name) setProdeName(prode.name);
+  }, [prode?.name, editingName]);
   const [savedName, setSavedName] = useState(false);
 
   const [switching, setSwitching] = useState(false);
 
   const isAdmin = prode?.adminId === user?.id;
-  const inviteLink = prode ? `https://prodemundial.app/join/${prode.inviteCode}` : "";
+  const inviteLink = prode
+    ? `${typeof window !== "undefined" ? window.location.origin : ""}/join/${prode.inviteCode}`
+    : "";
 
   const handleCopyLink = async () => {
     await navigator.clipboard.writeText(inviteLink).catch(() => {});
@@ -335,7 +345,7 @@ export default function GrupoPage() {
   if (!prode) {
     return (
       <div>
-        <TopBar title="Configuraciones" />
+        <TopBar title="Configuraciones" showProfile />
         <div className="flex items-center justify-center h-40 text-white/30 text-sm">Cargando…</div>
       </div>
     );
@@ -343,7 +353,7 @@ export default function GrupoPage() {
 
   return (
     <div>
-      <TopBar title="Configuraciones" subtitle={prodeName || prode.name} />
+      <TopBar title="Configuraciones" subtitle={prodeName || prode.name} showProfile />
 
       <div className="mx-auto max-w-lg space-y-4 px-4 py-4">
 
