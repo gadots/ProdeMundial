@@ -34,7 +34,7 @@ const TLA_TO_ISO2: Record<string, string> = {
   LBN: "lb", LIB: "lb", ISR: "il",
   // CONCACAF (no anfitriones)
   CRC: "cr", PAN: "pa", JAM: "jm", HON: "hn", SLV: "sv", GTM: "gt",
-  HAI: "ht", HTI: "ht", TRI: "tt", TTO: "tt", CUB: "cu",
+  HAI: "ht", HTI: "ht", TRI: "tt", TTO: "tt", CUB: "cu", CUW: "cw",
   GUY: "gy", SUR: "sr", BLZ: "bz", NCA: "ni", NIC: "ni",
   DOM: "do", PUR: "pr", GUA: "gt",
   // OFC
