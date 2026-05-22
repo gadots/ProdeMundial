@@ -35,7 +35,10 @@ export default function LandingPage() {
         );
         setLoading(false);
       } else {
-        window.location.href = "/dashboard";
+        const params = new URLSearchParams(window.location.search);
+        const nextPath = params.get("next");
+        window.location.href =
+          nextPath?.startsWith("/") && !nextPath.startsWith("//") ? nextPath : "/dashboard";
       }
     } else {
       if (!name.trim()) {
@@ -63,10 +66,14 @@ export default function LandingPage() {
   const handleGoogle = async () => {
     setLoading(true);
     setError("");
+    const params = new URLSearchParams(window.location.search);
+    const nextPath = params.get("next");
+    const safeNext =
+      nextPath?.startsWith("/") && !nextPath.startsWith("//") ? nextPath : "/dashboard";
     const { error } = await createClient().auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(safeNext)}`,
       },
     });
     if (error) {
