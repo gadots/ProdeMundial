@@ -497,11 +497,9 @@ export async function joinProde(
   inviteCode: string
 ): Promise<{ error: string | null; prodeId: string | null }> {
   const supabase = createClient();
-  const { data: prode } = await supabase
-    .from("prodes")
-    .select("id")
-    .eq("invite_code", inviteCode.toUpperCase())
-    .single();
+  const { data: rows } = await supabase
+    .rpc("find_prode_by_invite_code", { p_invite_code: inviteCode });
+  const prode = rows?.[0] ?? null;
   if (!prode) return { error: "Código inválido o prode no encontrado", prodeId: null };
   const { error } = await supabase
     .from("prode_members")
