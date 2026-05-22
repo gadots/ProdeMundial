@@ -68,7 +68,12 @@ function JoinPageInner() {
     if (!c || !isSupabase) return;
     const supabase = createClient();
     supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) handleAutoJoin(c.toUpperCase(), user.id);
+      if (user) {
+        handleAutoJoin(c.toUpperCase(), user.id);
+      } else {
+        // Not logged in — send to login preserving the invite code
+        window.location.href = `/?next=${encodeURIComponent(`/join?code=${c.toUpperCase()}`)}`;
+      }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -88,8 +93,7 @@ function JoinPageInner() {
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
-      setJoinError("Tenés que estar logueado para unirte a un prode");
-      setJoinLoading(false);
+      window.location.href = `/?next=${encodeURIComponent(`/join?code=${code}`)}`;
       return;
     }
 
@@ -119,8 +123,7 @@ function JoinPageInner() {
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
-      setCreateError("Tenés que estar logueado para crear un prode");
-      setCreateLoading(false);
+      window.location.href = `/?next=${encodeURIComponent("/join?tab=crear")}`;
       return;
     }
 
