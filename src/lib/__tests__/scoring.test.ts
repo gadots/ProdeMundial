@@ -37,9 +37,9 @@ describe("calculatePoints — GROUP", () => {
   });
 
   describe("empate correcto", () => {
-    it("GROUP: 1 pt por empate correcto (no exacto)", () => {
+    it("GROUP: 2 pts por empate correcto (no exacto)", () => {
       const r = calculatePoints(1, 1, 2, 2, "GROUP");
-      expect(r.points).toBe(1);
+      expect(r.points).toBe(2);
       expect(r.reason).toContain("Empate correcto");
     });
   });
@@ -69,9 +69,9 @@ describe("calculatePoints — GROUP", () => {
 
 describe("calculatePoints — KNOCKOUT", () => {
   describe("ROUND_OF_32", () => {
-    it("exacto en tiempo regular (no empate): 5 pts", () => {
+    it("exacto en tiempo regular (no empate): 6 pts", () => {
       const r = calculatePoints(2, 1, 2, 1, "ROUND_OF_32");
-      expect(r.points).toBe(5);
+      expect(r.points).toBe(6);
     });
 
     it("ganador correcto (no exacto, no empate): 2 pts", () => {
@@ -79,15 +79,15 @@ describe("calculatePoints — KNOCKOUT", () => {
       expect(r.points).toBe(2);
     });
 
-    it("empate correcto (no exacto) + penales correctos: 3 pts", () => {
+    it("empate correcto (no exacto) + penales correctos: 4 pts", () => {
       const r = calculatePoints(1, 1, 2, 2, "ROUND_OF_32", 1, 0, "home", "home");
-      expect(r.points).toBe(3);
+      expect(r.points).toBe(4);
       expect(r.reason).toContain("penales");
     });
 
-    it("exacto de empate + penales correctos: 5 pts", () => {
+    it("exacto de empate + penales correctos: 6 pts", () => {
       const r = calculatePoints(1, 1, 1, 1, "ROUND_OF_32", 1, 0, "away", "away");
-      expect(r.points).toBe(5);
+      expect(r.points).toBe(6);
     });
 
     it("exacto de empate + penales incorrectos: 0 pts", () => {
@@ -112,29 +112,29 @@ describe("calculatePoints — KNOCKOUT", () => {
   });
 
   describe("otros valores de fase", () => {
-    it("ROUND_OF_16 exacto: 12 pts", () => {
+    it("ROUND_OF_16 exacto: 10 pts", () => {
       const r = calculatePoints(0, 1, 0, 1, "ROUND_OF_16");
-      expect(r.points).toBe(12);
+      expect(r.points).toBe(10);
     });
 
-    it("QUARTER_FINAL ganador: 8 pts", () => {
+    it("QUARTER_FINAL ganador: 6 pts", () => {
       const r = calculatePoints(1, 0, 2, 0, "QUARTER_FINAL");
-      expect(r.points).toBe(8);
+      expect(r.points).toBe(6);
     });
 
-    it("SEMI_FINAL exacto: 35 pts", () => {
+    it("SEMI_FINAL exacto: 30 pts", () => {
       const r = calculatePoints(3, 1, 3, 1, "SEMI_FINAL");
-      expect(r.points).toBe(35);
+      expect(r.points).toBe(30);
     });
 
-    it("FINAL exacto: 60 pts", () => {
+    it("FINAL exacto: 50 pts", () => {
       const r = calculatePoints(1, 0, 1, 0, "FINAL");
-      expect(r.points).toBe(60);
+      expect(r.points).toBe(50);
     });
 
-    it("FINAL ganador: 25 pts", () => {
+    it("FINAL ganador: 20 pts", () => {
       const r = calculatePoints(2, 1, 3, 2, "FINAL");
-      expect(r.points).toBe(25);
+      expect(r.points).toBe(20);
     });
 
     it("FINAL empate + penales correctos: 35 pts", () => {
@@ -170,9 +170,9 @@ describe("tokens multiplicadores", () => {
     expect(r.points).toBe(0);
   });
 
-  it("token 5x en FINAL exacto: 300 pts", () => {
+  it("token 5x en FINAL exacto: 250 pts", () => {
     const r = calculatePoints(1, 0, 1, 0, "FINAL", 5);
-    expect(r.points).toBe(300); // 60 * 5
+    expect(r.points).toBe(250); // 50 * 5
   });
 });
 
@@ -202,9 +202,9 @@ describe("streak bonus", () => {
     expect(r.points).toBe(12); // (3 + 3) * 2
   });
 
-  it("token + streak en KNOCKOUT exacto: (35 + 8) * 1 = 43 pts", () => {
+  it("token + streak en KNOCKOUT exacto: (30 + 8) * 1 = 38 pts", () => {
     const r = calculatePoints(3, 1, 3, 1, "SEMI_FINAL", 1, 8);
-    expect(r.points).toBe(43); // (35 + 8) * 1
+    expect(r.points).toBe(38); // (30 + 8) * 1
   });
 });
 
@@ -217,16 +217,16 @@ describe("maxPointsForMatch", () => {
     expect(maxPointsForMatch("GROUP")).toBe(3);
   });
 
-  it("FINAL sin token: 60", () => {
-    expect(maxPointsForMatch("FINAL")).toBe(60);
+  it("FINAL sin token: 50", () => {
+    expect(maxPointsForMatch("FINAL")).toBe(50);
   });
 
-  it("SEMI_FINAL con 5x: 175", () => {
-    expect(maxPointsForMatch("SEMI_FINAL", 5)).toBe(175); // 35 * 5
+  it("SEMI_FINAL con 5x: 150", () => {
+    expect(maxPointsForMatch("SEMI_FINAL", 5)).toBe(150); // 30 * 5
   });
 
-  it("QUARTER_FINAL con 3x: 60", () => {
-    expect(maxPointsForMatch("QUARTER_FINAL", 3)).toBe(60); // 20 * 3
+  it("QUARTER_FINAL con 3x: 54", () => {
+    expect(maxPointsForMatch("QUARTER_FINAL", 3)).toBe(54); // 18 * 3
   });
 
   it("GROUP con 2x + racha 3: (3 + 3) * 2 = 12", () => {
