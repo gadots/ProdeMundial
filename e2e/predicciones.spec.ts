@@ -9,6 +9,7 @@ const SCORE_INPUT_DISABLED = 'input[inputmode="numeric"][disabled]';
 test.describe("Predicciones", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/predicciones");
+    await page.waitForLoadState("networkidle");
   });
 
   test("renders page title", async ({ page }) => {
@@ -70,7 +71,7 @@ test.describe("Predicciones", () => {
     await expect(modalBody).toBeVisible();
 
     await expect(page.getByText("Puntos por fase")).toBeVisible();
-    await expect(page.getByText("Potenciadores")).toBeVisible();
+    await expect(page.getByText("Potenciadores", { exact: true })).toBeVisible();
     await expect(page.getByText("Bonus de racha")).toBeVisible();
     await expect(page.getByText("Predicciones especiales")).toBeVisible();
   });

@@ -3,6 +3,7 @@ import { test, expect } from "@playwright/test";
 test.describe("Perfil page", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/perfil");
+    await page.waitForLoadState("networkidle");
   });
 
   test("renders the profile heading", async ({ page }) => {
@@ -10,37 +11,34 @@ test.describe("Perfil page", () => {
   });
 
   test("shows user display name or avatar", async ({ page }) => {
-    await page.waitForTimeout(1500);
-    // Either an avatar image, initials badge, or display name text
-    const avatar = page.locator("img[alt], [class*='avatar'], [class*='Avatar']");
-    const displayName = page.locator("[class*='display'], input[type='text']").first();
-    const hasAvatar = await avatar.first().isVisible().catch(() => false);
-    const hasName = await displayName.isVisible().catch(() => false);
-    expect(hasAvatar || hasName).toBe(true);
+    // h2 shows the user's display name; an <img> appears if avatarUrl is set
+    const displayNameH2 = page.locator("h2").first();
+    const avatarImg = page.locator("img[alt]");
+    const hasH2 = await displayNameH2.isVisible().catch(() => false);
+    const hasImg = await avatarImg.first().isVisible().catch(() => false);
+    expect(hasH2 || hasImg).toBe(true);
   });
 
   test("shows display name input for editing", async ({ page }) => {
-    await page.waitForTimeout(1500);
-    const nameInput = page.locator("input[type='text']").first();
+    // Input has placeholder "Tu nombre" (no explicit type attribute on shadcn Input)
+    const nameInput = page.getByPlaceholder("Tu nombre");
     await expect(nameInput).toBeVisible({ timeout: 8000 });
   });
 
   test("shows logout button", async ({ page }) => {
-    const logoutBtn = page.getByRole("button", { name: /Cerrar sesión|Salir|Logout/i })
-      .or(page.getByText(/Cerrar sesión|Salir/i));
-    await expect(logoutBtn.first()).toBeVisible({ timeout: 8000 });
+    // Scoped to <main> to avoid the hidden sidebar duplicate on mobile
+    const logoutBtn = page.locator("main").getByRole("button", { name: /Cerrar sesión/i });
+    await expect(logoutBtn).toBeVisible({ timeout: 8000 });
   });
 
   test("shows change password section or button", async ({ page }) => {
-    const passSection = page.getByText(/Contraseña|Password/i)
-      .or(page.getByRole("button", { name: /Cambiar contraseña|contraseña/i }));
+    const passSection = page.getByText(/Contraseña|Password|contraseña/i);
     await expect(passSection.first()).toBeVisible({ timeout: 8000 });
   });
 
   test("shows points or rank stats", async ({ page }) => {
-    await page.waitForTimeout(1500);
-    // Stats like "pts", "puesto", "racha"
-    const stats = page.getByText(/pts|puesto|racha|Puntos|Ranking/i);
+    // Stats like "pts", "racha" appear in badges and stat cards
+    const stats = page.getByText(/pts|racha|Puntos|Ranking/i);
     await expect(stats.first()).toBeVisible({ timeout: 8000 });
   });
 });

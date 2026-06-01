@@ -1,9 +1,22 @@
 import { test as setup, expect } from "@playwright/test";
 import { AUTH_FILE } from "./constants";
+import path from "path";
+import fs from "fs";
 
 setup("autenticar usuario de test", async ({ page }) => {
   const email = process.env.E2E_TEST_EMAIL;
   const password = process.env.E2E_TEST_PASSWORD;
+
+  // In mock mode (no Supabase configured), the middleware passes all routes
+  // through without auth checks — save empty storage state and proceed.
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+  const isSupabase = supabaseUrl.startsWith("https://") && !supabaseUrl.includes("<your-project>");
+
+  if (!isSupabase) {
+    fs.mkdirSync(path.dirname(AUTH_FILE), { recursive: true });
+    fs.writeFileSync(AUTH_FILE, JSON.stringify({ cookies: [], origins: [] }));
+    return;
+  }
 
   if (!email || !password) {
     throw new Error(

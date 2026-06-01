@@ -45,7 +45,7 @@ test.describe("Tabla (Posiciones)", () => {
     const statsTab = page.getByRole("button", { name: /Stats/ });
     await expect(statsTab).toBeVisible();
     await statsTab.click();
-    await expect(page.getByText(/Mejor racha|Racha/i)).toBeVisible({ timeout: 8000 });
+    await expect(page.getByText(/Mejor racha|Racha/i).first()).toBeVisible({ timeout: 8000 });
   });
 
   test("share button is visible", async ({ page }) => {
