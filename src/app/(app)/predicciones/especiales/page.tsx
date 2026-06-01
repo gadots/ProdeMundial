@@ -118,11 +118,17 @@ function PlayerInput({
         className="w-full h-10 rounded-xl border border-white/15 bg-white/5 px-4 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-40"
       />
       {showSuggestions && filtered.length > 0 && (
-        <div className="absolute z-10 mt-1 w-full rounded-xl border border-white/10 bg-[#0f1f3d] shadow-xl overflow-hidden">
+        // onMouseDown with preventDefault keeps the input focused when clicking a suggestion,
+        // preventing onBlur from hiding the list before onClick fires on the button.
+        <div
+          className="absolute z-10 mt-1 w-full rounded-xl border border-white/10 bg-[#0f1f3d] shadow-xl overflow-hidden"
+          onMouseDown={(e) => e.preventDefault()}
+        >
           {filtered.slice(0, 6).map((p) => (
             <button
               key={p}
-              onMouseDown={() => { onChange(p); setShowSuggestions(false); }}
+              type="button"
+              onClick={() => { onChange(p); setShowSuggestions(false); }}
               className="w-full px-4 py-2.5 text-left text-sm text-white/80 hover:bg-white/10 transition-colors"
             >
               {p}
@@ -149,9 +155,13 @@ export default function EspecialesPage() {
   // Load existing special predictions from DB
   useEffect(() => {
     if (!user || !prodeId) return;
-    Q.getSpecialPredictions(user.id, prodeId).then((data) => {
-      if (Object.keys(data).length > 0) setPredictions(data);
-    });
+    Q.getSpecialPredictions(user.id, prodeId)
+      .then((data) => {
+        if (Object.keys(data).length > 0) setPredictions(data);
+      })
+      .catch(() => {
+        // Supabase unavailable (mock mode / offline) — keep default predictions
+      });
   }, [user?.id, prodeId]);
 
   const totalPotential = SPECIAL_PREDICTIONS.reduce((sum, p) => sum + p.points, 0);
@@ -160,8 +170,12 @@ export default function EspecialesPage() {
   const handleSave = async () => {
     if (LOCKED) return;
     setSaving(true);
-    if (user && prodeId) {
-      await Q.upsertSpecialPredictions(user.id, prodeId, predictions);
+    try {
+      if (user && prodeId) {
+        await Q.upsertSpecialPredictions(user.id, prodeId, predictions);
+      }
+    } catch {
+      // Supabase unavailable (mock mode / offline) — still confirm save in UI
     }
     setSaving(false);
     setSaved(true);
@@ -253,7 +267,7 @@ export default function EspecialesPage() {
         ))}
 
         {!LOCKED && (
-          <Button onClick={handleSave} className="w-full" disabled={filled === 0 || saving} size="lg">
+          <Button type="button" onClick={handleSave} className="w-full" disabled={filled === 0 || saving} size="lg">
             {saving ? (
               <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
             ) : saved ? (

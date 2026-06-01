@@ -3,6 +3,9 @@ import { test, expect } from "@playwright/test";
 test.describe("Predicciones Especiales", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/predicciones/especiales");
+    // Wait for networkidle so the service worker controllerchange + reload completes
+    // before any test interaction, preventing mid-test state resets.
+    await page.waitForLoadState("networkidle");
   });
 
   // ── Renderizado básico ────────────────────────────────────────────────────
@@ -28,7 +31,8 @@ test.describe("Predicciones Especiales", () => {
   test("shows all 5 prediction cards", async ({ page }) => {
     await expect(page.getByText("Campeón del Mundo")).toBeVisible();
     await expect(page.getByText("Finalista")).toBeVisible();
-    await expect(page.getByText("Tercer Puesto")).toBeVisible();
+    // { exact: true } avoids matching description text "¿Quién gana el partido por el tercer puesto?"
+    await expect(page.getByText("Tercer Puesto", { exact: true })).toBeVisible();
     await expect(page.getByText("Goleador del Torneo")).toBeVisible();
     await expect(page.getByText("Selección con más goles")).toBeVisible();
   });
@@ -59,7 +63,8 @@ test.describe("Predicciones Especiales", () => {
     const searchInputs = page.locator('input[placeholder*="Buscar selección"]');
     await searchInputs.nth(1).fill("Franc");
     const fraButton = page.getByRole("button", { name: /FRA/ }).first();
-    await fraButton.click();
+    // Use evaluate() to bypass <nextjs-portal> dev overlay pointer-event interception
+    await fraButton.evaluate((btn) => (btn as HTMLElement).click());
     // El nombre completo debe aparecer debajo como confirmación
     await expect(page.getByText("Francia")).toBeVisible();
   });
@@ -81,8 +86,11 @@ test.describe("Predicciones Especiales", () => {
   test("selecting a player suggestion fills the input", async ({ page }) => {
     const playerInput = page.locator('input[placeholder*="nombre del jugador"]');
     await playerInput.fill("Mba");
-    // onMouseDown en el botón de sugerencia → selecciona antes del blur
-    await page.getByText("Kylian Mbappé").click();
+    const suggestion = page.locator("button").filter({ hasText: "Kylian Mbappé" });
+    await expect(suggestion).toBeVisible({ timeout: 3000 });
+    // Use evaluate to click without Playwright's stability checks — the suggestion list
+    // can re-render while filling, causing false "unstable" errors with regular .click().
+    await suggestion.evaluate((btn) => (btn as HTMLElement).click());
     await expect(playerInput).toHaveValue("Kylian Mbappé");
   });
 
@@ -103,7 +111,10 @@ test.describe("Predicciones Especiales", () => {
 
   test("save button text changes after clicking", async ({ page }) => {
     const saveBtn = page.getByRole("button", { name: /Guardar predicciones especiales/ });
-    await saveBtn.click();
+    await expect(saveBtn).toBeVisible({ timeout: 5000 });
+    // Use evaluate() to bypass <nextjs-portal> dev overlay pointer-event interception
+    // (overlay loads fully after networkidle in beforeEach)
+    await saveBtn.evaluate((btn) => (btn as HTMLElement).click());
     await expect(
       page.getByRole("button", { name: /Predicciones guardadas/ })
     ).toBeVisible({ timeout: 5000 });

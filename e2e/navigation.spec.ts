@@ -11,20 +11,21 @@ test.describe("Navigation", () => {
 
   test("bottom nav links navigate to correct pages", async ({ page }) => {
     await page.goto("/dashboard");
-    await page.getByText("Tu posición").waitFor({ timeout: 12000 }).catch(() => {});
     const bottomNav = page.locator("nav").last();
+    await expect(bottomNav).toBeVisible({ timeout: 5000 });
 
-    await bottomNav.getByRole("link", { name: "Predicciones" }).click();
-    await expect(page).toHaveURL(/\/predicciones$/);
+    // Use evaluate() to bypass <nextjs-portal> dev overlay pointer-event interception
+    await bottomNav.getByRole("link", { name: "Predicciones" }).evaluate((link) => (link as HTMLElement).click());
+    await expect(page).toHaveURL(/\/predicciones$/, { timeout: 8000 });
 
-    await bottomNav.getByRole("link", { name: "Posiciones" }).click();
-    await expect(page).toHaveURL(/\/tabla/);
+    await bottomNav.getByRole("link", { name: "Posiciones" }).evaluate((link) => (link as HTMLElement).click());
+    await expect(page).toHaveURL(/\/tabla/, { timeout: 8000 });
 
-    await bottomNav.getByRole("link", { name: /Especiales/ }).click();
-    await expect(page).toHaveURL(/\/predicciones\/especiales/);
+    await bottomNav.getByRole("link", { name: /Especiales/ }).evaluate((link) => (link as HTMLElement).click());
+    await expect(page).toHaveURL(/\/predicciones\/especiales/, { timeout: 8000 });
 
-    await bottomNav.getByRole("link", { name: "Dashboard" }).click();
-    await expect(page).toHaveURL(/\/dashboard/);
+    await bottomNav.getByRole("link", { name: "Dashboard" }).evaluate((link) => (link as HTMLElement).click());
+    await expect(page).toHaveURL(/\/dashboard/, { timeout: 8000 });
   });
 
   test("predicciones especiales page loads correctly", async ({ page }) => {
@@ -34,7 +35,7 @@ test.describe("Navigation", () => {
 
   test("grupo/config page loads correctly", async ({ page }) => {
     await page.goto("/grupo");
-    await expect(page.getByRole("heading", { name: /Prode|Grupo|Config/i })).toBeVisible({ timeout: 8000 });
+    await expect(page.getByRole("heading", { name: /Prode|Grupo|Config/i }).first()).toBeVisible({ timeout: 8000 });
   });
 
   test("perfil page loads correctly", async ({ page }) => {
@@ -48,6 +49,7 @@ test.describe("Mobile viewport chip consistency", () => {
 
   test("sticky phase selector fits within viewport on mobile", async ({ page }) => {
     await page.goto("/predicciones");
+    await page.waitForLoadState("networkidle");
     const stickyHeader = page.locator(".sticky.top-\\[57px\\]");
     const box = await stickyHeader.boundingBox();
     expect(box).not.toBeNull();
@@ -56,6 +58,7 @@ test.describe("Mobile viewport chip consistency", () => {
 
   test("rules modal fits within mobile viewport height", async ({ page }) => {
     await page.goto("/predicciones");
+    await page.waitForLoadState("networkidle");
     await page.getByTitle("Ver reglas completas").click();
 
     const modal = page.locator('[class*="rounded-2xl"]').filter({

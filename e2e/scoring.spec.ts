@@ -7,6 +7,7 @@ import { test, expect } from "@playwright/test";
 test.describe("Scoring — tabla de puntos", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/predicciones");
+    await page.waitForLoadState("networkidle");
     await page.getByTitle("Ver reglas completas").click();
     await expect(page.getByText("Reglas de puntuación")).toBeVisible();
   });
@@ -57,8 +58,8 @@ test.describe("Scoring — tabla de puntos", () => {
   test("modal shows streak bonus section", async ({ page }) => {
     await expect(page.getByText("Bonus de racha")).toBeVisible();
     // +3 pts for 3-in-a-row, +8 pts for 5-in-a-row
-    await expect(page.getByText(/\+3|3 puntos/)).toBeVisible();
-    await expect(page.getByText(/\+8|8 puntos/)).toBeVisible();
+    await expect(page.getByText(/\+3|3 puntos/).first()).toBeVisible();
+    await expect(page.getByText(/\+8|8 puntos/).first()).toBeVisible();
   });
 
   test("modal shows Final as highest-value phase (50 pts exact)", async ({ page }) => {
