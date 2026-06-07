@@ -145,9 +145,10 @@ test.describe("Predicciones", () => {
     await expect(card.locator(".animate-spin")).not.toBeVisible();
   });
 
-  test("editar predicción guardada vuelve a mostrar el botón Guardar", async ({ page }) => {
-    // Regression guard for the lastSaved fix: once a prediction is saved (button shows
-    // "Guardado"), editing any input must immediately switch the button back to "Guardar".
+  test("editar predicción guardada vuelve a mostrar el botón Guardar y auto-guarda", async ({ page }) => {
+    // Regression guard + auto-save flow: once a prediction is saved (button shows
+    // "Guardado"), editing any input must immediately switch the button back to "Guardar",
+    // and then auto-save triggers ~800ms later showing "Guardado" again.
     const card = page.locator(".space-y-3 > div").filter({
       has: page.locator(SCORE_INPUT_ENABLED),
     }).first();
@@ -161,10 +162,11 @@ test.describe("Predicciones", () => {
     await card.getByRole("button", { name: /Guardar/ }).click();
     await expect(card.getByRole("button", { name: /Guardado/ })).toBeVisible({ timeout: 5000 });
 
-    // Edit one value — button must revert to "Guardar"
+    // Edit one value — button must revert to "Guardar" immediately
     await inputs.nth(0).fill("3");
     await expect(card.getByRole("button", { name: "Guardar", exact: false })).toBeVisible({ timeout: 2000 });
-    await expect(card.getByRole("button", { name: "Guardado", exact: false })).not.toBeVisible();
+    // Auto-save fires ~800ms after edit and returns to "Guardado"
+    await expect(card.getByRole("button", { name: "Guardado", exact: false })).toBeVisible({ timeout: 3000 });
   });
 
   test("re-guardar después de editar funciona y vuelve a Guardado", async ({ page }) => {

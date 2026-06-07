@@ -348,6 +348,14 @@ function MatchPredictionCard({
     }
   }, [existing?.homeGoals, existing?.awayGoals, existing?.multiplier]); // `saved` intentionally omitted
 
+  // Auto-save: 800ms después del último cambio, si los datos son válidos y no están guardados
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!canSave || saved) return;
+    const timer = setTimeout(handleSave, 800);
+    return () => clearTimeout(timer);
+  }, [home, away, multiplier, penaltyWinner]);
+
   const handleReveal = async () => {
     if (showReveal) { setShowReveal(false); return; }
     if (memberPreds !== null) { setShowReveal(true); return; }
@@ -387,11 +395,12 @@ function MatchPredictionCard({
   const handleTokenSelect = (next: TokenMultiplier) => {
     const prev = multiplier;
     setMultiplier(next);
+    setSaveError(null);
     onTokenChange(match.id, prev, next);
   };
 
   const handleSave = async () => {
-    if (!canSave) return;
+    if (!canSave || saving) return;
     setSaving(true);
     setSaveError(null);
     try {
@@ -466,9 +475,9 @@ function MatchPredictionCard({
             <p className="text-sm font-bold text-white leading-tight">{homeName}</p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <ScoreInput value={home} onChange={(v) => { setHome(v); if (Number(v) !== Number(away)) setPenaltyWinner(undefined); }} disabled={locked} />
+            <ScoreInput value={home} onChange={(v) => { setHome(v); if (Number(v) !== Number(away)) setPenaltyWinner(undefined); setSaveError(null); }} disabled={locked} />
             <span className="text-white/30 font-bold text-lg">-</span>
-            <ScoreInput value={away} onChange={(v) => { setAway(v); if (Number(home) !== Number(v)) setPenaltyWinner(undefined); }} disabled={locked} />
+            <ScoreInput value={away} onChange={(v) => { setAway(v); if (Number(home) !== Number(v)) setPenaltyWinner(undefined); setSaveError(null); }} disabled={locked} />
           </div>
           <div className="flex flex-1 items-center gap-2 justify-end">
             <p className="text-sm font-bold text-white leading-tight text-right">{awayName}</p>
