@@ -46,10 +46,30 @@ export default function PerfilPage() {
   const [syncSaving, setSyncSaving] = useState(false);
   const hasManyProdes = allProdes.length >= 2;
 
+  // Pending state: separates local selection from the saved value.
+  // null = not editing, UI shows the saved mainProdeId state.
+  const [pendingMode, setPendingMode] = useState<"libre" | "copycat" | null>(null);
+  const [pendingProdeId, setPendingProdeId] = useState<string | null>(null);
+
+  const displayMode = pendingMode ?? (mainProdeId !== null ? "copycat" : "libre");
+  const displayProdeId = pendingMode === "copycat" ? pendingProdeId : mainProdeId;
+  const isDirty = pendingMode !== null;
+
   const handleSetMainProde = async (id: string | null) => {
     setSyncSaving(true);
     await setMainProdeId(id);
     setSyncSaving(false);
+    setPendingMode(null);
+    setPendingProdeId(null);
+  };
+
+  const handleConfirm = () => {
+    handleSetMainProde(pendingMode === "copycat" ? pendingProdeId : null);
+  };
+
+  const handleCancel = () => {
+    setPendingMode(null);
+    setPendingProdeId(null);
   };
 
   // ── Change password ──
@@ -234,71 +254,107 @@ export default function PerfilPage() {
 
               {/* Libre mode */}
               <button
-                onClick={() => !syncSaving && handleSetMainProde(null)}
+                onClick={() => {
+                  if (syncSaving) return;
+                  if (displayMode !== "libre") setPendingMode("libre");
+                }}
                 disabled={syncSaving}
                 className={`w-full flex items-start gap-3 rounded-xl border px-4 py-3 text-left transition-all ${
-                  mainProdeId === null
+                  displayMode === "libre"
                     ? "border-amber-500/40 bg-amber-500/10"
                     : "border-white/10 bg-white/3 hover:border-white/20"
                 }`}
               >
                 <span className={`mt-0.5 h-4 w-4 shrink-0 rounded-full border-2 flex items-center justify-center ${
-                  mainProdeId === null ? "border-amber-500" : "border-white/30"
+                  displayMode === "libre" ? "border-amber-500" : "border-white/30"
                 }`}>
-                  {mainProdeId === null && <span className="h-2 w-2 rounded-full bg-amber-500" />}
+                  {displayMode === "libre" && <span className="h-2 w-2 rounded-full bg-amber-500" />}
                 </span>
                 <div>
-                  <p className={`text-sm font-semibold ${mainProdeId === null ? "text-amber-400" : "text-white/70"}`}>Libre</p>
+                  <p className={`text-sm font-semibold ${displayMode === "libre" ? "text-amber-400" : "text-white/70"}`}>Libre</p>
                   <p className="text-xs text-white/35 mt-0.5">Cada prode tiene sus propias predicciones</p>
                 </div>
               </button>
 
               {/* Copycat mode */}
               <div className={`rounded-xl border transition-all ${
-                mainProdeId !== null
+                displayMode === "copycat"
                   ? "border-amber-500/40 bg-amber-500/10"
                   : "border-white/10 bg-white/3"
               }`}>
                 <button
-                  onClick={() => !syncSaving && mainProdeId === null && handleSetMainProde(allProdes[0].id)}
+                  onClick={() => {
+                    if (syncSaving) return;
+                    if (displayMode !== "copycat") {
+                      setPendingMode("copycat");
+                      setPendingProdeId(mainProdeId ?? allProdes[0].id);
+                    }
+                  }}
                   disabled={syncSaving}
                   className="w-full flex items-start gap-3 px-4 py-3 text-left"
                 >
                   <span className={`mt-0.5 h-4 w-4 shrink-0 rounded-full border-2 flex items-center justify-center ${
-                    mainProdeId !== null ? "border-amber-500" : "border-white/30"
+                    displayMode === "copycat" ? "border-amber-500" : "border-white/30"
                   }`}>
-                    {mainProdeId !== null && <span className="h-2 w-2 rounded-full bg-amber-500" />}
+                    {displayMode === "copycat" && <span className="h-2 w-2 rounded-full bg-amber-500" />}
                   </span>
                   <div>
-                    <p className={`text-sm font-semibold ${mainProdeId !== null ? "text-amber-400" : "text-white/70"}`}>Copycat</p>
+                    <p className={`text-sm font-semibold ${displayMode === "copycat" ? "text-amber-400" : "text-white/70"}`}>Copycat</p>
                     <p className="text-xs text-white/35 mt-0.5">Un prode es la fuente de verdad; los demás se sincronizan desde ahí</p>
                   </div>
                 </button>
 
-                {mainProdeId !== null && (
+                {displayMode === "copycat" && (
                   <div className="px-4 pb-3 border-t border-white/10 pt-2.5">
                     <p className="text-[11px] text-white/40 mb-2">Prode principal:</p>
                     <div className="flex flex-col gap-1.5">
                       {allProdes.map((p) => (
                         <button
                           key={p.id}
-                          onClick={() => !syncSaving && mainProdeId !== p.id && handleSetMainProde(p.id)}
+                          onClick={() => {
+                            if (syncSaving || displayProdeId === p.id) return;
+                            setPendingMode("copycat");
+                            setPendingProdeId(p.id);
+                          }}
                           disabled={syncSaving}
                           className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-xs font-medium transition-all ${
-                            mainProdeId === p.id
+                            displayProdeId === p.id
                               ? "bg-amber-500/20 text-amber-300"
                               : "bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/70"
                           }`}
                         >
-                          <span className={`h-2 w-2 shrink-0 rounded-full ${mainProdeId === p.id ? "bg-amber-400" : "bg-white/20"}`} />
+                          <span className={`h-2 w-2 shrink-0 rounded-full ${displayProdeId === p.id ? "bg-amber-400" : "bg-white/20"}`} />
                           {p.name}
-                          {mainProdeId === p.id && <span className="ml-auto text-[10px] text-amber-400/70">principal</span>}
+                          {displayProdeId === p.id && !isDirty && <span className="ml-auto text-[10px] text-amber-400/70">principal</span>}
                         </button>
                       ))}
                     </div>
                   </div>
                 )}
               </div>
+
+              {/* Confirm / Cancel — only shown when there's a pending change */}
+              {isDirty && (
+                <div className="flex gap-2 pt-1">
+                  <Button
+                    onClick={handleConfirm}
+                    disabled={syncSaving || (pendingMode === "copycat" && !pendingProdeId)}
+                    size="sm"
+                    className="flex-1"
+                  >
+                    {syncSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Confirmar"}
+                  </Button>
+                  <Button
+                    onClick={handleCancel}
+                    disabled={syncSaving}
+                    size="sm"
+                    variant="secondary"
+                    className="flex-1"
+                  >
+                    Cancelar
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
