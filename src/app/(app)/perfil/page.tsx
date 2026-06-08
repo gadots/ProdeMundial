@@ -7,13 +7,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useApp } from "@/components/app-context";
-import { LogOut, ChevronRight, User, CheckCircle2, AlertCircle, Loader2, KeyRound } from "lucide-react";
+import { LogOut, ChevronRight, User, CheckCircle2, AlertCircle, Loader2, KeyRound, Link2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { updateDisplayName } from "@/lib/supabase/queries";
 import { signOut } from "./actions";
 
 export default function PerfilPage() {
-  const { user, prode, refreshUser } = useApp();
+  const { user, prode, refreshUser, allProdes, mainProdeId, setMainProdeId } = useApp();
   const me = prode?.members.find((m) => m.id === user?.id) ?? prode?.members[0];
 
   // ── Edit name ──
@@ -40,6 +40,16 @@ export default function PerfilPage() {
       await refreshUser();
       setTimeout(() => setNameSuccess(false), 3000);
     }
+  };
+
+  // ── Copycat sync ──
+  const [syncSaving, setSyncSaving] = useState(false);
+  const hasManyProdes = allProdes.length >= 2;
+
+  const handleSetMainProde = async (id: string | null) => {
+    setSyncSaving(true);
+    await setMainProdeId(id);
+    setSyncSaving(false);
   };
 
   // ── Change password ──
@@ -211,6 +221,87 @@ export default function PerfilPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* Sync between prodes (only shown when user is in 2+ prodes) */}
+        {hasManyProdes && (
+          <Card>
+            <CardContent className="p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <Link2 className="h-4 w-4 text-white/40" />
+                <p className="text-xs text-white/40 font-semibold uppercase tracking-wider">Sincronización entre prodes</p>
+                {syncSaving && <Loader2 className="h-3.5 w-3.5 animate-spin text-white/30 ml-auto" />}
+              </div>
+
+              {/* Libre mode */}
+              <button
+                onClick={() => !syncSaving && handleSetMainProde(null)}
+                disabled={syncSaving}
+                className={`w-full flex items-start gap-3 rounded-xl border px-4 py-3 text-left transition-all ${
+                  mainProdeId === null
+                    ? "border-amber-500/40 bg-amber-500/10"
+                    : "border-white/10 bg-white/3 hover:border-white/20"
+                }`}
+              >
+                <span className={`mt-0.5 h-4 w-4 shrink-0 rounded-full border-2 flex items-center justify-center ${
+                  mainProdeId === null ? "border-amber-500" : "border-white/30"
+                }`}>
+                  {mainProdeId === null && <span className="h-2 w-2 rounded-full bg-amber-500" />}
+                </span>
+                <div>
+                  <p className={`text-sm font-semibold ${mainProdeId === null ? "text-amber-400" : "text-white/70"}`}>Libre</p>
+                  <p className="text-xs text-white/35 mt-0.5">Cada prode tiene sus propias predicciones</p>
+                </div>
+              </button>
+
+              {/* Copycat mode */}
+              <div className={`rounded-xl border transition-all ${
+                mainProdeId !== null
+                  ? "border-amber-500/40 bg-amber-500/10"
+                  : "border-white/10 bg-white/3"
+              }`}>
+                <button
+                  onClick={() => !syncSaving && mainProdeId === null && handleSetMainProde(allProdes[0].id)}
+                  disabled={syncSaving}
+                  className="w-full flex items-start gap-3 px-4 py-3 text-left"
+                >
+                  <span className={`mt-0.5 h-4 w-4 shrink-0 rounded-full border-2 flex items-center justify-center ${
+                    mainProdeId !== null ? "border-amber-500" : "border-white/30"
+                  }`}>
+                    {mainProdeId !== null && <span className="h-2 w-2 rounded-full bg-amber-500" />}
+                  </span>
+                  <div>
+                    <p className={`text-sm font-semibold ${mainProdeId !== null ? "text-amber-400" : "text-white/70"}`}>Copycat</p>
+                    <p className="text-xs text-white/35 mt-0.5">Un prode es la fuente de verdad; los demás se sincronizan desde ahí</p>
+                  </div>
+                </button>
+
+                {mainProdeId !== null && (
+                  <div className="px-4 pb-3 border-t border-white/10 pt-2.5">
+                    <p className="text-[11px] text-white/40 mb-2">Prode principal:</p>
+                    <div className="flex flex-col gap-1.5">
+                      {allProdes.map((p) => (
+                        <button
+                          key={p.id}
+                          onClick={() => !syncSaving && mainProdeId !== p.id && handleSetMainProde(p.id)}
+                          disabled={syncSaving}
+                          className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-xs font-medium transition-all ${
+                            mainProdeId === p.id
+                              ? "bg-amber-500/20 text-amber-300"
+                              : "bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/70"
+                          }`}
+                        >
+                          <span className={`h-2 w-2 shrink-0 rounded-full ${mainProdeId === p.id ? "bg-amber-400" : "bg-white/20"}`} />
+                          {p.name}
+                          {mainProdeId === p.id && <span className="ml-auto text-[10px] text-amber-400/70">principal</span>}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Logout */}
         <Card>

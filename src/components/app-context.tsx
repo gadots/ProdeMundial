@@ -65,6 +65,9 @@ export interface AppContextValue {
   // Re-fetch user profile (e.g. after updating display name)
   refreshUser: () => Promise<void>;
   isMockMode: boolean;
+  // Copycat sync
+  mainProdeId: string | null;
+  setMainProdeId: (id: string | null) => Promise<void>;
 }
 
 // -------------------------------------------------------
@@ -99,6 +102,8 @@ const DEFAULT_VALUE: AppContextValue = {
   pointsToday: MOCK_POINTS_TODAY,
   refreshUser: async () => {},
   isMockMode: true,
+  mainProdeId: null,
+  setMainProdeId: async () => {},
 };
 
 // -------------------------------------------------------
@@ -146,8 +151,13 @@ function AppProviderSupabase({ children }: { children: React.ReactNode }) {
 
   const [pointsToday, setPointsToday] = useState<Record<string, number>>({});
 
-  // Stable ref to current userId so callbacks don't go stale
+  const [mainProdeId, setMainProdeIdState] = useState<string | null>(null);
+
+  // Stable refs so callbacks don't go stale
   const userIdRef = useRef<string | null>(null);
+  const mainProdeIdRef = useRef<string | null>(null);
+  const allProdesRef = useRef<Q.ProdeInfo[]>([]);
+  const matchesRef = useRef<Match[]>([]);
 
   // -------------------------------------------------------
   // Load prode-specific data (reusable for initial load + switchProde)
@@ -211,6 +221,9 @@ function AppProviderSupabase({ children }: { children: React.ReactNode }) {
     };
     setUser(appUser);
     userIdRef.current = authUser.id;
+    const loadedMainProdeId = profile?.mainProdeId ?? null;
+    setMainProdeIdState(loadedMainProdeId);
+    mainProdeIdRef.current = loadedMainProdeId;
     setUserLoading(false);
   }, []);
 
@@ -266,6 +279,10 @@ function AppProviderSupabase({ children }: { children: React.ReactNode }) {
 
     return () => { supabase.removeChannel(matchChannel); };
   }, []);
+
+  // Keep refs in sync with state (for use in callbacks)
+  useEffect(() => { allProdesRef.current = allProdes; }, [allProdes]);
+  useEffect(() => { matchesRef.current = matches; }, [matches]);
 
   // -------------------------------------------------------
   // Load prode + user-specific data once user is available
@@ -395,6 +412,91 @@ function AppProviderSupabase({ children }: { children: React.ReactNode }) {
   }, [prodeId, loadProdeData]);
 
   // -------------------------------------------------------
+  // Copycat sync helpers
+  // -------------------------------------------------------
+
+  // Sync one prediction from main prode to a single secondary prode.
+  // Respects token availability: only copies multiplier if the token is free in secondary.
+  const syncPredToSecondary = useCallback(async (
+    userId: string,
+    pred: { matchId: string; homeGoals: number; awayGoals: number; multiplier: TokenMultiplier; penaltyWinner?: "home" | "away" },
+    secondaryProdeId: string
+  ): Promise<void> => {
+    const secondaryTokens = await Q.getMyTokens(userId, secondaryProdeId);
+    let effectiveMultiplier: TokenMultiplier = pred.multiplier;
+
+    if (pred.multiplier === 1) {
+      // Freeing a token: clear any secondary token that was on this match
+      for (const token of secondaryTokens) {
+        if (token.usedOnMatchId === pred.matchId) {
+          await Q.updateTokenUsage(userId, secondaryProdeId, token.multiplier, null);
+        }
+      }
+    } else {
+      const secToken = secondaryTokens.find((t) => t.multiplier === pred.multiplier);
+      const available = secToken && !secToken.decayed &&
+        (!secToken.usedOnMatchId || secToken.usedOnMatchId === pred.matchId);
+      if (available) {
+        await Q.updateTokenUsage(userId, secondaryProdeId, pred.multiplier, pred.matchId);
+      } else {
+        effectiveMultiplier = 1;
+      }
+    }
+
+    await Q.upsertPrediction({
+      userId,
+      matchId: pred.matchId,
+      prodeId: secondaryProdeId,
+      homeGoals: pred.homeGoals,
+      awayGoals: pred.awayGoals,
+      multiplier: effectiveMultiplier,
+      penaltyWinner: pred.penaltyWinner,
+    });
+  }, []);
+
+  // Set main prode: persist to DB and run retroactive sync of all future predictions.
+  const setMainProdeId = useCallback(async (id: string | null) => {
+    const userId = userIdRef.current;
+    if (!userId) return;
+    const { error } = await Q.updateMainProdeId(userId, id);
+    if (error) return;
+    setMainProdeIdState(id);
+    mainProdeIdRef.current = id;
+
+    if (!id) return;
+
+    // Retroactive sync: copy all non-locked predictions from main to secondary prodes
+    const now = new Date();
+    const currentMatches = matchesRef.current;
+    const currentAllProdes = allProdesRef.current;
+    const secondaryProdes = currentAllProdes.filter((p) => p.id !== id);
+    if (secondaryProdes.length === 0) return;
+
+    const futureMatchIds = new Set(
+      currentMatches
+        .filter((m) => m.status === "SCHEDULED" && new Date(m.date) > now)
+        .map((m) => m.id)
+    );
+    if (futureMatchIds.size === 0) return;
+
+    const mainPreds = await Q.getMyPredictions(userId, id);
+    const toSync = Object.values(mainPreds).filter((p) => futureMatchIds.has(p.matchId));
+    if (toSync.length === 0) return;
+
+    for (const secondary of secondaryProdes) {
+      for (const pred of toSync) {
+        await syncPredToSecondary(userId, {
+          matchId: pred.matchId,
+          homeGoals: pred.homeGoals,
+          awayGoals: pred.awayGoals,
+          multiplier: pred.multiplier,
+          penaltyWinner: pred.penaltyWinner,
+        }, secondary.id);
+      }
+    }
+  }, [syncPredToSecondary]);
+
+  // -------------------------------------------------------
   // Actions
   // -------------------------------------------------------
 
@@ -416,10 +518,19 @@ function AppProviderSupabase({ children }: { children: React.ReactNode }) {
             penaltyWinner: pred.penaltyWinner,
           },
         }));
+
+        // Copycat: sync to all secondary prodes when saving in main prode
+        const currentMainProdeId = mainProdeIdRef.current;
+        if (currentMainProdeId && prodeId === currentMainProdeId) {
+          const secondaryProdes = allProdesRef.current.filter((p) => p.id !== currentMainProdeId);
+          for (const secondary of secondaryProdes) {
+            syncPredToSecondary(user.id, pred, secondary.id);
+          }
+        }
       }
       return result;
     },
-    [user, prodeId]
+    [user, prodeId, syncPredToSecondary]
   );
 
   const updateTokenUsage = useCallback(
@@ -479,6 +590,8 @@ function AppProviderSupabase({ children }: { children: React.ReactNode }) {
     pointsToday,
     refreshUser,
     isMockMode: false,
+    mainProdeId,
+    setMainProdeId,
   };
 
   if (isMockMode) {

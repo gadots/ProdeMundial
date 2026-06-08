@@ -11,7 +11,7 @@ import { useApp } from "@/components/app-context";
 import { PHASE_LABELS, PHASE_POINTS, Phase, Match, Member, MultiplierToken, TokenMultiplier, Prediction } from "@/lib/types";
 import { maxPointsForMatch } from "@/lib/scoring";
 import { formatMatchDay } from "@/lib/utils";
-import { Save, Lock, Check, Flame, HelpCircle, X } from "lucide-react";
+import { Save, Lock, Check, Flame, HelpCircle, X, ArrowLeft } from "lucide-react";
 import { getMatchPredictions } from "@/lib/supabase/queries";
 import { MOCK_MATCH_PREDICTIONS } from "@/lib/mock-data";
 
@@ -303,6 +303,7 @@ function MatchPredictionCard({
   prode,
   user,
   isMockMode,
+  forceDisabled,
   onTokenChange,
   onSave,
 }: {
@@ -313,6 +314,7 @@ function MatchPredictionCard({
   prode: ReturnType<typeof useApp>["prode"];
   user: ReturnType<typeof useApp>["user"];
   isMockMode: boolean;
+  forceDisabled?: boolean;
   onTokenChange: (matchId: string, prev: TokenMultiplier, next: TokenMultiplier) => void;
   onSave: (matchId: string, home: number, away: number, multiplier: TokenMultiplier, penaltyWinner?: "home" | "away") => Promise<{ error: string | null }>;
 }) {
@@ -372,7 +374,7 @@ function MatchPredictionCard({
   const teamsKnown = !!match.homeTeam.id && !!match.awayTeam.id;
   const isFinished = match.status === "FINISHED";
   const isLive = match.status === "LIVE";
-  const locked = isFinished || isLive || !teamsKnown;
+  const locked = isFinished || isLive || !teamsKnown || !!forceDisabled;
   const pts = PHASE_POINTS[match.phase];
   const isGroupPhase = match.phase === "GROUP";
   const isKnockout = !isGroupPhase;
@@ -515,7 +517,7 @@ function MatchPredictionCard({
           </div>
         )}
 
-        {locked && (
+        {locked && !forceDisabled && (
           <div className="mb-3 flex items-center justify-center gap-3 rounded-xl bg-white/5 py-2">
             <span className="text-xs text-white/40">Resultado:</span>
             <span className="text-sm font-black text-white">{match.homeScore} - {match.awayScore}</span>
@@ -707,7 +709,10 @@ function RulesModal({ onClose }: { onClose: () => void }) {
 }
 
 export default function PrediccionesPage() {
-  const { matches, predictions, tokens, setTokens, updateTokenUsage, streak, savePrediction, prode, user, isMockMode } = useApp();
+  const { matches, predictions, tokens, setTokens, updateTokenUsage, streak, savePrediction, prode, user, isMockMode, prodeId, mainProdeId, allProdes, switchProde } = useApp();
+
+  const isSecondaryProde = mainProdeId !== null && prodeId !== null && prodeId !== mainProdeId;
+  const mainProdeName = isSecondaryProde ? (allProdes.find((p) => p.id === mainProdeId)?.name ?? "prode principal") : undefined;
 
   const [activePhase, setActivePhase] = useState<Phase>("GROUP");
   const [filterView, setFilterView] = useState<FilterView>("all");
@@ -783,6 +788,22 @@ export default function PrediccionesPage() {
         subtitle={allPending.length > 0 ? `${allPending.length} sin predecir` : "Todo cargado ✓"}
         showProfile
       />
+
+      {/* Copycat: banner de prode secundario read-only */}
+      {isSecondaryProde && (
+        <div className="mx-3 mt-3 flex items-center gap-3 rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-2.5">
+          <p className="flex-1 text-xs text-white/60">
+            Sincronizado desde <span className="font-semibold text-amber-400">{mainProdeName}</span>. Editá ahí para actualizar.
+          </p>
+          <button
+            onClick={() => mainProdeId && switchProde(mainProdeId)}
+            className="flex shrink-0 items-center gap-1 text-xs font-semibold text-amber-400 hover:text-amber-300 transition-colors"
+          >
+            <ArrowLeft className="h-3 w-3" />
+            Ir al principal
+          </button>
+        </div>
+      )}
 
       {/* Filtros rápidos + tabs de fase */}
       <div className="sticky top-[57px] z-30 border-b border-white/10 bg-[#0a1628]/95 backdrop-blur-lg">
@@ -986,6 +1007,7 @@ export default function PrediccionesPage() {
                     prode={prode}
                     user={user}
                     isMockMode={isMockMode}
+                    forceDisabled={isSecondaryProde}
                     onTokenChange={handleTokenChange}
                     onSave={handleSave}
                   />
