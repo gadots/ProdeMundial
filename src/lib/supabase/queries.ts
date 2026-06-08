@@ -517,18 +517,31 @@ export async function joinProde(
 
 export async function getMyProfile(
   userId: string
-): Promise<{ displayName: string; avatarUrl?: string } | null> {
+): Promise<{ displayName: string; avatarUrl?: string; mainProdeId: string | null } | null> {
   const supabase = createClient();
   const { data } = await supabase
     .from("profiles")
-    .select("display_name, avatar_url")
+    .select("display_name, avatar_url, main_prode_id")
     .eq("id", userId)
     .single();
   if (!data) return null;
   return {
     displayName: data.display_name,
     avatarUrl: (data.avatar_url as string | null) ?? undefined,
+    mainProdeId: (data.main_prode_id as string | null) ?? null,
   };
+}
+
+export async function updateMainProdeId(
+  userId: string,
+  prodeId: string | null
+): Promise<{ error: string | null }> {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("profiles")
+    .update({ main_prode_id: prodeId })
+    .eq("id", userId);
+  return { error: error?.message ?? null };
 }
 
 // -------------------------------------------------------
