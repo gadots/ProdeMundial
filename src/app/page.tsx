@@ -46,17 +46,22 @@ export default function LandingPage() {
         setLoading(false);
         return;
       }
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: { data: { full_name: name.trim() } },
+        options: {
+          data: { full_name: name.trim() },
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
       });
       if (error) {
         setError(error.message);
         setLoading(false);
+      } else if (data.session) {
+        // Confirmación deshabilitada — sesión activa de inmediato
+        window.location.href = "/dashboard";
       } else {
-        // Si email confirmation está deshabilitado → redirige directo
-        // Si está habilitado → mostramos mensaje de confirmación
+        // Confirmación habilitada — usuario debe revisar su email
         setSuccess("¡Cuenta creada! Revisá tu email para confirmar.");
         setLoading(false);
       }
