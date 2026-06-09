@@ -7,13 +7,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useApp } from "@/components/app-context";
-import { LogOut, ChevronRight, User, CheckCircle2, AlertCircle, Loader2, KeyRound, Link2 } from "lucide-react";
+import { LogOut, ChevronRight, User, CheckCircle2, AlertCircle, Loader2, KeyRound, Link2, Download } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { updateDisplayName } from "@/lib/supabase/queries";
 import { signOut } from "./actions";
 
 export default function PerfilPage() {
-  const { user, prode, refreshUser, allProdes, mainProdeId, setMainProdeId } = useApp();
+  const { user, prode, refreshUser, allProdes, mainProdeId, setMainProdeId, matches, predictions, predictionsLoading } = useApp();
   const me = prode?.members.find((m) => m.id === user?.id) ?? prode?.members[0];
 
   // ── Edit name ──
@@ -100,6 +100,84 @@ export default function PerfilPage() {
   };
 
   const handleLogout = () => signOut();
+
+  // ── Export predictions ──
+  const [exportFormat, setExportFormat] = useState<"csv" | "json">("csv");
+
+  const PHASE_LABELS: Record<string, string> = {
+    GROUP: "Fase de grupos",
+    ROUND_OF_32: "Ronda de 32",
+    ROUND_OF_16: "Octavos de final",
+    QUARTER_FINAL: "Cuartos de final",
+    SEMI_FINAL: "Semifinal",
+    THIRD_PLACE: "Tercer puesto",
+    FINAL: "Final",
+  };
+
+  const STATUS_LABELS: Record<string, string> = {
+    SCHEDULED: "Programado",
+    LIVE: "En vivo",
+    FINISHED: "Finalizado",
+    POSTPONED: "Postergado",
+  };
+
+  const handleExport = () => {
+    const matchMap = new Map(matches.map((m) => [m.id, m]));
+    const rows = Object.values(predictions).map((pred) => {
+      const match = matchMap.get(pred.matchId);
+      return {
+        fecha: match?.date ?? "",
+        fase: PHASE_LABELS[match?.phase ?? ""] ?? (match?.phase ?? ""),
+        grupo: match?.group ?? "",
+        local: match?.homeTeam.name ?? "",
+        visitante: match?.awayTeam.name ?? "",
+        pred_local: pred.homeGoals,
+        pred_visitante: pred.awayGoals,
+        potenciador: `${pred.multiplier}x`,
+        ganador_penales: pred.penaltyWinner === "home" ? "local" : pred.penaltyWinner === "away" ? "visitante" : "",
+        resultado_local: match?.homeScore ?? "",
+        resultado_visitante: match?.awayScore ?? "",
+        estado: STATUS_LABELS[match?.status ?? ""] ?? (match?.status ?? ""),
+        puntos: pred.pointsEarned ?? "",
+      };
+    });
+
+    rows.sort((a, b) => a.fecha.localeCompare(b.fecha));
+
+    const safeName = (prode?.name ?? "prode")
+      .toLowerCase()
+      .replace(/\s+/g, "-")
+      .replace(/[^a-z0-9-]/g, "");
+    const date = new Date().toISOString().slice(0, 10);
+    const filename = `predicciones-${safeName}-${date}.${exportFormat}`;
+
+    let content: string;
+    let mimeType: string;
+
+    if (exportFormat === "json") {
+      content = JSON.stringify(rows, null, 2);
+      mimeType = "application/json";
+    } else {
+      const headers = Object.keys(rows[0] ?? {});
+      const escape = (v: unknown) => {
+        const s = String(v ?? "");
+        return s.includes(",") || s.includes('"') || s.includes("\n")
+          ? `"${s.replace(/"/g, '""')}"`
+          : s;
+      };
+      const lines = [headers.join(","), ...rows.map((r) => headers.map((h) => escape(r[h as keyof typeof r])).join(","))];
+      content = lines.join("\n");
+      mimeType = "text/csv;charset=utf-8;";
+    }
+
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div>
@@ -358,6 +436,49 @@ export default function PerfilPage() {
             </CardContent>
           </Card>
         )}
+
+        {/* Export predictions */}
+        <Card>
+          <CardContent className="p-4 space-y-3">
+            <p className="text-xs text-white/40 font-semibold uppercase tracking-wider">Exportar predicciones</p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setExportFormat("csv")}
+                className={`flex-1 rounded-xl py-2 text-sm font-semibold transition-all ${
+                  exportFormat === "csv"
+                    ? "bg-amber-500 text-black"
+                    : "bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/70"
+                }`}
+              >
+                CSV
+              </button>
+              <button
+                onClick={() => setExportFormat("json")}
+                className={`flex-1 rounded-xl py-2 text-sm font-semibold transition-all ${
+                  exportFormat === "json"
+                    ? "bg-amber-500 text-black"
+                    : "bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/70"
+                }`}
+              >
+                JSON
+              </button>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs text-white/30">
+                {predictionsLoading ? "Cargando…" : `${Object.keys(predictions).length} predicciones`}
+              </p>
+              <Button
+                onClick={handleExport}
+                disabled={predictionsLoading || Object.keys(predictions).length === 0}
+                size="sm"
+                className="gap-2"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Descargar
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Logout */}
         <Card>
