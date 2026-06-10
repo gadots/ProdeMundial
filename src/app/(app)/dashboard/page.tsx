@@ -377,6 +377,20 @@ export default function DashboardPage() {
             </div>
           </Link>
 
+          {/* Especiales — acceso rápido (mobile) */}
+          <Link href="/predicciones/especiales" className="block lg:hidden">
+            <div className="flex items-center justify-between rounded-xl px-4 py-3 bg-yellow-500/10 border border-yellow-500/15 hover:border-yellow-500/30 transition-colors">
+              <div className="flex items-center gap-2">
+                <span className="text-base">⭐</span>
+                <div>
+                  <p className="text-sm font-semibold text-white">Predicciones especiales</p>
+                  <p className="text-xs text-yellow-400/70">Campeón, goleador, finalistas…</p>
+                </div>
+              </div>
+              <ChevronRight className="h-4 w-4 text-yellow-400/50" />
+            </div>
+          </Link>
+
           {/* Accesos rápidos — solo desktop */}
           <div className="hidden lg:grid grid-cols-2 gap-3 pt-1">
             <Link href="/predicciones/especiales">
