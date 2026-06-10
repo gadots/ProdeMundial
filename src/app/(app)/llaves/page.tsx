@@ -26,13 +26,34 @@ const PHASE_MATCH_COUNT: Partial<Record<Phase, number>> = {
   FINAL: 1,
 };
 
-// R32 base slot height — doubles each round so all columns share the same total height (640px)
-const BASE_SLOT = 40;
+// R32 base slot height — doubles each round so all columns share the same total height (1280px)
+// R32=80 · R16=160 · QF=320 · SF=640 · Final=1280
+const BASE_SLOT = 80;
 
 function slotHeight(phase: Phase): number {
   const idx = MAIN_PHASES.indexOf(phase);
   return idx === -1 ? BASE_SLOT : BASE_SLOT * Math.pow(2, idx);
 }
+
+// Expected R32 matchups in date order (FIFA 2026 official schedule, sorted by kickoff time)
+const R32_BRACKET: { home: string; away: string }[] = [
+  { home: "2° Grupo A", away: "2° Grupo B" },  // Jun 28
+  { home: "1° Grupo E", away: "Mejor 3°"    },  // Jun 28
+  { home: "1° Grupo F", away: "2° Grupo C"  },  // Jun 29
+  { home: "1° Grupo C", away: "2° Grupo F"  },  // Jun 29
+  { home: "2° Grupo E", away: "2° Grupo I"  },  // Jun 30
+  { home: "1° Grupo I", away: "Mejor 3°"    },  // Jun 30
+  { home: "1° Grupo A", away: "Mejor 3°"    },  // Jun 30
+  { home: "1° Grupo L", away: "Mejor 3°"    },  // Jul 1
+  { home: "1° Grupo G", away: "Mejor 3°"    },  // Jul 1
+  { home: "1° Grupo D", away: "Mejor 3°"    },  // Jul 1
+  { home: "1° Grupo H", away: "2° Grupo J"  },  // Jul 2
+  { home: "2° Grupo K", away: "2° Grupo L"  },  // Jul 2
+  { home: "1° Grupo B", away: "Mejor 3°"    },  // Jul 2
+  { home: "2° Grupo D", away: "2° Grupo G"  },  // Jul 3
+  { home: "1° Grupo J", away: "2° Grupo H"  },  // Jul 3
+  { home: "1° Grupo K", away: "Mejor 3°"    },  // Jul 3
+];
 
 // ─── Team row (inside a card) ────────────────────────────────────────
 
@@ -41,21 +62,19 @@ function TeamRow({
   name,
   score,
   live,
-  small = false,
 }: {
   tla: string;
   name: string;
   score?: number;
   live?: boolean;
-  small?: boolean;
 }) {
   return (
-    <div className="flex items-center gap-1">
-      <Flag tla={tla} size={20} className={small ? "w-3.5 h-auto" : ""} />
-      <span className={`${small ? "text-[10px]" : "text-[11px]"} text-white/80 truncate flex-1 min-w-0`}>{name}</span>
+    <div className="flex items-center gap-1.5">
+      <Flag tla={tla} size={20} />
+      <span className="text-[11px] text-white/80 truncate flex-1 min-w-0">{name}</span>
       {score !== undefined && (
         <span
-          className={`${small ? "text-[10px]" : "text-[12px]"} font-bold tabular-nums shrink-0 ${
+          className={`text-[12px] font-bold tabular-nums shrink-0 ${
             live ? "text-amber-400" : "text-white"
           }`}
         >
@@ -72,28 +91,29 @@ function BracketCard({
   match,
   prediction,
   isFinal = false,
-  isSmall = false,
+  slotLabel,
 }: {
   match: Match | null;
   prediction?: Prediction;
   isFinal?: boolean;
-  isSmall?: boolean;
+  slotLabel?: { home: string; away: string };
 }) {
-  const cardW = isFinal ? "w-[144px]" : isSmall ? "w-[112px]" : "w-[132px]";
-  const px = isSmall ? "px-2 py-1" : "px-2.5 py-2";
+  const cardW = isFinal ? "w-[144px]" : "w-[132px]";
 
   if (!match) {
     return (
       <div
-        className={`${cardW} shrink-0 rounded-xl border border-white/8 bg-white/3 ${px}`}
+        className={`${cardW} shrink-0 rounded-xl border border-white/8 bg-white/3 px-2.5 py-2`}
       >
-        {[0, 1].map((i) => (
+        {[slotLabel?.home, slotLabel?.away].map((label, i) => (
           <div
             key={i}
-            className={`flex items-center gap-1 ${i > 0 ? (isSmall ? "mt-1" : "mt-1.5") : ""}`}
+            className={`flex items-center gap-1.5 ${i > 0 ? "mt-1.5" : ""}`}
           >
-            <div className={`${isSmall ? "h-2.5 w-3.5" : "h-3 w-4"} rounded-sm bg-white/10 shrink-0`} />
-            <span className={`${isSmall ? "text-[10px]" : "text-[11px]"} text-white/20`}>TBD</span>
+            <div className="h-3 w-4 rounded-sm bg-white/10 shrink-0" />
+            <span className="text-[10px] text-white/30 truncate">
+              {label ?? "TBD"}
+            </span>
           </div>
         ))}
       </div>
@@ -117,7 +137,7 @@ function BracketCard({
 
   return (
     <div
-      className={`${cardW} shrink-0 rounded-xl border ${px} ${
+      className={`${cardW} shrink-0 rounded-xl border px-2.5 py-2 ${
         live
           ? "border-amber-500/50 bg-amber-500/8 shadow-[0_0_8px_rgba(251,191,36,0.12)]"
           : isFinal
@@ -132,19 +152,16 @@ function BracketCard({
         name={match.homeTeam.shortName}
         score={homeScore}
         live={live}
-        small={isSmall}
       />
-      {!isSmall && <div className="my-0.5 h-px bg-white/8" />}
-      {isSmall && <div className="my-0.5" />}
+      <div className="my-0.5 h-px bg-white/8" />
       <TeamRow
         tla={match.awayTeam.flag}
         name={match.awayTeam.shortName}
         score={awayScore}
         live={live}
-        small={isSmall}
       />
 
-      {!isSmall && !showScore && (
+      {!showScore && (
         <p className="mt-0.5 text-[9px] text-white/25 text-center">
           {new Date(match.date).toLocaleDateString("es", {
             day: "2-digit",
@@ -153,7 +170,7 @@ function BracketCard({
         </p>
       )}
 
-      {!isSmall && prediction && (
+      {prediction && (
         <div className="mt-1 flex items-center gap-0.5 rounded-md bg-white/5 px-1.5 py-0.5">
           {multEmoji && <span className="text-[9px]">{multEmoji}</span>}
           <span className="text-[9px] text-white/40 truncate">
@@ -210,7 +227,6 @@ function BracketColumn({
 }) {
   const h = slotHeight(phase);
   const isFinal = phase === "FINAL";
-  const isSmall = phase === "ROUND_OF_32";
   const pairCount = Math.floor(slots.length / 2);
 
   return (
@@ -227,7 +243,7 @@ function BracketColumn({
               match={match}
               prediction={match ? predictions[match.id] : undefined}
               isFinal={isFinal}
-              isSmall={isSmall}
+              slotLabel={!match && phase === "ROUND_OF_32" ? R32_BRACKET[i] : undefined}
             />
           </div>
         ))}
@@ -271,7 +287,6 @@ export default function LlavesPage() {
   }, [matches]);
 
   const thirdPlaceMatch = phaseSlots["THIRD_PLACE"]?.[0] ?? null;
-  const hasSFMatches = (phaseSlots["SEMI_FINAL"] ?? []).some((m) => m !== null);
   const hasMainMatches = MAIN_PHASES.some((p) =>
     (phaseSlots[p] ?? []).some((m) => m !== null)
   );
@@ -292,14 +307,14 @@ export default function LlavesPage() {
           </div>
         )}
 
-        {/* ── Bracket completo (R32 → Final) ── */}
+        {/* ── Bracket completo (R32 → Final) + Tercer puesto ── */}
         <div className="overflow-x-auto pb-4">
           <div className="px-4 min-w-max">
             {/* Column headers */}
             <div className="flex items-center gap-0 mb-2">
               {MAIN_PHASES.map((phase, i) => {
                 const isLast = i === MAIN_PHASES.length - 1;
-                const cardW = phase === "FINAL" ? 144 : phase === "ROUND_OF_32" ? 112 : 132;
+                const cardW = phase === "FINAL" ? 144 : 132;
                 const connW = isLast ? 0 : 16;
                 return (
                   <div
@@ -328,23 +343,26 @@ export default function LlavesPage() {
                 );
               })}
             </div>
+
+            {/* Tercer puesto — dentro del scroll, alineado bajo la columna Final */}
+            <div className="flex mt-8">
+              {MAIN_PHASES.slice(0, -1).map((phase) => (
+                <div key={phase} style={{ width: 132 + 16 }} className="shrink-0" />
+              ))}
+              <div>
+                <p className="text-[10px] font-semibold text-white/35 uppercase tracking-wider mb-2">
+                  Tercer puesto
+                </p>
+                <BracketCard
+                  match={thirdPlaceMatch}
+                  prediction={
+                    thirdPlaceMatch ? predictions[thirdPlaceMatch.id] : undefined
+                  }
+                />
+              </div>
+            </div>
           </div>
         </div>
-
-        {/* ── Tercer puesto ── */}
-        {(thirdPlaceMatch !== null || hasSFMatches) && (
-          <div className="px-4">
-            <p className="text-[10px] font-semibold text-white/35 uppercase tracking-wider mb-2">
-              Tercer puesto
-            </p>
-            <BracketCard
-              match={thirdPlaceMatch}
-              prediction={
-                thirdPlaceMatch ? predictions[thirdPlaceMatch.id] : undefined
-              }
-            />
-          </div>
-        )}
       </div>
     </div>
   );
