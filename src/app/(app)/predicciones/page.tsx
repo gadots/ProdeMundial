@@ -890,13 +890,6 @@ export default function PrediccionesPage() {
                 );
               })}
             </div>
-            <Link
-              href="/grupos"
-              className="shrink-0 flex items-center justify-center h-8 px-2.5 rounded-xl bg-white/5 border border-white/10 text-white/40 hover:text-white/70 hover:border-white/20 transition-all text-[10px] font-semibold gap-1"
-              title="Posiciones por grupo"
-            >
-              📊 Grupos
-            </Link>
             <button
               onClick={() => setShowRules(true)}
               className="shrink-0 flex items-center justify-center h-8 w-8 rounded-xl bg-white/5 border border-white/10 text-white/40 hover:text-white/70 hover:border-white/20 transition-all"
