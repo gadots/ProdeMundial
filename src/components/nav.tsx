@@ -3,17 +3,17 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Home, List, Trophy, Settings, Bell, Star, X, LogOut, GitFork } from "lucide-react";
+import { Home, List, Trophy, Settings, Bell, Layers, X, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useApp } from "@/components/app-context";
 import { createClient } from "@/lib/supabase/client";
 
 const navItems = [
-  { href: "/dashboard",               icon: Home,     label: "Dashboard"    },
-  { href: "/predicciones",            icon: List,     label: "Predicciones" },
-  { href: "/tabla",                   icon: Trophy,   label: "Posiciones"   },
-  { href: "/llaves",                   icon: GitFork,  label: "Llaves"       },
-  { href: "/grupo",                   icon: Settings, label: "Config"       },
+  { href: "/dashboard",    icon: Home,     label: "Dashboard"    },
+  { href: "/predicciones", icon: List,     label: "Predicciones" },
+  { href: "/tabla",        icon: Trophy,   label: "Posiciones"   },
+  { href: "/cuadro",       icon: Layers,   label: "Cuadro"       },
+  { href: "/grupo",        icon: Settings, label: "Config"       },
 ];
 
 interface Notification {
