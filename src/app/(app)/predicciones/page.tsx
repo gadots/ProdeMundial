@@ -11,7 +11,7 @@ import { useApp } from "@/components/app-context";
 import { PHASE_LABELS, PHASE_POINTS, Phase, Match, Member, MultiplierToken, TokenMultiplier, Prediction } from "@/lib/types";
 import { maxPointsForMatch } from "@/lib/scoring";
 import { formatMatchDay } from "@/lib/utils";
-import { Save, Lock, Check, Flame, HelpCircle, X, ArrowLeft, Star } from "lucide-react";
+import { Save, Lock, Check, Flame, HelpCircle, X, ArrowLeft } from "lucide-react";
 import { getMatchPredictions } from "@/lib/supabase/queries";
 import { MOCK_MATCH_PREDICTIONS } from "@/lib/mock-data";
 
@@ -863,13 +863,6 @@ export default function PrediccionesPage() {
               </span>
             )}
           </button>
-          <Link
-            href="/predicciones/especiales"
-            className="ml-auto flex items-center gap-1 rounded-xl px-3 py-1.5 text-xs font-semibold text-white/30 hover:text-amber-400 transition-colors shrink-0"
-          >
-            <Star className="h-3 w-3" />
-            Especiales
-          </Link>
         </div>
 
         {/* Fila 2: tabs de fase (solo en vista "todas") */}

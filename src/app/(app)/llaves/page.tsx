@@ -269,7 +269,6 @@ export default function LlavesPage() {
   }, [matches]);
 
   const r32Slots = phaseSlots["ROUND_OF_32"] ?? [];
-  const r32HasMatches = r32Slots.some((m) => m !== null);
   const thirdPlaceMatch = phaseSlots["THIRD_PLACE"]?.[0] ?? null;
   const hasSFMatches = (phaseSlots["SEMI_FINAL"] ?? []).some((m) => m !== null);
   const hasMainMatches = MAIN_PHASES.some((p) =>
@@ -282,9 +281,18 @@ export default function LlavesPage() {
 
       <div className="pt-4 space-y-5">
 
+        {/* ── Nota cuando aún no hay partidos de eliminatoria ── */}
+        {!hasMainMatches && (
+          <div className="mx-4 flex items-center gap-2 rounded-xl border border-white/8 bg-white/3 px-4 py-2.5">
+            <span className="text-base">🏆</span>
+            <p className="text-xs text-white/40">
+              Las llaves se completan a medida que avanza el torneo
+            </p>
+          </div>
+        )}
+
         {/* ── Ronda de 32 (collapsible list) ── */}
-        {r32HasMatches && (
-          <div className="px-4">
+        <div className="px-4">
             <button
               onClick={() => setShowR32((v) => !v)}
               className="flex items-center gap-1.5 text-[11px] font-semibold text-white/40 hover:text-white/60 transition-colors mb-2 uppercase tracking-wider"
@@ -347,22 +355,10 @@ export default function LlavesPage() {
                 )}
               </div>
             )}
-          </div>
-        )}
-
-        {/* ── Empty state ── */}
-        {!hasMainMatches && (
-          <div className="flex flex-col items-center justify-center py-16 px-8 text-center gap-2">
-            <p className="text-3xl">🏆</p>
-            <p className="text-sm text-white/30">
-              Las llaves se habilitarán al iniciar la fase eliminatoria
-            </p>
-          </div>
-        )}
+        </div>
 
         {/* ── Main bracket tree ── */}
-        {hasMainMatches && (
-          <div className="overflow-x-auto pb-4">
+        <div className="overflow-x-auto pb-4">
             <div className="px-4 min-w-max">
               {/* Column headers */}
               <div className="flex items-center gap-0 mb-2">
@@ -398,8 +394,7 @@ export default function LlavesPage() {
                 })}
               </div>
             </div>
-          </div>
-        )}
+        </div>
 
         {/* ── Tercer puesto ── */}
         {(thirdPlaceMatch !== null || hasSFMatches) && (
