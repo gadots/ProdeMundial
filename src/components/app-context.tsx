@@ -158,6 +158,7 @@ function AppProviderSupabase({ children }: { children: React.ReactNode }) {
   const mainProdeIdRef = useRef<string | null>(null);
   const allProdesRef = useRef<Q.ProdeInfo[]>([]);
   const matchesRef = useRef<Match[]>([]);
+  const prodeIdRef = useRef<string | null>(null);
 
   // -------------------------------------------------------
   // Load prode-specific data (reusable for initial load + switchProde)
@@ -283,6 +284,23 @@ function AppProviderSupabase({ children }: { children: React.ReactNode }) {
   // Keep refs in sync with state (for use in callbacks)
   useEffect(() => { allProdesRef.current = allProdes; }, [allProdes]);
   useEffect(() => { matchesRef.current = matches; }, [matches]);
+  useEffect(() => { prodeIdRef.current = prodeId; }, [prodeId]);
+
+  // Refresh dynamic data when user returns to the tab (covers realtime gaps)
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      Q.getMatches().then(setMatches);
+      const pid = prodeIdRef.current;
+      if (pid) {
+        const info = allProdesRef.current.find((p) => p.id === pid);
+        if (info) Q.getProde(pid, info).then((p) => { if (p) setProde(p); });
+        Q.getPointsToday(pid).then(setPointsToday);
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, []);
 
   // -------------------------------------------------------
   // Load prode + user-specific data once user is available
@@ -338,6 +356,17 @@ function AppProviderSupabase({ children }: { children: React.ReactNode }) {
                 pointsEarned: (row.points_earned as number | null) ?? undefined,
               },
             }));
+
+            // When points are calculated (match finished), refresh match status and leaderboard
+            if (row.points_earned != null) {
+              Q.getMatches().then((fresh) => setMatches(fresh));
+              const pid = prodeIdRef.current;
+              if (pid) {
+                const info = allProdesRef.current.find((p) => p.id === pid);
+                if (info) Q.getProde(pid, info).then((p) => { if (p) setProde(p); });
+                Q.getPointsToday(pid).then((pts) => setPointsToday(pts));
+              }
+            }
           }
         )
         .subscribe();
