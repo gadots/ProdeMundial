@@ -294,12 +294,36 @@ function AppProviderSupabase({ children }: { children: React.ReactNode }) {
       const pid = prodeIdRef.current;
       if (pid) {
         const info = allProdesRef.current.find((p) => p.id === pid);
-        if (info) Q.getProde(pid, info).then((p) => { if (p) setProde(p); });
+        if (info) Q.getProde(pid, info).then((p) => { if (p?.members?.length) setProde(p); });
         Q.getPointsToday(pid).then(setPointsToday);
       }
     };
     document.addEventListener("visibilitychange", onVisible);
     return () => document.removeEventListener("visibilitychange", onVisible);
+  }, []);
+
+  // Poll every 30s during live/recent matches (reliable fallback when realtime isn't configured)
+  useEffect(() => {
+    const tick = () => {
+      const now = Date.now();
+      const hasActive = matchesRef.current.some(
+        (m) =>
+          m.status === "LIVE" ||
+          (m.status === "FINISHED" && now - new Date(m.date).getTime() < 2 * 60 * 60 * 1000)
+      );
+      if (!hasActive) return;
+
+      Q.getMatches().then(setMatches);
+      const pid = prodeIdRef.current;
+      if (pid) {
+        const info = allProdesRef.current.find((p) => p.id === pid);
+        if (info) Q.getProde(pid, info).then((p) => { if (p?.members?.length) setProde(p); });
+        Q.getPointsToday(pid).then(setPointsToday);
+      }
+    };
+
+    const id = setInterval(tick, 30_000);
+    return () => clearInterval(id);
   }, []);
 
   // -------------------------------------------------------
@@ -363,7 +387,7 @@ function AppProviderSupabase({ children }: { children: React.ReactNode }) {
               const pid = prodeIdRef.current;
               if (pid) {
                 const info = allProdesRef.current.find((p) => p.id === pid);
-                if (info) Q.getProde(pid, info).then((p) => { if (p) setProde(p); });
+                if (info) Q.getProde(pid, info).then((p) => { if (p?.members?.length) setProde(p); });
                 Q.getPointsToday(pid).then((pts) => setPointsToday(pts));
               }
             }
