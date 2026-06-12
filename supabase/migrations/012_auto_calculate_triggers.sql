@@ -57,23 +57,4 @@ create trigger tg_prediction_upserted
   after insert or update of home_goals, away_goals, multiplier on public.predictions
   for each row execute function public.tgfn_prediction_upserted();
 
--- ─── Backfill: fix existing FINISHED matches with uncalculated predictions ───
-
-do $$
-declare
-  v_id uuid;
-begin
-  for v_id in
-    select distinct m.id
-    from   public.matches m
-    where  m.status = 'FINISHED'
-      and  exists (
-             select 1 from public.predictions p
-             where  p.match_id = m.id
-               and  p.points_earned is null
-           )
-  loop
-    perform public.calculate_match_points(v_id);
-  end loop;
-end;
-$$;
+-- Backfill runs in migration 013 after calculate_match_points is fixed.
