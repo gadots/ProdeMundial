@@ -85,6 +85,15 @@ function MemberPredictionsPanel({
   );
 }
 
+function useNow(intervalMs = 60_000) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), intervalMs);
+    return () => clearInterval(id);
+  }, [intervalMs]);
+  return now;
+}
+
 function useCountdown(targetDate: string) {
   const [timeLeft, setTimeLeft] = useState("");
   useEffect(() => {
@@ -110,8 +119,12 @@ function MatchCard({ match }: { match: Match }) {
   const router = useRouter();
   const countdown = useCountdown(match.date);
   const myPrediction = predictions[match.id];
-  const isLive = match.status === "LIVE";
   const isFinished = match.status === "FINISHED";
+  const isLiveReal = match.status === "LIVE";
+  // inProgress: kickoff passed (countdown="En curso") but sync hasn't marked it FINISHED yet
+  const inProgress = !isFinished && (isLiveReal || countdown === "En curso");
+  const isLive = isLiveReal || inProgress;
+  const hasScore = match.homeScore !== undefined && match.awayScore !== undefined;
   const pts = PHASE_POINTS[match.phase];
   const canReveal = isLive || isFinished;
 
@@ -151,7 +164,8 @@ function MatchCard({ match }: { match: Match }) {
                 {PHASE_LABELS[match.phase]}
               </Badge>
             )}
-            {isLive && <Badge variant="live">🔴 EN VIVO</Badge>}
+            {isLiveReal && <Badge variant="live">🔴 EN VIVO</Badge>}
+            {!isLiveReal && inProgress && <Badge variant="live">🔴 EN CURSO</Badge>}
             {isFinished && <span className="text-xs text-white/30">Finalizado</span>}
             {!isLive && !isFinished && (
               <span className="flex items-center gap-1 text-xs text-white/40">
@@ -176,12 +190,14 @@ function MatchCard({ match }: { match: Match }) {
               <p className="text-sm font-bold text-white leading-tight truncate">{match.homeTeam.name}</p>
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
-              {isFinished || isLive ? (
+              {hasScore ? (
                 <>
                   <span className="text-xl font-black text-white w-5 text-center">{match.homeScore}</span>
                   <span className="text-white/30 font-bold">-</span>
                   <span className="text-xl font-black text-white w-5 text-center">{match.awayScore}</span>
                 </>
+              ) : inProgress ? (
+                <span className="text-sm text-white/30 font-medium px-1">vs</span>
               ) : (
                 <span className="text-sm text-white/30 font-medium px-1">
                   {new Date(match.date).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })} hs
@@ -253,10 +269,14 @@ function MatchCard({ match }: { match: Match }) {
 export default function DashboardPage() {
   const { user, prode, matches, tokens, streak } = useApp();
 
+  const now = useNow(60_000);
   const me = prode?.members.find((m) => m.id === user?.id) ?? prode?.members[0];
   const leader = prode?.members[0];
-  const upcoming = matches.filter((m) => m.status === "SCHEDULED").slice(0, 4);
-  const live = matches.filter((m) => m.status === "LIVE");
+  const kickedOff = (m: Match) => new Date(m.date).getTime() <= now;
+  // En vivo: arrancó y todavía no está finalizado (status LIVE real o SCHEDULED ya pasado de hora)
+  const live = matches.filter((m) => m.status !== "FINISHED" && (m.status === "LIVE" || kickedOff(m)));
+  // Próximos: agendados que todavía no arrancaron
+  const upcoming = matches.filter((m) => m.status === "SCHEDULED" && !kickedOff(m)).slice(0, 4);
   const gap = leader && me ? leader.totalPoints - me.totalPoints : 0;
 
   const tokensAvailable = tokens.filter((t) => !t.usedOnMatchId && !t.decayed);

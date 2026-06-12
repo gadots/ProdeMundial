@@ -374,7 +374,8 @@ function MatchPredictionCard({
   const teamsKnown = !!match.homeTeam.id && !!match.awayTeam.id;
   const isFinished = match.status === "FINISHED";
   const isLive = match.status === "LIVE";
-  const locked = isFinished || isLive || !teamsKnown || !!forceDisabled;
+  const hasKickedOff = new Date(match.date).getTime() <= Date.now();
+  const locked = isFinished || isLive || hasKickedOff || !teamsKnown || !!forceDisabled;
   const pts = PHASE_POINTS[match.phase];
   const isGroupPhase = match.phase === "GROUP";
   const isKnockout = !isGroupPhase;
@@ -446,7 +447,7 @@ function MatchPredictionCard({
             {teamsKnown && locked && (
               <span className="flex items-center gap-1 text-[10px] text-white/30">
                 <Lock className="h-3 w-3" />
-                {isLive ? "En vivo" : "Finalizado"}
+                {isFinished ? "Finalizado" : "En vivo"}
               </span>
             )}
           </div>
@@ -741,14 +742,18 @@ export default function PrediccionesPage() {
     matches.some((m) => m.phase === p && !!m.homeTeam.id && !!m.awayTeam.id)
   );
 
-  const allPending = matches.filter((m) => m.status === "SCHEDULED" && !predictions[m.id]);
+  // Only truly future matches (kickoff hasn't passed) count as pending
+  const allPending = matches.filter(
+    (m) => m.status === "SCHEDULED" && new Date(m.date).getTime() > MODULE_LOAD_TIME && !predictions[m.id]
+  );
   const allUrgent = allPending.filter((m) => {
     const diff = new Date(m.date).getTime() - MODULE_LOAD_TIME;
     return diff > 0 && diff < 86400000;
   });
 
+  // Historial includes FINISHED matches + matches that have kicked off (status may lag)
   const finishedMatches = [...matches]
-    .filter((m) => m.status === "FINISHED")
+    .filter((m) => m.status === "FINISHED" || new Date(m.date).getTime() <= MODULE_LOAD_TIME)
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   const historialCount = finishedMatches.filter((m) => predictions[m.id]).length;
