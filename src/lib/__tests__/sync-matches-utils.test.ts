@@ -112,16 +112,34 @@ describe("syncMatches", () => {
 
   // ── API non-200 ────────────────────────────────────────────────────────────
 
-  it("retorna error cuando football-data.org devuelve status no-200", async () => {
+  it("retorna error cuando football-data.org devuelve status no-200 (no reintentable)", async () => {
     process.env.FOOTBALL_DATA_API_KEY = "test-key";
+    // 403 (p. ej. API key inválida) no es reintentable → vuelve de inmediato.
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: false,
+      status: 403,
+      text: async () => "Forbidden",
+    }));
+    const result = await syncMatches();
+    expect(result.error).toMatch(/API error 403/);
+    expect(result.synced).toBe(0);
+  });
+
+  it("reintenta en 429 y devuelve error si persiste", async () => {
+    process.env.FOOTBALL_DATA_API_KEY = "test-key";
+    const fetchMock = vi.fn().mockResolvedValue({
       ok: false,
       status: 429,
       text: async () => "Too Many Requests",
-    }));
-    const result = await syncMatches();
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    vi.useFakeTimers();
+    const promise = syncMatches();
+    await vi.runAllTimersAsync();
+    const result = await promise;
+    vi.useRealTimers();
+    expect(fetchMock).toHaveBeenCalledTimes(4); // 1 inicial + 3 reintentos
     expect(result.error).toMatch(/API error 429/);
-    expect(result.synced).toBe(0);
   });
 
   // ── matches vacíos ─────────────────────────────────────────────────────────
@@ -208,11 +226,26 @@ describe("syncMatches", () => {
       .mockResolvedValueOnce({ data: 3, error: null })  // calculate_match_points
       .mockResolvedValueOnce({ data: 0, error: null }); // decay_group_tokens
 
-    const mockIs = vi.fn().mockResolvedValue({ data: [{ id: "uuid-101" }] });
-    const mockEq = vi.fn().mockReturnValue({ is: mockIs });
-    const mockSelect = vi.fn().mockReturnValue({ eq: mockEq });
     const mockUpsert = vi.fn().mockResolvedValue({ error: null });
-    const mockFrom = vi.fn().mockReturnValue({ upsert: mockUpsert, select: mockSelect });
+
+    // matches: select().eq().is() → un partido FINISHED sin calcular.
+    // También soporta .in() para la tercera query (no se usa en este caso).
+    const matchesChain: Record<string, unknown> = {
+      upsert: mockUpsert,
+    };
+    matchesChain.select = vi.fn(() => matchesChain);
+    matchesChain.eq = vi.fn(() => matchesChain);
+    matchesChain.is = vi.fn(() => Promise.resolve({ data: [{ id: "uuid-101" }] }));
+    matchesChain.in = vi.fn(() => Promise.resolve({ data: [{ id: "uuid-101" }] }));
+
+    // predictions: select().is() → sin predicciones pendientes (data vacía).
+    const predsChain: Record<string, unknown> = {};
+    predsChain.select = vi.fn(() => predsChain);
+    predsChain.is = vi.fn(() => Promise.resolve({ data: [] }));
+
+    const mockFrom = vi.fn((table: string) =>
+      table === "predictions" ? predsChain : matchesChain
+    );
 
     const { createAdminClient } = await import("@/lib/supabase/admin");
     vi.mocked(createAdminClient).mockReturnValue({
