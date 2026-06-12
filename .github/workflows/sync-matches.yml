@@ -5,10 +5,9 @@
 # Fuera de ese período corre una vez por día a las 6 UTC para
 # mantener los datos actualizados sin consumir demasiados minutos.
 #
-# Requisito: crear el secret CRON_SECRET en
-#   GitHub → Settings → Secrets and variables → Actions
-# con el mismo valor que la variable de entorno CRON_SECRET en Vercel.
-# También crear APP_URL con la URL de tu app (ej: https://elprode.vercel.app)
+# Setup requerido en GitHub (Settings → Secrets and variables → Actions):
+#   Secrets:   CRON_SECRET  → mismo valor que en Vercel env vars
+#   Variables: APP_URL      → ej: https://elprode.vercel.app
 
 name: Sync Matches
 
@@ -17,9 +16,8 @@ on:
     # Cada 5 minutos durante el Mundial (11 jun – 19 jul 2026)
     - cron: "*/5 * 11-30 6 *"
     - cron: "*/5 * 1-19 7 *"
-    # Diario el resto del año (mantiene datos sin desperdiciar minutos)
+    # Diario el resto del año
     - cron: "0 6 * * *"
-  # Permite dispararlo manualmente desde la UI de GitHub
   workflow_dispatch:
 
 jobs:
@@ -28,11 +26,25 @@ jobs:
     timeout-minutes: 2
     steps:
       - name: Trigger sync
+        env:
+          APP_URL: ${{ vars.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
-          APP_URL="${{ vars.APP_URL }}"
+          if [ -z "$APP_URL" ]; then
+            echo "ERROR: APP_URL variable not set in GitHub Actions."
+            echo "Go to: Settings → Secrets and variables → Actions → Variables → New repository variable"
+            echo "Name: APP_URL  Value: https://elprode.vercel.app"
+            exit 1
+          fi
+          if [ -z "$CRON_SECRET" ]; then
+            echo "ERROR: CRON_SECRET secret not set in GitHub Actions."
+            echo "Go to: Settings → Secrets and variables → Actions → Secrets → New repository secret"
+            echo "Name: CRON_SECRET  Value: (same value as CRON_SECRET in Vercel env vars)"
+            exit 1
+          fi
           BODY=$(curl -s -L -w "\n%{http_code}" \
             -X POST "${APP_URL%/}/api/admin/sync" \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
             -H "Content-Type: application/json")
           HTTP_CODE=$(echo "$BODY" | tail -1)
           RESPONSE=$(echo "$BODY" | sed '$d')
@@ -42,3 +54,4 @@ jobs:
             echo "Sync failed with status $HTTP_CODE"
             exit 1
           fi
+
