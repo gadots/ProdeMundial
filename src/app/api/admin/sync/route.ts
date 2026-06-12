@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
 import { syncMatches } from "@/lib/sync-matches";
 
-export async function POST() {
+async function handleSync() {
   // Accept either admin cookie (manual button) or CRON_SECRET Bearer token (GitHub Actions)
   const headerStore = await headers();
   const auth = headerStore.get("authorization");
@@ -29,3 +29,9 @@ export async function POST() {
     return NextResponse.json({ error: String(err) }, { status: 500 });
   }
 }
+
+// POST: admin panel button + GitHub Actions
+export const POST = handleSync;
+
+// GET: cron-job.org (free plan only supports GET)
+export const GET = handleSync;
