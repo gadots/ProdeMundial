@@ -114,18 +114,38 @@ export async function syncMatches(): Promise<SyncResult> {
     };
   }
 
-  // 4. Find FINISHED matches that haven't had points calculated yet
-  const { data: uncalculated } = await supabase
-    .from("matches")
-    .select("id")
-    .eq("status", "FINISHED")
-    .is("calculated_at", null);
+  // 4. Find FINISHED matches that still need point calculation.
+  //
+  // Two cases we need to handle:
+  //  a) calculated_at IS NULL  → function never ran for this match
+  //  b) calculated_at IS SET but predictions still have points_earned IS NULL
+  //     → function ran while no predictions existed yet (set calculated_at but
+  //       processed 0 rows); later-saved predictions were never picked up.
+  //
+  // Strategy: union of (a) + FINISHED matches that own an uncalculated prediction.
+
+  const [{ data: neverCalculated }, { data: uncalcPreds }] = await Promise.all([
+    supabase.from("matches").select("id").eq("status", "FINISHED").is("calculated_at", null),
+    supabase.from("predictions").select("match_id").is("points_earned", null),
+  ]);
+
+  const toCalculate = new Set<string>((neverCalculated ?? []).map((m: { id: string }) => m.id));
+
+  if (uncalcPreds && uncalcPreds.length > 0) {
+    const pendingMatchIds = [...new Set(uncalcPreds.map((p: { match_id: string }) => p.match_id))];
+    const { data: finishedPending } = await supabase
+      .from("matches")
+      .select("id")
+      .eq("status", "FINISHED")
+      .in("id", pendingMatchIds);
+    (finishedPending ?? []).forEach((m: { id: string }) => toCalculate.add(m.id));
+  }
 
   let calculated = 0;
-  for (const match of uncalculated ?? []) {
+  for (const matchId of toCalculate) {
     const { data: calcResult, error: calcError } = await supabase.rpc(
       "calculate_match_points",
-      { p_match_id: match.id }
+      { p_match_id: matchId }
     );
     if (!calcError && typeof calcResult === "number") {
       calculated += calcResult;
