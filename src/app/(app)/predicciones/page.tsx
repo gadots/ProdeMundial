@@ -374,7 +374,8 @@ function MatchPredictionCard({
   const teamsKnown = !!match.homeTeam.id && !!match.awayTeam.id;
   const isFinished = match.status === "FINISHED";
   const isLive = match.status === "LIVE";
-  const locked = isFinished || isLive || !teamsKnown || !!forceDisabled;
+  const hasKickedOff = new Date(match.date).getTime() <= Date.now();
+  const locked = isFinished || isLive || hasKickedOff || !teamsKnown || !!forceDisabled;
   const pts = PHASE_POINTS[match.phase];
   const isGroupPhase = match.phase === "GROUP";
   const isKnockout = !isGroupPhase;
@@ -446,7 +447,7 @@ function MatchPredictionCard({
             {teamsKnown && locked && (
               <span className="flex items-center gap-1 text-[10px] text-white/30">
                 <Lock className="h-3 w-3" />
-                {isLive ? "En vivo" : "Finalizado"}
+                {isFinished ? "Finalizado" : "En vivo"}
               </span>
             )}
           </div>

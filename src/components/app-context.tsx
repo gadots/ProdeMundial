@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
+import { createContext, useContext, useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import * as Q from "@/lib/supabase/queries";
 import { Prode, Match, Prediction, MultiplierToken, WildcardChallenge, WildcardAnswer, StreakInfo, TokenMultiplier } from "@/lib/types";
@@ -306,11 +306,11 @@ function AppProviderSupabase({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const tick = () => {
       const now = Date.now();
-      const hasActive = matchesRef.current.some(
-        (m) =>
-          m.status === "LIVE" ||
-          (m.status === "FINISHED" && now - new Date(m.date).getTime() < 2 * 60 * 60 * 1000)
-      );
+      const hasActive = matchesRef.current.some((m) => {
+        const kickoff = new Date(m.date).getTime();
+        if (m.status === "FINISHED") return now - kickoff < 2 * 60 * 60 * 1000; // recién terminó
+        return kickoff <= now + 5 * 60 * 1000; // arrancó (o está por arrancar) y no terminó
+      });
       if (!hasActive) return;
 
       Q.getMatches().then(setMatches);
@@ -617,7 +617,7 @@ function AppProviderSupabase({ children }: { children: React.ReactNode }) {
     [user]
   );
 
-  const value: AppContextValue = {
+  const value = useMemo<AppContextValue>(() => ({
     user,
     userLoading,
     prode,
@@ -645,7 +645,13 @@ function AppProviderSupabase({ children }: { children: React.ReactNode }) {
     isMockMode: false,
     mainProdeId,
     setMainProdeId,
-  };
+  }), [
+    user, userLoading, prode, prodeId, prodeLoading, allProdes, switchProde,
+    refreshAndSwitch, matches, matchesLoading, predictions, predictionsLoading,
+    savePrediction, tokens, tokensLoading, updateTokenUsage, streak, wildcards,
+    wildcardAnswers, wildcardsLoading, submitWildcardAnswer, pointsToday,
+    refreshUser, mainProdeId, setMainProdeId,
+  ]);
 
   if (isMockMode) {
     return <AppContext.Provider value={DEFAULT_VALUE}>{children}</AppContext.Provider>;
