@@ -44,20 +44,40 @@ export function mapStatus(status: string): string {
   return map[status] ?? "SCHEDULED";
 }
 
+/**
+ * Fetch the World Cup matches with retry + exponential backoff on transient
+ * failures (429 rate limit, 5xx). The free football-data.org tier rate-limits
+ * to ~10 req/min, so a 429 during a busy sync window is expected and should be
+ * retried rather than failing the whole run.
+ */
+async function fetchMatchesWithRetry(apiKey: string, maxAttempts = 4): Promise<Response> {
+  let lastRes: Response | null = null;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const res = await fetch(`${FOOTBALL_DATA_API}/competitions/${WORLD_CUP_ID}/matches`, {
+      headers: { "X-Auth-Token": apiKey },
+      cache: "no-store",
+    });
+    if (res.ok) return res;
+    lastRes = res;
+    // Only retry transient errors; 4xx other than 429 won't fix themselves.
+    if (res.status !== 429 && res.status < 500) return res;
+    if (attempt < maxAttempts) {
+      const delayMs = 2000 * 2 ** (attempt - 1); // 2s, 4s, 8s
+      console.warn(`football-data.org ${res.status}, retrying in ${delayMs}ms (attempt ${attempt}/${maxAttempts})`);
+      await new Promise((r) => setTimeout(r, delayMs));
+    }
+  }
+  return lastRes!;
+}
+
 export async function syncMatches(): Promise<SyncResult> {
   const apiKey = process.env.FOOTBALL_DATA_API_KEY;
   if (!apiKey) {
     return { synced: 0, calculated: 0, decayedTokens: 0, at: new Date().toISOString(), error: "FOOTBALL_DATA_API_KEY not set" };
   }
 
-  // 1. Fetch from football-data.org
-  const res = await fetch(
-    `${FOOTBALL_DATA_API}/competitions/${WORLD_CUP_ID}/matches`,
-    {
-      headers: { "X-Auth-Token": apiKey },
-      cache: "no-store",
-    }
-  );
+  // 1. Fetch from football-data.org (with retry/backoff on 429 + 5xx)
+  const res = await fetchMatchesWithRetry(apiKey);
 
   if (!res.ok) {
     const text = await res.text();
@@ -147,13 +167,20 @@ export async function syncMatches(): Promise<SyncResult> {
       "calculate_match_points",
       { p_match_id: matchId }
     );
-    if (!calcError && typeof calcResult === "number") {
+    if (calcError) {
+      // Log instead of silently swallowing — a stuck match here means players
+      // never earn points for that game, which is exactly the bug we hit before.
+      console.error(`calculate_match_points failed for match ${matchId}:`, calcError.message);
+    } else if (typeof calcResult === "number") {
       calculated += calcResult;
     }
   }
 
   // 5. Decay unused group-phase tokens if all GROUP matches are done
-  const { data: decayResult } = await supabase.rpc("decay_group_tokens");
+  const { data: decayResult, error: decayError } = await supabase.rpc("decay_group_tokens");
+  if (decayError) {
+    console.error("decay_group_tokens failed:", decayError.message);
+  }
   const decayedTokens = typeof decayResult === "number" ? decayResult : 0;
 
   return {

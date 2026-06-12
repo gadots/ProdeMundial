@@ -719,7 +719,7 @@ export default function PrediccionesPage() {
   const [filterView, setFilterView] = useState<FilterView>("all");
   const [showRules, setShowRules] = useState(false);
 
-  const handleTokenChange = useCallback((matchId: string, prev: TokenMultiplier, next: TokenMultiplier) => {
+  const handleTokenChange = useCallback(async (matchId: string, prev: TokenMultiplier, next: TokenMultiplier) => {
     setTokens(
       tokens.map((t) => {
         if (t.multiplier === prev && t.usedOnMatchId === matchId) return { ...t, usedOnMatchId: undefined };
@@ -727,9 +727,10 @@ export default function PrediccionesPage() {
         return t;
       })
     );
-    // Persist to DB: clear previous token, set new
-    if (prev !== 1) updateTokenUsage(prev, null);
-    if (next !== 1) updateTokenUsage(next, matchId);
+    // Persist to DB: clear previous token first, then set the new one. Awaiting
+    // in order avoids interleaved writes leaving the wrong token marked as used.
+    if (prev !== 1) await updateTokenUsage(prev, null);
+    if (next !== 1) await updateTokenUsage(next, matchId);
   }, [tokens, setTokens, updateTokenUsage]);
 
   const handleSave = useCallback(async (

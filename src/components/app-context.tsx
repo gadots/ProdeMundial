@@ -305,6 +305,10 @@ function AppProviderSupabase({ children }: { children: React.ReactNode }) {
   // Poll every 30s during live/recent matches (reliable fallback when realtime isn't configured)
   useEffect(() => {
     const tick = () => {
+      // Skip polling entirely when the tab is hidden — saves bandwidth and
+      // avoids a burst of queries (and re-renders) the moment the user returns,
+      // which the visibilitychange handler already covers.
+      if (document.visibilityState !== "visible") return;
       const now = Date.now();
       const hasActive = matchesRef.current.some((m) => {
         const kickoff = new Date(m.date).getTime();
