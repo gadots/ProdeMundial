@@ -9,6 +9,34 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useApp } from "@/components/app-context";
 import { PHASE_LABELS, PHASE_POINTS, Match, Prediction, Member } from "@/lib/types";
+
+function buildShareMessage(
+  match: Match,
+  memberPreds: Record<string, Prediction>,
+  members: Member[],
+): string {
+  const hasScore = match.homeScore !== undefined && match.awayScore !== undefined;
+  const isFinished = match.status === "FINISHED";
+  const header = `⚽ ${match.homeTeam.name} vs ${match.awayTeam.name}`;
+  const phase = match.group ? `Grupo ${match.group}` : PHASE_LABELS[match.phase];
+  const score = hasScore ? `${match.homeScore} - ${match.awayScore}` : isFinished ? "Finalizado" : "En curso";
+  const ranked = [...members].sort((a, b) => a.rank - b.rank);
+  const lines = [header, `${phase} · ${score}`, "", "Predicciones:"];
+  for (const member of ranked) {
+    const pred = memberPreds[member.id];
+    const medal = member.rank === 1 ? "🥇" : member.rank === 2 ? "🥈" : member.rank === 3 ? "🥉" : `#${member.rank}`;
+    const mult = pred?.multiplier === 5 ? " 💥5x" : pred?.multiplier === 3 ? " 🔥3x" : pred?.multiplier === 2 ? " ⚡2x" : "";
+    if (!pred) {
+      lines.push(`${medal} ${member.displayName}: sin pred.`);
+    } else {
+      const exact = isFinished && hasScore && pred.homeGoals === match.homeScore && pred.awayGoals === match.awayScore ? " ✓" : "";
+      const pts = isFinished ? ` +${pred.pointsEarned ?? 0} pts` : "";
+      lines.push(`${medal} ${member.displayName}: ${pred.homeGoals}-${pred.awayGoals}${mult}${exact}${pts}`);
+    }
+  }
+  lines.push("", "¿quién acertará? ¿quién hace papelón? 😅");
+  return lines.join("\n");
+}
 import { formatMatchDay } from "@/lib/utils";
 import { ChevronRight, Zap, TrendingUp, Clock } from "lucide-react";
 import { PwaInstallBanner } from "@/components/pwa-install-banner";
@@ -81,6 +109,19 @@ function MemberPredictionsPanel({
           </div>
         );
       })}
+      {!isFinished && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            const msg = buildShareMessage(match, memberPreds, members);
+            window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank", "noopener,noreferrer");
+          }}
+          className="mt-2 w-full flex items-center justify-center gap-1.5 text-xs text-green-400/60 hover:text-green-400 transition-colors py-1.5 border-t border-white/5"
+        >
+          <span>📲</span>
+          <span>Compartir por WhatsApp</span>
+        </button>
+      )}
     </div>
   );
 }
