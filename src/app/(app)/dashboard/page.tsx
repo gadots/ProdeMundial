@@ -109,17 +109,19 @@ function MemberPredictionsPanel({
           </div>
         );
       })}
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          const msg = buildShareMessage(match, memberPreds, members);
-          window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank", "noopener,noreferrer");
-        }}
-        className="mt-2 w-full flex items-center justify-center gap-1.5 text-xs text-green-400/60 hover:text-green-400 transition-colors py-1.5 border-t border-white/5"
-      >
-        <span>📲</span>
-        <span>Compartir por WhatsApp</span>
-      </button>
+      {!isFinished && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            const msg = buildShareMessage(match, memberPreds, members);
+            window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank", "noopener,noreferrer");
+          }}
+          className="mt-2 w-full flex items-center justify-center gap-1.5 text-xs text-green-400/60 hover:text-green-400 transition-colors py-1.5 border-t border-white/5"
+        >
+          <span>📲</span>
+          <span>Compartir por WhatsApp</span>
+        </button>
+      )}
     </div>
   );
 }
