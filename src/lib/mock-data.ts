@@ -379,6 +379,24 @@ export const MOCK_POINTS_TODAY: Record<string, number> = {
 };
 
 // -------------------------------------------------------
+// SPECIAL PREDICTIONS (all members, for prode tab)
+// -------------------------------------------------------
+export const MOCK_PRODE_SPECIAL_PREDICTIONS: Array<{
+  userId: string;
+  champion: string | null;
+  finalist: string | null;
+  third: string | null;
+  topScorer: string | null;
+  mostGoals: string | null;
+}> = [
+  { userId: "u1", champion: "ARG", finalist: "FRA", third: "BRA", topScorer: "Lionel Messi",  mostGoals: "ARG" },
+  { userId: "u2", champion: "ESP", finalist: "ARG", third: "FRA", topScorer: "Kylian Mbappé", mostGoals: "ESP" },
+  { userId: "u3", champion: "BRA", finalist: "ESP", third: "ARG", topScorer: "Vinicius Jr.",  mostGoals: "BRA" },
+  { userId: "u4", champion: "ARG", finalist: "BRA", third: "ESP", topScorer: "Lionel Messi",  mostGoals: "ARG" },
+  { userId: "u5", champion: "FRA", finalist: "ARG", third: "BRA", topScorer: "Kylian Mbappé", mostGoals: "FRA" },
+];
+
+// -------------------------------------------------------
 // MATCH PREDICTIONS (all members, for reveal post-partido)
 // -------------------------------------------------------
 export const MOCK_MATCH_PREDICTIONS: Record<string, Record<string, Prediction>> = {

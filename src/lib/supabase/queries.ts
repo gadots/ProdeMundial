@@ -445,6 +445,32 @@ export async function getSpecialPredictions(
   };
 }
 
+export type SpecialPredRow = {
+  userId: string;
+  champion: string | null;
+  finalist: string | null;
+  third: string | null;
+  topScorer: string | null;
+  mostGoals: string | null;
+};
+
+export async function getAllSpecialPredictions(prodeId: string): Promise<SpecialPredRow[]> {
+  const supabase = createClient();
+  const { data } = await supabase
+    .from("special_predictions")
+    .select("user_id, champion, finalist, third_place, top_scorer, most_goals_country")
+    .eq("prode_id", prodeId);
+  if (!data) return [];
+  return data.map((row) => ({
+    userId: row.user_id as string,
+    champion: row.champion as string | null,
+    finalist: row.finalist as string | null,
+    third: row.third_place as string | null,
+    topScorer: row.top_scorer as string | null,
+    mostGoals: row.most_goals_country as string | null,
+  }));
+}
+
 export async function upsertSpecialPredictions(
   userId: string,
   prodeId: string,

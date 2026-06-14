@@ -8,8 +8,17 @@ import { Button } from "@/components/ui/button";
 import { useApp } from "@/components/app-context";
 import * as Q from "@/lib/supabase/queries";
 import { ALL_WC_TEAMS } from "@/lib/mock-data";
+import { MOCK_PRODE_SPECIAL_PREDICTIONS } from "@/lib/mock-data";
 import { Flag } from "@/components/flag";
 import { Lock, Save, Check, Info, Search } from "lucide-react";
+import type { Member } from "@/lib/types";
+
+const IS_SUPABASE = !!(
+  process.env.NEXT_PUBLIC_SUPABASE_URL &&
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY &&
+  !process.env.NEXT_PUBLIC_SUPABASE_URL.includes("<your-project>") &&
+  process.env.NEXT_PUBLIC_SUPABASE_URL.startsWith("https://")
+);
 
 const SPECIAL_PREDICTIONS = [
   { id: "champion",   label: "Campeón del Mundo",         description: "¿Qué selección va a ganar el Mundial 2026?",              points: 60, emoji: "🏆", type: "team"   },
@@ -18,6 +27,16 @@ const SPECIAL_PREDICTIONS = [
   { id: "topScorer",  label: "Goleador del Torneo",       description: "¿Quién va a meter más goles en el Mundial?",             points: 40, emoji: "⚽", type: "player" },
   { id: "mostGoals",  label: "Selección con más goles",   description: "¿Qué país va a anotar más goles en total?",              points: 20, emoji: "🎯", type: "team"   },
 ] as const;
+
+type SpecialId = (typeof SPECIAL_PREDICTIONS)[number]["id"];
+
+const PRED_KEY: Record<SpecialId, keyof Q.SpecialPredRow> = {
+  champion:  "champion",
+  finalist:  "finalist",
+  third:     "third",
+  topScorer: "topScorer",
+  mostGoals: "mostGoals",
+};
 
 const LOCK_DATE = new Date("2026-06-11T18:00:00Z");
 const LOCKED = new Date() >= LOCK_DATE;
@@ -118,8 +137,6 @@ function PlayerInput({
         className="w-full h-10 rounded-xl border border-white/15 bg-white/5 px-4 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-40"
       />
       {showSuggestions && filtered.length > 0 && (
-        // onMouseDown with preventDefault keeps the input focused when clicking a suggestion,
-        // preventing onBlur from hiding the list before onClick fires on the button.
         <div
           className="absolute z-10 mt-1 w-full rounded-xl border border-white/10 bg-[#0f1f3d] shadow-xl overflow-hidden"
           onMouseDown={(e) => e.preventDefault()}
@@ -143,8 +160,89 @@ function PlayerInput({
   );
 }
 
+function ProdeSpecialsTable({ prodeId, members }: { prodeId: string; members: Member[] }) {
+  const { isMockMode } = useApp();
+  const [rows, setRows] = useState<Q.SpecialPredRow[] | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!IS_SUPABASE || isMockMode) {
+      setRows(MOCK_PRODE_SPECIAL_PREDICTIONS);
+      setLoading(false);
+      return;
+    }
+    Q.getAllSpecialPredictions(prodeId)
+      .then(setRows)
+      .catch(() => setRows([]))
+      .finally(() => setLoading(false));
+  }, [prodeId, isMockMode]);
+
+  if (loading) {
+    return <p className="text-center text-white/30 text-sm py-10">Cargando…</p>;
+  }
+
+  const byUser = Object.fromEntries((rows ?? []).map((r) => [r.userId, r]));
+  const ranked = [...members].sort((a, b) => a.rank - b.rank);
+  const getTeamShort = (id: string) => ALL_WC_TEAMS.find((t) => t.id === id)?.shortName ?? id;
+
+  return (
+    <div className="overflow-x-auto rounded-2xl border border-white/10 -mx-4 sm:mx-0">
+      <table className="w-full text-xs" style={{ minWidth: 440 }}>
+        <thead>
+          <tr className="border-b border-white/10 bg-white/5">
+            <th className="text-left pl-4 pr-3 py-2.5 text-white/40 font-medium sticky left-0 bg-[#0a1628] z-10" style={{ minWidth: 110 }}>
+              Jugador
+            </th>
+            {SPECIAL_PREDICTIONS.map((p) => (
+              <th key={p.id} className="text-center px-2 py-2.5 text-white/40 font-medium" style={{ minWidth: 64 }}>
+                <span className="text-base leading-none" title={p.label}>{p.emoji}</span>
+                <p className="text-[9px] text-white/25 mt-0.5 font-normal">{p.points} pts</p>
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-white/5">
+          {ranked.map((member) => {
+            const row = byUser[member.id];
+            return (
+              <tr key={member.id} className="hover:bg-white/[0.03] transition-colors">
+                <td className="pl-4 pr-3 py-2.5 sticky left-0 bg-[#0a1628] z-10">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-white/30 text-[10px]">#{member.rank}</span>
+                    <span className="font-medium text-white truncate" style={{ maxWidth: 72 }}>{member.displayName}</span>
+                  </div>
+                </td>
+                {SPECIAL_PREDICTIONS.map((pred) => {
+                  const val = row?.[PRED_KEY[pred.id]] ?? null;
+                  return (
+                    <td key={pred.id} className="px-2 py-2.5 text-center align-middle">
+                      {pred.type === "team" && val ? (
+                        <div className="flex flex-col items-center gap-0.5">
+                          <Flag tla={val} size={20} className="w-5 h-auto rounded-[1px]" />
+                          <span className="text-[9px] text-white/40 leading-none">{getTeamShort(val)}</span>
+                        </div>
+                      ) : pred.type === "player" && val ? (
+                        <span className="text-white/70 text-[10px] leading-tight block truncate" style={{ maxWidth: 60 }}>
+                          {val.split(" ").slice(-1)[0]}
+                        </span>
+                      ) : (
+                        <span className="text-white/15">—</span>
+                      )}
+                    </td>
+                  );
+                })}
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export default function EspecialesPage() {
-  const { user, prodeId } = useApp();
+  const { user, prodeId, prode, isMockMode } = useApp();
+  const [tab, setTab] = useState<"mine" | "prode">("mine");
   const [predictions, setPredictions] = useState<Record<string, string>>({
     champion: "ARG",
     topScorer: "Lionel Messi",
@@ -152,17 +250,15 @@ export default function EspecialesPage() {
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // Load existing special predictions from DB
   useEffect(() => {
     if (!user || !prodeId) return;
+    if (!IS_SUPABASE || isMockMode) return;
     Q.getSpecialPredictions(user.id, prodeId)
       .then((data) => {
         if (Object.keys(data).length > 0) setPredictions(data);
       })
-      .catch(() => {
-        // Supabase unavailable (mock mode / offline) — keep default predictions
-      });
-  }, [user?.id, prodeId]);
+      .catch(() => {});
+  }, [user?.id, prodeId, isMockMode]);
 
   const totalPotential = SPECIAL_PREDICTIONS.reduce((sum, p) => sum + p.points, 0);
   const filled = SPECIAL_PREDICTIONS.filter((p) => predictions[p.id]).length;
@@ -175,7 +271,7 @@ export default function EspecialesPage() {
         await Q.upsertSpecialPredictions(user.id, prodeId, predictions);
       }
     } catch {
-      // Supabase unavailable (mock mode / offline) — still confirm save in UI
+      // mock/offline
     }
     setSaving(false);
     setSaved(true);
@@ -191,95 +287,137 @@ export default function EspecialesPage() {
         showProfile
       />
 
+      {/* Tabs */}
       <div className="mx-auto max-w-lg px-4 pt-4">
-        {LOCKED ? (
-          <div className="flex items-center gap-3 rounded-2xl bg-red-500/10 border border-red-500/20 p-3 mb-4">
-            <Lock className="h-4 w-4 text-red-400 shrink-0" />
-            <p className="text-sm text-red-300">
-              Las predicciones especiales están cerradas — se bloquearon al inicio del torneo
-            </p>
-          </div>
-        ) : (
-          <div className="flex items-start gap-3 rounded-2xl bg-blue-500/10 border border-blue-500/20 p-3 mb-4">
-            <Info className="h-4 w-4 text-blue-400 shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm text-blue-300 font-semibold mb-0.5">Se cierran al inicio del torneo</p>
-              <p className="text-xs text-white/50">
-                El 11 de junio de 2026 a las 18:00 UTC ya no vas a poder cambiarlas. Los puntos se suman al finalizar el torneo.
-              </p>
+        <div className="flex rounded-xl bg-white/5 p-1 gap-1 mb-4">
+          {(["mine", "prode"] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`flex-1 rounded-lg py-2 text-xs font-semibold transition-all ${
+                tab === t
+                  ? "bg-amber-500 text-black shadow-sm"
+                  : "text-white/50 hover:text-white/80"
+              }`}
+            >
+              {t === "mine" ? "Tus predicciones" : "Predicciones del prode"}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {tab === "mine" && (
+        <>
+          <div className="mx-auto max-w-lg px-4">
+            {LOCKED ? (
+              <div className="flex items-center gap-3 rounded-2xl bg-red-500/10 border border-red-500/20 p-3 mb-4">
+                <Lock className="h-4 w-4 text-red-400 shrink-0" />
+                <p className="text-sm text-red-300">
+                  Las predicciones especiales están cerradas — se bloquearon al inicio del torneo
+                </p>
+              </div>
+            ) : (
+              <div className="flex items-start gap-3 rounded-2xl bg-blue-500/10 border border-blue-500/20 p-3 mb-4">
+                <Info className="h-4 w-4 text-blue-400 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm text-blue-300 font-semibold mb-0.5">Se cierran al inicio del torneo</p>
+                  <p className="text-xs text-white/50">
+                    El 11 de junio de 2026 a las 18:00 UTC ya no vas a poder cambiarlas. Los puntos se suman al finalizar el torneo.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs text-white/50">{filled} de {SPECIAL_PREDICTIONS.length} completadas</span>
+              <span className="text-xs text-amber-400 font-semibold">{totalPotential} pts disponibles</span>
+            </div>
+            <div className="h-1.5 rounded-full bg-white/10 mb-5">
+              <div
+                className="h-full rounded-full bg-amber-500 transition-all"
+                style={{ width: `${(filled / SPECIAL_PREDICTIONS.length) * 100}%` }}
+              />
             </div>
           </div>
-        )}
 
-        <div className="flex items-center justify-between mb-1">
-          <span className="text-xs text-white/50">{filled} de {SPECIAL_PREDICTIONS.length} completadas</span>
-          <span className="text-xs text-amber-400 font-semibold">{totalPotential} pts disponibles</span>
-        </div>
-        <div className="h-1.5 rounded-full bg-white/10 mb-5">
-          <div
-            className="h-full rounded-full bg-amber-500 transition-all"
-            style={{ width: `${(filled / SPECIAL_PREDICTIONS.length) * 100}%` }}
-          />
-        </div>
-      </div>
-
-      <div className="mx-auto max-w-lg space-y-3 px-4">
-        {SPECIAL_PREDICTIONS.map((pred) => (
-          <Card key={pred.id} className={LOCKED ? "opacity-70" : ""}>
-            <CardContent className="p-4">
-              <div className="flex items-start justify-between mb-1">
-                <div className="flex items-center gap-2">
-                  <span className="text-xl">{pred.emoji}</span>
-                  <div>
-                    <p className="text-sm font-bold text-white">{pred.label}</p>
-                    <p className="text-xs text-white/40">{pred.description}</p>
+          <div className="mx-auto max-w-lg space-y-3 px-4">
+            {SPECIAL_PREDICTIONS.map((pred) => (
+              <Card key={pred.id} className={LOCKED ? "opacity-70" : ""}>
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between mb-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">{pred.emoji}</span>
+                      <div>
+                        <p className="text-sm font-bold text-white">{pred.label}</p>
+                        <p className="text-xs text-white/40">{pred.description}</p>
+                      </div>
+                    </div>
+                    <Badge variant="default" className="shrink-0 ml-2">
+                      {pred.points} pts
+                    </Badge>
                   </div>
-                </div>
-                <Badge variant="default" className="shrink-0 ml-2">
-                  {pred.points} pts
-                </Badge>
-              </div>
 
-              {pred.type === "team" ? (
-                <TeamSelector
-                  value={predictions[pred.id] ?? ""}
-                  onChange={(v) => { setPredictions((p) => ({ ...p, [pred.id]: v })); setSaved(false); }}
-                  disabled={LOCKED}
-                />
-              ) : (
-                <PlayerInput
-                  value={predictions[pred.id] ?? ""}
-                  onChange={(v) => { setPredictions((p) => ({ ...p, [pred.id]: v })); setSaved(false); }}
-                  disabled={LOCKED}
-                />
-              )}
+                  {pred.type === "team" ? (
+                    <TeamSelector
+                      value={predictions[pred.id] ?? ""}
+                      onChange={(v) => { setPredictions((p) => ({ ...p, [pred.id]: v })); setSaved(false); }}
+                      disabled={LOCKED}
+                    />
+                  ) : (
+                    <PlayerInput
+                      value={predictions[pred.id] ?? ""}
+                      onChange={(v) => { setPredictions((p) => ({ ...p, [pred.id]: v })); setSaved(false); }}
+                      disabled={LOCKED}
+                    />
+                  )}
 
-              {predictions[pred.id] && (
-                <div className="mt-2.5 flex items-center gap-2">
-                  <Check className="h-3.5 w-3.5 text-amber-400 shrink-0" />
-                  <span className="text-xs text-amber-400">
-                    {pred.type === "team" ? getTeamName(predictions[pred.id]) : predictions[pred.id]}
-                  </span>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        ))}
+                  {predictions[pred.id] && (
+                    <div className="mt-2.5 flex items-center gap-2">
+                      <Check className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+                      <span className="text-xs text-amber-400">
+                        {pred.type === "team" ? getTeamName(predictions[pred.id]) : predictions[pred.id]}
+                      </span>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
 
-        {!LOCKED && (
-          <Button type="button" onClick={handleSave} className="w-full" disabled={filled === 0 || saving} size="lg">
-            {saving ? (
-              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-            ) : saved ? (
-              <><Check className="h-4 w-4" /> Predicciones guardadas</>
-            ) : (
-              <><Save className="h-4 w-4" /> Guardar predicciones especiales</>
+            {!LOCKED && (
+              <Button type="button" onClick={handleSave} className="w-full" disabled={filled === 0 || saving} size="lg">
+                {saving ? (
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                ) : saved ? (
+                  <><Check className="h-4 w-4" /> Predicciones guardadas</>
+                ) : (
+                  <><Save className="h-4 w-4" /> Guardar predicciones especiales</>
+                )}
+              </Button>
             )}
-          </Button>
-        )}
-      </div>
+          </div>
 
-      <div className="h-6" />
+          <div className="h-6" />
+        </>
+      )}
+
+      {tab === "prode" && (
+        <div className="mx-auto max-w-lg px-4">
+          <p className="text-xs text-white/40 mb-3">
+            Lo que predijo cada jugador del prode. Los puntos aparecen al finalizar el torneo.
+          </p>
+          {prode && prodeId ? (
+            <ProdeSpecialsTable prodeId={prodeId} members={prode.members} />
+          ) : (
+            <p className="text-center text-white/30 text-sm py-10">Sin prode activo</p>
+          )}
+          <div className="mt-3 flex flex-wrap gap-3 text-[10px] text-white/25">
+            {SPECIAL_PREDICTIONS.map((p) => (
+              <span key={p.id}>{p.emoji} {p.label}</span>
+            ))}
+          </div>
+          <div className="h-6" />
+        </div>
+      )}
     </div>
   );
 }
