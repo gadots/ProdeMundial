@@ -521,7 +521,11 @@ function MatchPredictionCard({
         {locked && !forceDisabled && (
           <div className="mb-3 flex items-center justify-center gap-3 rounded-xl bg-white/5 py-2">
             <span className="text-xs text-white/40">Resultado:</span>
-            <span className="text-sm font-black text-white">{match.homeScore} - {match.awayScore}</span>
+            {match.homeScore !== undefined && match.awayScore !== undefined ? (
+              <span className="text-sm font-black text-white">{match.homeScore} - {match.awayScore}</span>
+            ) : (
+              <span className="text-sm text-white/40 italic">En curso</span>
+            )}
             {existing?.pointsEarned !== undefined && (
               <Badge variant={existing.pointsEarned > 0 ? "default" : "secondary"}>
                 {existing.pointsEarned > 0 ? `+${existing.pointsEarned} pts` : "0 pts"}
