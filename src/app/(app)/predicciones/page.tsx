@@ -47,11 +47,7 @@ interface HistorialStats {
   sinPred: number;
 }
 
-function buildHistorialShareMessage(
-  stats: HistorialStats,
-  matches: Match[],
-  predictions: Record<string, Prediction>,
-): string {
+function buildHistorialShareMessage(stats: HistorialStats): string {
   const jugados = stats.exactos + stats.ganadores + stats.fallos;
   const lines = [
     "📊 Mi historial del Mundial 2026",
@@ -59,21 +55,6 @@ function buildHistorialShareMessage(
     `🏆 ${stats.totalPts} pts en ${jugados} predicciones`,
     `🎯 ${stats.exactos} exacto${stats.exactos !== 1 ? "s" : ""}  ✓ ${stats.ganadores} ganador  ✗ ${stats.fallos} fallo${stats.fallos !== 1 ? "s" : ""}`,
   ];
-
-  // Top 3 best predictions
-  const best = matches
-    .map((m) => ({ m, pred: predictions[m.id] }))
-    .filter(({ pred }) => pred?.pointsEarned && pred.pointsEarned > 0)
-    .sort((a, b) => (b.pred!.pointsEarned ?? 0) - (a.pred!.pointsEarned ?? 0))
-    .slice(0, 3);
-
-  if (best.length > 0) {
-    lines.push("", "Mis mejores:");
-    for (const { m, pred } of best) {
-      const token = pred!.multiplier === 5 ? "💥" : pred!.multiplier === 3 ? "🔥" : pred!.multiplier === 2 ? "⚡" : "";
-      lines.push(`  ${m.homeTeam.shortName} ${m.homeScore}-${m.awayScore} ${m.awayTeam.shortName} → ${pred!.homeGoals}-${pred!.awayGoals}${token} +${pred!.pointsEarned}pts`);
-    }
-  }
 
   lines.push("", "¿Cómo van ustedes? ⚽");
   return lines.join("\n");
@@ -109,7 +90,7 @@ function HistorialView({
       <div className="mx-4 mt-3 rounded-xl bg-white/5 border border-white/8 relative">
         <button
           onClick={() => {
-            const msg = buildHistorialShareMessage(stats, matches, predictions);
+            const msg = buildHistorialShareMessage(stats);
             window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank", "noopener,noreferrer");
           }}
           title="Compartir por WhatsApp"
