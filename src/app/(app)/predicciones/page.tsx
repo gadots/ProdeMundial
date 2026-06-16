@@ -47,6 +47,38 @@ interface HistorialStats {
   sinPred: number;
 }
 
+function buildHistorialShareMessage(
+  stats: HistorialStats,
+  matches: Match[],
+  predictions: Record<string, Prediction>,
+): string {
+  const jugados = stats.exactos + stats.ganadores + stats.fallos;
+  const lines = [
+    "📊 Mi historial del Mundial 2026",
+    "",
+    `🏆 ${stats.totalPts} pts en ${jugados} predicciones`,
+    `🎯 ${stats.exactos} exacto${stats.exactos !== 1 ? "s" : ""}  ✓ ${stats.ganadores} ganador  ✗ ${stats.fallos} fallo${stats.fallos !== 1 ? "s" : ""}`,
+  ];
+
+  // Top 3 best predictions
+  const best = matches
+    .map((m) => ({ m, pred: predictions[m.id] }))
+    .filter(({ pred }) => pred?.pointsEarned && pred.pointsEarned > 0)
+    .sort((a, b) => (b.pred!.pointsEarned ?? 0) - (a.pred!.pointsEarned ?? 0))
+    .slice(0, 3);
+
+  if (best.length > 0) {
+    lines.push("", "Mis mejores:");
+    for (const { m, pred } of best) {
+      const token = pred!.multiplier === 5 ? "💥" : pred!.multiplier === 3 ? "🔥" : pred!.multiplier === 2 ? "⚡" : "";
+      lines.push(`  ${m.homeTeam.shortName} ${m.homeScore}-${m.awayScore} ${m.awayTeam.shortName} → ${pred!.homeGoals}-${pred!.awayGoals}${token} +${pred!.pointsEarned}pts`);
+    }
+  }
+
+  lines.push("", "¿Cómo van ustedes? ⚽");
+  return lines.join("\n");
+}
+
 function HistorialView({
   matches,
   predictions,
@@ -74,26 +106,38 @@ function HistorialView({
   return (
     <div className="pb-6">
       {/* Resumen */}
-      <div className="mx-4 mt-3 grid grid-cols-5 gap-1.5 rounded-xl bg-white/5 p-3 border border-white/8">
-        <div className="text-center">
-          <p className="text-sm font-black text-amber-400">{stats.totalPts}</p>
-          <p className="text-[10px] text-white/40 mt-0.5">pts</p>
-        </div>
-        <div className="text-center">
-          <p className="text-sm font-black text-green-400">{stats.exactos}</p>
-          <p className="text-[10px] text-white/40 mt-0.5">exactos</p>
-        </div>
-        <div className="text-center">
-          <p className="text-sm font-black text-white">{stats.ganadores}</p>
-          <p className="text-[10px] text-white/40 mt-0.5">ganador</p>
-        </div>
-        <div className="text-center">
-          <p className="text-sm font-black text-white/50">{stats.fallos}</p>
-          <p className="text-[10px] text-white/40 mt-0.5">fallos</p>
-        </div>
-        <div className="text-center">
-          <p className="text-sm font-black text-white/30">{stats.sinPred}</p>
-          <p className="text-[10px] text-white/40 mt-0.5">sin pred</p>
+      <div className="mx-4 mt-3 rounded-xl bg-white/5 border border-white/8 relative">
+        <button
+          onClick={() => {
+            const msg = buildHistorialShareMessage(stats, matches, predictions);
+            window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank", "noopener,noreferrer");
+          }}
+          title="Compartir por WhatsApp"
+          className="absolute top-2.5 right-2.5 text-white/25 hover:text-green-400 transition-colors text-base leading-none"
+        >
+          📲
+        </button>
+        <div className="grid grid-cols-5 gap-1.5 p-3 pr-8">
+          <div className="text-center">
+            <p className="text-sm font-black text-amber-400">{stats.totalPts}</p>
+            <p className="text-[10px] text-white/40 mt-0.5">pts</p>
+          </div>
+          <div className="text-center">
+            <p className="text-sm font-black text-green-400">{stats.exactos}</p>
+            <p className="text-[10px] text-white/40 mt-0.5">exactos</p>
+          </div>
+          <div className="text-center">
+            <p className="text-sm font-black text-white">{stats.ganadores}</p>
+            <p className="text-[10px] text-white/40 mt-0.5">ganador</p>
+          </div>
+          <div className="text-center">
+            <p className="text-sm font-black text-white/50">{stats.fallos}</p>
+            <p className="text-[10px] text-white/40 mt-0.5">fallos</p>
+          </div>
+          <div className="text-center">
+            <p className="text-sm font-black text-white/30">{stats.sinPred}</p>
+            <p className="text-[10px] text-white/40 mt-0.5">sin pred</p>
+          </div>
         </div>
       </div>
 
