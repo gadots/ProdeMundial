@@ -11,7 +11,7 @@ import { useApp } from "@/components/app-context";
 import { PHASE_LABELS, PHASE_POINTS, Phase, Match, Member, MultiplierToken, TokenMultiplier, Prediction } from "@/lib/types";
 import { maxPointsForMatch } from "@/lib/scoring";
 import { formatMatchDay } from "@/lib/utils";
-import { Save, Lock, Check, Flame, HelpCircle, X, ArrowLeft } from "lucide-react";
+import { Save, Lock, Check, Flame, HelpCircle, X, ArrowLeft, Share2 } from "lucide-react";
 import { getMatchPredictions } from "@/lib/supabase/queries";
 import { MOCK_MATCH_PREDICTIONS } from "@/lib/mock-data";
 
@@ -47,6 +47,19 @@ interface HistorialStats {
   sinPred: number;
 }
 
+function buildHistorialShareMessage(stats: HistorialStats): string {
+  const jugados = stats.exactos + stats.ganadores + stats.fallos;
+  const lines = [
+    "📊 Mi historial del Mundial 2026",
+    "",
+    `🏆 ${stats.totalPts} pts en ${jugados} predicciones`,
+    `🎯 ${stats.exactos} exacto${stats.exactos !== 1 ? "s" : ""}  ✓ ${stats.ganadores} ganador  ✗ ${stats.fallos} fallo${stats.fallos !== 1 ? "s" : ""}`,
+  ];
+
+  lines.push("", "¿Cómo van ustedes? ⚽");
+  return lines.join("\n");
+}
+
 function HistorialView({
   matches,
   predictions,
@@ -74,26 +87,38 @@ function HistorialView({
   return (
     <div className="pb-6">
       {/* Resumen */}
-      <div className="mx-4 mt-3 grid grid-cols-5 gap-1.5 rounded-xl bg-white/5 p-3 border border-white/8">
-        <div className="text-center">
-          <p className="text-sm font-black text-amber-400">{stats.totalPts}</p>
-          <p className="text-[10px] text-white/40 mt-0.5">pts</p>
-        </div>
-        <div className="text-center">
-          <p className="text-sm font-black text-green-400">{stats.exactos}</p>
-          <p className="text-[10px] text-white/40 mt-0.5">exactos</p>
-        </div>
-        <div className="text-center">
-          <p className="text-sm font-black text-white">{stats.ganadores}</p>
-          <p className="text-[10px] text-white/40 mt-0.5">ganador</p>
-        </div>
-        <div className="text-center">
-          <p className="text-sm font-black text-white/50">{stats.fallos}</p>
-          <p className="text-[10px] text-white/40 mt-0.5">fallos</p>
-        </div>
-        <div className="text-center">
-          <p className="text-sm font-black text-white/30">{stats.sinPred}</p>
-          <p className="text-[10px] text-white/40 mt-0.5">sin pred</p>
+      <div className="mx-4 mt-3 rounded-xl bg-white/5 border border-white/8 relative">
+        <button
+          onClick={() => {
+            const msg = buildHistorialShareMessage(stats);
+            window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank", "noopener,noreferrer");
+          }}
+          title="Compartir por WhatsApp"
+          className="absolute top-2.5 right-2.5 text-white/25 hover:text-green-400 transition-colors"
+        >
+          <Share2 className="h-3.5 w-3.5" />
+        </button>
+        <div className="grid grid-cols-5 gap-1.5 p-3 pr-8">
+          <div className="text-center">
+            <p className="text-sm font-black text-amber-400">{stats.totalPts}</p>
+            <p className="text-[10px] text-white/40 mt-0.5">pts</p>
+          </div>
+          <div className="text-center">
+            <p className="text-sm font-black text-green-400">{stats.exactos}</p>
+            <p className="text-[10px] text-white/40 mt-0.5">exactos</p>
+          </div>
+          <div className="text-center">
+            <p className="text-sm font-black text-white">{stats.ganadores}</p>
+            <p className="text-[10px] text-white/40 mt-0.5">ganador</p>
+          </div>
+          <div className="text-center">
+            <p className="text-sm font-black text-white/50">{stats.fallos}</p>
+            <p className="text-[10px] text-white/40 mt-0.5">fallos</p>
+          </div>
+          <div className="text-center">
+            <p className="text-sm font-black text-white/30">{stats.sinPred}</p>
+            <p className="text-[10px] text-white/40 mt-0.5">sin pred</p>
+          </div>
         </div>
       </div>
 
@@ -521,7 +546,11 @@ function MatchPredictionCard({
         {locked && !forceDisabled && (
           <div className="mb-3 flex items-center justify-center gap-3 rounded-xl bg-white/5 py-2">
             <span className="text-xs text-white/40">Resultado:</span>
-            <span className="text-sm font-black text-white">{match.homeScore} - {match.awayScore}</span>
+            {match.homeScore !== undefined && match.awayScore !== undefined ? (
+              <span className="text-sm font-black text-white">{match.homeScore} - {match.awayScore}</span>
+            ) : (
+              <span className="text-sm text-white/40 italic">En curso</span>
+            )}
             {existing?.pointsEarned !== undefined && (
               <Badge variant={existing.pointsEarned > 0 ? "default" : "secondary"}>
                 {existing.pointsEarned > 0 ? `+${existing.pointsEarned} pts` : "0 pts"}
