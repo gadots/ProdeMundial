@@ -11,7 +11,7 @@ import { useApp } from "@/components/app-context";
 import { PHASE_LABELS, PHASE_POINTS, Phase, Match, Member, MultiplierToken, TokenMultiplier, Prediction } from "@/lib/types";
 import { maxPointsForMatch } from "@/lib/scoring";
 import { formatMatchDay } from "@/lib/utils";
-import { Save, Lock, Check, Flame, HelpCircle, X, ArrowLeft } from "lucide-react";
+import { Save, Lock, Check, Flame, HelpCircle, X, ArrowLeft, Share2 } from "lucide-react";
 import { getMatchPredictions } from "@/lib/supabase/queries";
 import { MOCK_MATCH_PREDICTIONS } from "@/lib/mock-data";
 
@@ -113,9 +113,9 @@ function HistorialView({
             window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank", "noopener,noreferrer");
           }}
           title="Compartir por WhatsApp"
-          className="absolute top-2.5 right-2.5 text-white/25 hover:text-green-400 transition-colors text-base leading-none"
+          className="absolute top-2.5 right-2.5 text-white/25 hover:text-green-400 transition-colors"
         >
-          📲
+          <Share2 className="h-3.5 w-3.5" />
         </button>
         <div className="grid grid-cols-5 gap-1.5 p-3 pr-8">
           <div className="text-center">
