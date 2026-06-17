@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
 import { TopBar } from "@/components/nav";
 import { Flag } from "@/components/flag";
@@ -748,24 +748,32 @@ export default function PrediccionesPage() {
   const [filterView, setFilterView] = useState<FilterView>("all");
   const [showRules, setShowRules] = useState(false);
 
-  // Scroll to today's matches when entering "Todas" tab
+  // Scroll to today's matches when entering "Todas" tab.
+  // scrolledForTab tracks the last filterView we scrolled for, so we don't
+  // re-scroll on every prediction save (which re-renders but doesn't change tab).
+  const scrolledForTab = useRef<string | null>(null);
+
   useEffect(() => {
-    if (filterView !== "all") return;
-    const raf = requestAnimationFrame(() => {
+    if (filterView !== "all") { scrolledForTab.current = null; return; }
+    if (scrolledForTab.current === "all") return;
+    if (matches.length === 0) return; // wait until data is loaded
+
+    scrolledForTab.current = "all";
+
+    const timer = setTimeout(() => {
       const todayStart = new Date().setHours(0, 0, 0, 0);
-      // Find first day group that is today or in the future
       const els = document.querySelectorAll<HTMLElement>("[data-dayts]");
       for (const el of els) {
-        const ts = Number(el.dataset.dayts);
-        if (ts >= todayStart) {
+        if (Number(el.dataset.dayts) >= todayStart) {
           const y = el.getBoundingClientRect().top + window.scrollY - 115;
           window.scrollTo({ top: Math.max(0, y), behavior: "smooth" });
           break;
         }
       }
-    });
-    return () => cancelAnimationFrame(raf);
-  }, [filterView]);
+    }, 80); // small delay so React finishes painting
+
+    return () => clearTimeout(timer);
+  }, [filterView, matches.length]); // re-check when matches load
 
   const handleTokenChange = useCallback(async (matchId: string, prev: TokenMultiplier, next: TokenMultiplier) => {
     setTokens(
