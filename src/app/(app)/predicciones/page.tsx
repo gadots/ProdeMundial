@@ -748,6 +748,25 @@ export default function PrediccionesPage() {
   const [filterView, setFilterView] = useState<FilterView>("all");
   const [showRules, setShowRules] = useState(false);
 
+  // Scroll to today's matches when entering "Todas" tab
+  useEffect(() => {
+    if (filterView !== "all") return;
+    const raf = requestAnimationFrame(() => {
+      const todayStart = new Date().setHours(0, 0, 0, 0);
+      // Find first day group that is today or in the future
+      const els = document.querySelectorAll<HTMLElement>("[data-dayts]");
+      for (const el of els) {
+        const ts = Number(el.dataset.dayts);
+        if (ts >= todayStart) {
+          const y = el.getBoundingClientRect().top + window.scrollY - 115;
+          window.scrollTo({ top: Math.max(0, y), behavior: "smooth" });
+          break;
+        }
+      }
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [filterView]);
+
   const handleTokenChange = useCallback(async (matchId: string, prev: TokenMultiplier, next: TokenMultiplier) => {
     setTokens(
       tokens.map((t) => {
@@ -1020,7 +1039,7 @@ export default function PrediccionesPage() {
               }
             }
             return groups.map(({ dayKey, label, matches: dayMatches }) => (
-              <div key={dayKey}>
+              <div key={dayKey} data-dayts={new Date(dayMatches[0].date).setHours(0, 0, 0, 0)}>
                 <div className="flex items-center gap-3 px-4 pt-4 pb-1">
                   <span className="text-[11px] font-semibold text-white/35 uppercase tracking-wider">{label}</span>
                   <div className="flex-1 h-px bg-white/8" />
