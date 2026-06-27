@@ -1,4 +1,4 @@
-const CACHE = "prode-v4";
+const CACHE = "prode-v5";
 const PRECACHE = [
   "/",
   "/dashboard",
@@ -41,6 +41,10 @@ self.addEventListener("fetch", (e) => {
   // (Supabase REST/realtime calls are cross-origin and must always hit the network)
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
+
+  // Never cache same-origin API responses — they must always hit the network.
+  // (Cache-first here served stale/old-shape JSON and crashed the client.)
+  if (url.pathname.startsWith("/api/")) return;
 
   // Navigation: network-first with 3s timeout, then fall back to cache
   if (req.mode === "navigate") {
