@@ -795,8 +795,12 @@ export default function PrediccionesPage() {
     return savePrediction({ matchId, homeGoals: home, awayGoals: away, multiplier, penaltyWinner });
   }, [savePrediction]);
 
+  // Mostramos el tab de toda fase que tenga AL MENOS un partido, aunque los
+  // equipos estén por definir (llaves). Así las pestañas de knockout están
+  // siempre a la vista y, en cuanto se definen los cruces, ya quedan listas
+  // para cargar el resultado.
   const availablePhases = PHASE_ORDER.filter((p) =>
-    matches.some((m) => m.phase === p && !!m.homeTeam.id && !!m.awayTeam.id)
+    matches.some((m) => m.phase === p)
   );
 
   // Only truly future matches (kickoff hasn't passed) count as pending

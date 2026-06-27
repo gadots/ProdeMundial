@@ -9,6 +9,7 @@ interface ApiMatch {
   home: unknown;
   away: unknown;
   utcDate: unknown;
+  stage: unknown;
   status: unknown;
   home_score: number | null;
   away_score: number | null;
@@ -115,6 +116,7 @@ export function SyncMatchesButton() {
                 {debugData.recent_matches.map((m, i) => (
                   <div key={i} className={`flex gap-2 py-0.5 ${m.status === "FINISHED" ? "text-green-300" : m.status === "IN_PLAY" ? "text-yellow-300" : "text-white/40"}`}>
                     <span className="shrink-0">{(m.status as string).slice(0, 8).padEnd(8)}</span>
+                    <span className="shrink-0 text-white/30 w-24 truncate" title={String(m.stage ?? "")}>{String(m.stage ?? "—")}</span>
                     <span className="flex-1 truncate">{m.home as string} vs {m.away as string}</span>
                     <span className="shrink-0">
                       {m.home_score !== null ? `${m.home_score}-${m.away_score}` : "—"}

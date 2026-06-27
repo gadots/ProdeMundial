@@ -20,16 +20,30 @@ export interface SyncResult {
 }
 
 export function mapStage(stage: string): string {
+  // football-data.org v4 usa la convención LAST_16/LAST_32 para las llaves.
+  // El Mundial 2026 (48 equipos) arranca con Ronda de 32 = LAST_32. Soportamos
+  // ambas convenciones para no depender de cómo lo nombre la API.
   const map: Record<string, string> = {
     GROUP_STAGE: "GROUP",
+    LAST_32: "ROUND_OF_32",
     ROUND_OF_32: "ROUND_OF_32",
     LAST_16: "ROUND_OF_16",
+    ROUND_OF_16: "ROUND_OF_16",
     QUARTER_FINALS: "QUARTER_FINAL",
+    QUARTER_FINAL: "QUARTER_FINAL",
     SEMI_FINALS: "SEMI_FINAL",
+    SEMI_FINAL: "SEMI_FINAL",
     THIRD_PLACE: "THIRD_PLACE",
     FINAL: "FINAL",
   };
-  return map[stage] ?? "GROUP";
+  const mapped = map[stage];
+  if (!mapped) {
+    // No tragar stages desconocidos en silencio: si la API introduce un nombre
+    // nuevo, queremos verlo en logs en vez de mandarlo a GROUP sin aviso.
+    console.warn(`mapStage: stage desconocido "${stage}" → fallback GROUP`);
+    return "GROUP";
+  }
+  return mapped;
 }
 
 export function mapStatus(status: string): string {
@@ -121,6 +135,17 @@ export async function syncMatches(): Promise<SyncResult> {
     };
   });
 
+  // 2b. Snapshot del estado actual de estos partidos ANTES del upsert, para
+  // detectar correcciones de marcador en partidos que ya estaban FINISHED.
+  const apiIds = rows.map((r) => r.api_id);
+  const { data: prevRows } = await supabase
+    .from("matches")
+    .select("api_id, status, home_score, away_score")
+    .in("api_id", apiIds);
+  const prevMap = new Map(
+    (prevRows ?? []).map((p: { api_id: string; status: string; home_score: number | null; away_score: number | null }) => [p.api_id, p])
+  );
+
   // 3. Upsert matches
   const { error: upsertError } = await supabase
     .from("matches")
@@ -134,45 +159,66 @@ export async function syncMatches(): Promise<SyncResult> {
     };
   }
 
-  // 4. Find FINISHED matches that still need point calculation.
+  // 4. Calculate points.
   //
-  // Two cases we need to handle:
-  //  a) calculated_at IS NULL  → function never ran for this match
-  //  b) calculated_at IS SET but predictions still have points_earned IS NULL
-  //     → function ran while no predictions existed yet (set calculated_at but
-  //       processed 0 rows); later-saved predictions were never picked up.
-  //
-  // Strategy: union of (a) + FINISHED matches that own an uncalculated prediction.
+  // Two paths:
+  //  - Correction: an already-FINISHED match changed its score. The forward
+  //    calculator can't fix this (it skips predictions that already have
+  //    points_earned and only adds to scores). We run a full reversible replay
+  //    once, which also recomputes streaks in chronological order.
+  //  - Normal: brand-new finishes / late-saved predictions → forward calc per
+  //    match (cheap), same as before.
 
-  const [{ data: neverCalculated }, { data: uncalcPreds }] = await Promise.all([
-    supabase.from("matches").select("id").eq("status", "FINISHED").is("calculated_at", null),
-    supabase.from("predictions").select("match_id").is("points_earned", null),
-  ]);
-
-  const toCalculate = new Set<string>((neverCalculated ?? []).map((m: { id: string }) => m.id));
-
-  if (uncalcPreds && uncalcPreds.length > 0) {
-    const pendingMatchIds = [...new Set(uncalcPreds.map((p: { match_id: string }) => p.match_id))];
-    const { data: finishedPending } = await supabase
-      .from("matches")
-      .select("id")
-      .eq("status", "FINISHED")
-      .in("id", pendingMatchIds);
-    (finishedPending ?? []).forEach((m: { id: string }) => toCalculate.add(m.id));
-  }
+  const correction = rows.some((r) => {
+    const before = prevMap.get(r.api_id);
+    return (
+      !!before &&
+      before.status === "FINISHED" &&
+      (before.home_score !== r.home_score || before.away_score !== r.away_score)
+    );
+  });
 
   let calculated = 0;
-  for (const matchId of toCalculate) {
-    const { data: calcResult, error: calcError } = await supabase.rpc(
-      "calculate_match_points",
-      { p_match_id: matchId }
-    );
-    if (calcError) {
-      // Log instead of silently swallowing — a stuck match here means players
-      // never earn points for that game, which is exactly the bug we hit before.
-      console.error(`calculate_match_points failed for match ${matchId}:`, calcError.message);
-    } else if (typeof calcResult === "number") {
-      calculated += calcResult;
+
+  if (correction) {
+    const { data: recalcResult, error: recalcError } = await supabase.rpc("recalculate_all_points");
+    if (recalcError) {
+      console.error("recalculate_all_points failed:", recalcError.message);
+    } else if (typeof recalcResult === "number") {
+      calculated = recalcResult;
+    }
+  } else {
+    // Forward path: union of (a) FINISHED with calculated_at IS NULL +
+    // (b) FINISHED matches that own an uncalculated prediction.
+    const [{ data: neverCalculated }, { data: uncalcPreds }] = await Promise.all([
+      supabase.from("matches").select("id").eq("status", "FINISHED").is("calculated_at", null),
+      supabase.from("predictions").select("match_id").is("points_earned", null),
+    ]);
+
+    const toCalculate = new Set<string>((neverCalculated ?? []).map((m: { id: string }) => m.id));
+
+    if (uncalcPreds && uncalcPreds.length > 0) {
+      const pendingMatchIds = [...new Set(uncalcPreds.map((p: { match_id: string }) => p.match_id))];
+      const { data: finishedPending } = await supabase
+        .from("matches")
+        .select("id")
+        .eq("status", "FINISHED")
+        .in("id", pendingMatchIds);
+      (finishedPending ?? []).forEach((m: { id: string }) => toCalculate.add(m.id));
+    }
+
+    for (const matchId of toCalculate) {
+      const { data: calcResult, error: calcError } = await supabase.rpc(
+        "calculate_match_points",
+        { p_match_id: matchId }
+      );
+      if (calcError) {
+        // Log instead of silently swallowing — a stuck match here means players
+        // never earn points for that game, which is exactly the bug we hit before.
+        console.error(`calculate_match_points failed for match ${matchId}:`, calcError.message);
+      } else if (typeof calcResult === "number") {
+        calculated += calcResult;
+      }
     }
   }
 
