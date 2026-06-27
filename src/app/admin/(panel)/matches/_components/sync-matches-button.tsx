@@ -108,7 +108,7 @@ export function SyncMatchesButton() {
               {/* Total + conteo por estado */}
               <div className="flex flex-wrap gap-2">
                 <span className="text-white/40">Total: <span className="text-white">{debugData.total_matches}</span></span>
-                {Object.entries(debugData.status_summary).map(([s, n]) => (
+                {Object.entries(debugData.status_summary ?? {}).map(([s, n]) => (
                   <span key={s} className={`${s === "FINISHED" ? "text-green-400" : s === "IN_PLAY" ? "text-yellow-400" : "text-white/40"}`}>
                     {s}: <span className="text-white">{n}</span>
                   </span>
@@ -118,7 +118,7 @@ export function SyncMatchesButton() {
               {/* Conteo por fase cruda de la API — clave para ver si llegan los 16 de LAST_32 */}
               <div className="flex flex-wrap gap-2 border-t border-white/5 pt-2">
                 <span className="text-white/30 text-[10px]">Por fase:</span>
-                {Object.entries(debugData.by_stage).map(([s, n]) => (
+                {Object.entries(debugData.by_stage ?? {}).map(([s, n]) => (
                   <span key={s} className="text-white/50">
                     {s}: <span className="text-white">{n}</span>
                   </span>
@@ -127,12 +127,12 @@ export function SyncMatchesButton() {
 
               {/* Todos los cruces de llaves (no GROUP_STAGE) */}
               <div className="border-t border-white/5 pt-2">
-                <p className="text-white/30 text-[10px] mb-1">Llaves ({debugData.knockout_matches.length}):</p>
+                <p className="text-white/30 text-[10px] mb-1">Llaves ({(debugData.knockout_matches ?? []).length}):</p>
                 <div className="space-y-1 max-h-72 overflow-y-auto">
-                  {debugData.knockout_matches.length === 0 && (
+                  {(debugData.knockout_matches ?? []).length === 0 && (
                     <p className="text-white/30">La API no devolvió ningún partido de llaves.</p>
                   )}
-                  {debugData.knockout_matches.map((m, i) => (
+                  {(debugData.knockout_matches ?? []).map((m, i) => (
                     <div key={i} className={`flex gap-2 py-0.5 ${m.status === "FINISHED" ? "text-green-300" : m.status === "IN_PLAY" ? "text-yellow-300" : "text-white/40"}`}>
                       <span className="shrink-0 text-white/30 w-20 truncate" title={String(m.stage ?? "")}>{String(m.stage ?? "—")}</span>
                       <span className="flex-1 truncate">{(m.home as string) ?? "TBD"} vs {(m.away as string) ?? "TBD"}</span>
