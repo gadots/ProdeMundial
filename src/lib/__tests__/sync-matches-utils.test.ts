@@ -167,6 +167,60 @@ describe("syncMatches", () => {
     expect(result.error).toBeUndefined();
   });
 
+  // ── fallback a request sin parámetros cuando el rango da 400 ─────────────────
+
+  it("cae al request sin parámetros si football-data rechaza el rango con 400", async () => {
+    process.env.FOOTBALL_DATA_API_KEY = "test-key";
+
+    // 1er fetch (con dateFrom/dateTo) → 400; 2º fetch (pelado) → 200 con un partido.
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: false, status: 400, text: async () => "Bad date range" })
+      .mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          matches: [{
+            id: 201, stage: "GROUP_STAGE", status: "SCHEDULED",
+            utcDate: "2026-06-13T18:00:00Z",
+            homeTeam: { name: "C", tla: "CCC" },
+            awayTeam: { name: "D", tla: "DDD" },
+            score: { fullTime: { home: null, away: null } },
+            group: "Group B",
+          }],
+        }),
+      });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const matchesChain: Record<string, unknown> = {
+      upsert: vi.fn().mockResolvedValue({ error: null }),
+    };
+    matchesChain.select = vi.fn(() => matchesChain);
+    matchesChain.eq = vi.fn(() => matchesChain);
+    matchesChain.is = vi.fn(() => Promise.resolve({ data: [] }));
+    matchesChain.in = vi.fn(() => Promise.resolve({ data: [] }));
+
+    const predsChain: Record<string, unknown> = {};
+    predsChain.select = vi.fn(() => predsChain);
+    predsChain.is = vi.fn(() => Promise.resolve({ data: [] }));
+
+    const mockFrom = vi.fn((table: string) =>
+      table === "predictions" ? predsChain : matchesChain
+    );
+    const mockRpc = vi.fn().mockResolvedValue({ data: 0, error: null }); // decay_group_tokens
+
+    const { createAdminClient } = await import("@/lib/supabase/admin");
+    vi.mocked(createAdminClient).mockReturnValue({
+      from: mockFrom,
+      rpc: mockRpc,
+    } as unknown as ReturnType<typeof createAdminClient>);
+
+    const result = await syncMatches();
+
+    expect(fetchMock).toHaveBeenCalledTimes(2); // rango (400) + pelado (200)
+    expect(result.synced).toBe(1);
+    expect(result.error).toBeUndefined();
+  });
+
   // ── error de upsert ────────────────────────────────────────────────────────
 
   it("retorna error cuando Supabase upsert falla", async () => {

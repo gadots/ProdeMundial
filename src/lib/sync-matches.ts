@@ -11,6 +11,16 @@ import { createAdminClient } from "@/lib/supabase/admin";
 const FOOTBALL_DATA_API = "https://api.football-data.org/v4";
 const WORLD_CUP_ID = 2000; // FIFA World Cup competition ID
 
+// Ventana del torneo. Pedimos el fixture completo con dateFrom/dateTo en lugar
+// del request pelado, que en la práctica devolvía solo los próximos partidos y
+// dejaba afuera los cruces de llaves todavía no inminentes.
+const WC_DATE_FROM = "2026-06-01";
+const WC_DATE_TO = "2026-07-31";
+const MATCHES_PATH = `/competitions/${WORLD_CUP_ID}/matches`;
+
+export const MATCHES_URL_FULL = `${FOOTBALL_DATA_API}${MATCHES_PATH}?dateFrom=${WC_DATE_FROM}&dateTo=${WC_DATE_TO}`;
+export const MATCHES_URL_BARE = `${FOOTBALL_DATA_API}${MATCHES_PATH}`;
+
 export interface SyncResult {
   synced: number;
   calculated: number;
@@ -64,10 +74,10 @@ export function mapStatus(status: string): string {
  * to ~10 req/min, so a 429 during a busy sync window is expected and should be
  * retried rather than failing the whole run.
  */
-async function fetchMatchesWithRetry(apiKey: string, maxAttempts = 4): Promise<Response> {
+async function fetchMatchesWithRetry(apiKey: string, url: string, maxAttempts = 4): Promise<Response> {
   let lastRes: Response | null = null;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    const res = await fetch(`${FOOTBALL_DATA_API}/competitions/${WORLD_CUP_ID}/matches`, {
+    const res = await fetch(url, {
       headers: { "X-Auth-Token": apiKey },
       cache: "no-store",
     });
@@ -90,8 +100,14 @@ export async function syncMatches(): Promise<SyncResult> {
     return { synced: 0, calculated: 0, decayedTokens: 0, at: new Date().toISOString(), error: "FOOTBALL_DATA_API_KEY not set" };
   }
 
-  // 1. Fetch from football-data.org (with retry/backoff on 429 + 5xx)
-  const res = await fetchMatchesWithRetry(apiKey);
+  // 1. Fetch from football-data.org (with retry/backoff on 429 + 5xx).
+  // Pedimos el fixture completo del torneo (dateFrom/dateTo). Si football-data
+  // rechaza el rango con 400, caemos al request pelado para no romper la sync.
+  let res = await fetchMatchesWithRetry(apiKey, MATCHES_URL_FULL);
+  if (res.status === 400) {
+    console.warn("football-data.org rechazó el rango de fechas (400) → reintento sin parámetros");
+    res = await fetchMatchesWithRetry(apiKey, MATCHES_URL_BARE);
+  }
 
   if (!res.ok) {
     const text = await res.text();
