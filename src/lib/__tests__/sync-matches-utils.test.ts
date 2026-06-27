@@ -14,12 +14,24 @@ describe("mapStage", () => {
     expect(mapStage("ROUND_OF_32")).toBe("ROUND_OF_32");
   });
 
+  it("mapea LAST_32 (convención football-data 2026) → ROUND_OF_32", () => {
+    expect(mapStage("LAST_32")).toBe("ROUND_OF_32");
+  });
+
   it("mapea LAST_16 → ROUND_OF_16", () => {
     expect(mapStage("LAST_16")).toBe("ROUND_OF_16");
   });
 
+  it("mapea ROUND_OF_16 → ROUND_OF_16", () => {
+    expect(mapStage("ROUND_OF_16")).toBe("ROUND_OF_16");
+  });
+
   it("mapea QUARTER_FINALS → QUARTER_FINAL", () => {
     expect(mapStage("QUARTER_FINALS")).toBe("QUARTER_FINAL");
+  });
+
+  it("mapea THIRD_PLACE → THIRD_PLACE", () => {
+    expect(mapStage("THIRD_PLACE")).toBe("THIRD_PLACE");
   });
 
   it("mapea SEMI_FINALS → SEMI_FINAL", () => {
@@ -173,7 +185,11 @@ describe("syncMatches", () => {
     }));
 
     const mockUpsert = vi.fn().mockResolvedValue({ error: { message: "constraint violation" } });
-    const mockFrom = vi.fn().mockReturnValue({ upsert: mockUpsert });
+    // El snapshot previo al upsert hace matches.select().in() → soportarlo.
+    const matchesChain: Record<string, unknown> = { upsert: mockUpsert };
+    matchesChain.select = vi.fn(() => matchesChain);
+    matchesChain.in = vi.fn(() => Promise.resolve({ data: [] }));
+    const mockFrom = vi.fn().mockReturnValue(matchesChain);
     const { createAdminClient } = await import("@/lib/supabase/admin");
     vi.mocked(createAdminClient).mockReturnValue({
       from: mockFrom,
@@ -282,5 +298,64 @@ describe("syncMatches", () => {
     expect(row2.away_score).toBeNull();
     expect(row2.group_name).toBeNull();
     expect(row2.venue).toBeNull();
+  });
+
+  // ── corrección de marcador en partido ya FINISHED ───────────────────────────
+
+  it("llama recalculate_all_points cuando un partido FINISHED corrige su marcador", async () => {
+    process.env.FOOTBALL_DATA_API_KEY = "test-key";
+
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        matches: [{
+          id: 101,
+          stage: "GROUP_STAGE",
+          status: "FINISHED",
+          utcDate: "2026-06-12T18:00:00Z",
+          homeTeam: { name: "Egypt", tla: "EGY" },
+          awayTeam: { name: "Iran", tla: "IRN" },
+          score: { fullTime: { home: 1, away: 1 } }, // corregido a 1-1
+          group: "Group G",
+          venue: null,
+        }],
+      }),
+    }));
+
+    // El snapshot previo devuelve el partido ya FINISHED con marcador viejo (0-1).
+    const matchesChain: Record<string, unknown> = {
+      upsert: vi.fn().mockResolvedValue({ error: null }),
+    };
+    matchesChain.select = vi.fn(() => matchesChain);
+    matchesChain.eq = vi.fn(() => matchesChain);
+    matchesChain.is = vi.fn(() => Promise.resolve({ data: [] }));
+    matchesChain.in = vi.fn(() =>
+      Promise.resolve({ data: [{ api_id: "101", status: "FINISHED", home_score: 0, away_score: 1 }] })
+    );
+
+    const predsChain: Record<string, unknown> = {};
+    predsChain.select = vi.fn(() => predsChain);
+    predsChain.is = vi.fn(() => Promise.resolve({ data: [] }));
+
+    const mockFrom = vi.fn((table: string) =>
+      table === "predictions" ? predsChain : matchesChain
+    );
+
+    const mockRpc = vi.fn()
+      .mockResolvedValueOnce({ data: 5, error: null })  // recalculate_all_points
+      .mockResolvedValueOnce({ data: 0, error: null }); // decay_group_tokens
+
+    const { createAdminClient } = await import("@/lib/supabase/admin");
+    vi.mocked(createAdminClient).mockReturnValue({
+      from: mockFrom,
+      rpc: mockRpc,
+    } as unknown as ReturnType<typeof createAdminClient>);
+
+    const result = await syncMatches();
+
+    expect(mockRpc).toHaveBeenCalledWith("recalculate_all_points");
+    expect(result.calculated).toBe(5);
+    expect(result.synced).toBe(1);
+    expect(result.error).toBeUndefined();
   });
 });
