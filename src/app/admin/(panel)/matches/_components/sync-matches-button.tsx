@@ -18,8 +18,9 @@ interface ApiMatch {
 interface ApiDebugResult {
   fetched_at: string;
   total_matches: number;
+  by_stage: Record<string, number>;
   status_summary: Record<string, number>;
-  recent_matches: ApiMatch[];
+  knockout_matches: ApiMatch[];
   error?: string;
 }
 
@@ -59,7 +60,7 @@ export function SyncMatchesButton() {
       const data = await res.json().catch(() => ({ error: "JSON parse error" }));
       setDebugData(data);
     } catch {
-      setDebugData({ error: "Error de red", fetched_at: "", total_matches: 0, status_summary: {}, recent_matches: [] });
+      setDebugData({ error: "Error de red", fetched_at: "", total_matches: 0, by_stage: {}, status_summary: {}, knockout_matches: [] });
     }
     setDebugging(false);
   };
@@ -104,6 +105,7 @@ export function SyncMatchesButton() {
           {debugData?.error && <p className="text-red-400">Error: {debugData.error}</p>}
           {debugData && !debugData.error && (
             <>
+              {/* Total + conteo por estado */}
               <div className="flex flex-wrap gap-2">
                 <span className="text-white/40">Total: <span className="text-white">{debugData.total_matches}</span></span>
                 {Object.entries(debugData.status_summary).map(([s, n]) => (
@@ -112,19 +114,37 @@ export function SyncMatchesButton() {
                   </span>
                 ))}
               </div>
-              <div className="space-y-1 max-h-72 overflow-y-auto">
-                {debugData.recent_matches.map((m, i) => (
-                  <div key={i} className={`flex gap-2 py-0.5 ${m.status === "FINISHED" ? "text-green-300" : m.status === "IN_PLAY" ? "text-yellow-300" : "text-white/40"}`}>
-                    <span className="shrink-0">{(m.status as string).slice(0, 8).padEnd(8)}</span>
-                    <span className="shrink-0 text-white/30 w-24 truncate" title={String(m.stage ?? "")}>{String(m.stage ?? "—")}</span>
-                    <span className="flex-1 truncate">{m.home as string} vs {m.away as string}</span>
-                    <span className="shrink-0">
-                      {m.home_score !== null ? `${m.home_score}-${m.away_score}` : "—"}
-                    </span>
-                    <span className="shrink-0 text-white/30">{String(m.utcDate).slice(5, 16)}</span>
-                  </div>
+
+              {/* Conteo por fase cruda de la API — clave para ver si llegan los 16 de LAST_32 */}
+              <div className="flex flex-wrap gap-2 border-t border-white/5 pt-2">
+                <span className="text-white/30 text-[10px]">Por fase:</span>
+                {Object.entries(debugData.by_stage).map(([s, n]) => (
+                  <span key={s} className="text-white/50">
+                    {s}: <span className="text-white">{n}</span>
+                  </span>
                 ))}
               </div>
+
+              {/* Todos los cruces de llaves (no GROUP_STAGE) */}
+              <div className="border-t border-white/5 pt-2">
+                <p className="text-white/30 text-[10px] mb-1">Llaves ({debugData.knockout_matches.length}):</p>
+                <div className="space-y-1 max-h-72 overflow-y-auto">
+                  {debugData.knockout_matches.length === 0 && (
+                    <p className="text-white/30">La API no devolvió ningún partido de llaves.</p>
+                  )}
+                  {debugData.knockout_matches.map((m, i) => (
+                    <div key={i} className={`flex gap-2 py-0.5 ${m.status === "FINISHED" ? "text-green-300" : m.status === "IN_PLAY" ? "text-yellow-300" : "text-white/40"}`}>
+                      <span className="shrink-0 text-white/30 w-20 truncate" title={String(m.stage ?? "")}>{String(m.stage ?? "—")}</span>
+                      <span className="flex-1 truncate">{(m.home as string) ?? "TBD"} vs {(m.away as string) ?? "TBD"}</span>
+                      <span className="shrink-0">
+                        {m.home_score !== null ? `${m.home_score}-${m.away_score}` : "—"}
+                      </span>
+                      <span className="shrink-0 text-white/30">{String(m.utcDate).slice(5, 16)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               <p className="text-white/25 text-[10px]">{debugData.fetched_at}</p>
             </>
           )}
