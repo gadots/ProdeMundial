@@ -44,6 +44,8 @@ function dbToMatch(row: DbRow): Match {
     status: row.status as MatchStatus,
     homeScore: (row.home_score as number | null) ?? undefined,
     awayScore: (row.away_score as number | null) ?? undefined,
+    penaltyHome: (row.penalty_home as number | null) ?? undefined,
+    penaltyAway: (row.penalty_away as number | null) ?? undefined,
     venue: (row.venue as string | null) ?? undefined,
   };
 }

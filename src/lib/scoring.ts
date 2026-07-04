@@ -1,4 +1,4 @@
-import { Phase, PHASE_POINTS, TokenMultiplier } from "./types";
+import { Phase, PHASE_POINTS, TokenMultiplier, Match } from "./types";
 
 interface ScoreResult {
   points: number;
@@ -85,6 +85,53 @@ export function calculatePoints(
   if (streakBonus > 0) reason += ` +${streakBonus} racha`;
 
   return { points, reason };
+}
+
+/**
+ * Un partido de llaves se definió por penales si tiene marcador de shootout.
+ * En ese caso el resultado de tiempo regular/suplementario fue un empate.
+ */
+export function penaltyWinnerOf(
+  m: { penaltyHome?: number; penaltyAway?: number },
+): "home" | "away" | undefined {
+  if (m.penaltyHome == null || m.penaltyAway == null) return undefined;
+  return m.penaltyHome > m.penaltyAway ? "home" : "away";
+}
+
+export function isPenaltyShootout(m: { penaltyHome?: number; penaltyAway?: number }): boolean {
+  return penaltyWinnerOf(m) !== undefined;
+}
+
+/**
+ * Resultado de una predicción contra un partido FINALIZADO, para los íconos/labels
+ * de la UI (✓ exacto, ganador, o fallo). Contempla penales en llaves: un empate→penales
+ * NO es "ganador acertado" para quien puso que ganaba un equipo, y SÍ es acierto para
+ * quien puso empate + el ganador de penales correcto.
+ */
+export function predictionResult(
+  match: Match,
+  pred: { homeGoals: number; awayGoals: number; penaltyWinner?: "home" | "away" },
+): "exact" | "correct" | "wrong" {
+  const isKnockout = match.phase !== "GROUP";
+  const actualPen = penaltyWinnerOf(match);
+  const predDraw = pred.homeGoals === pred.awayGoals;
+
+  // Llaves definidas por penales → el tiempo regular fue empate.
+  if (isKnockout && actualPen) {
+    const penOk = predDraw && pred.penaltyWinner === actualPen;
+    if (!penOk) return "wrong";
+    const etKnown = match.homeScore != null && match.awayScore != null;
+    if (etKnown && pred.homeGoals === match.homeScore && pred.awayGoals === match.awayScore) return "exact";
+    return "correct";
+  }
+
+  if (match.homeScore == null || match.awayScore == null) return "wrong";
+  const isExact = pred.homeGoals === match.homeScore && pred.awayGoals === match.awayScore;
+  if (isExact) return "exact";
+  const predWinner = Math.sign(pred.homeGoals - pred.awayGoals);
+  const actualWinner = Math.sign(match.homeScore - match.awayScore);
+  if (isKnockout && actualWinner === 0) return "wrong"; // no debería pasar (llaves no empatan sin penales)
+  return predWinner === actualWinner ? "correct" : "wrong";
 }
 
 /**

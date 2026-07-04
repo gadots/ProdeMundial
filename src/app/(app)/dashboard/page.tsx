@@ -8,6 +8,8 @@ import { Flag } from "@/components/flag";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useApp } from "@/components/app-context";
+import { PenaltyLine } from "@/components/penalty-line";
+import { predictionResult, penaltyWinnerOf } from "@/lib/scoring";
 import { PHASE_LABELS, PHASE_POINTS, Match, Prediction, Member } from "@/lib/types";
 
 function buildShareMessage(
@@ -19,7 +21,11 @@ function buildShareMessage(
   const isFinished = match.status === "FINISHED";
   const header = `⚽ ${match.homeTeam.name} vs ${match.awayTeam.name}`;
   const phase = match.group ? `Grupo ${match.group}` : PHASE_LABELS[match.phase];
-  const score = hasScore ? `${match.homeScore} - ${match.awayScore}` : isFinished ? "Finalizado" : "En curso";
+  const penWinner = penaltyWinnerOf(match);
+  const penTxt = penWinner && match.penaltyHome != null
+    ? ` (pen. ${(penWinner === "home" ? match.homeTeam.shortName : match.awayTeam.shortName)} ${Math.max(match.penaltyHome, match.penaltyAway!)}-${Math.min(match.penaltyHome, match.penaltyAway!)})`
+    : "";
+  const score = (hasScore ? `${match.homeScore} - ${match.awayScore}` : isFinished ? "Finalizado" : "En curso") + penTxt;
   const ranked = [...members].sort((a, b) => a.rank - b.rank);
   const lines = [header, `${phase} · ${score}`, "", "Predicciones:"];
   for (const member of ranked) {
@@ -29,7 +35,7 @@ function buildShareMessage(
     if (!pred) {
       lines.push(`${medal} ${member.displayName}: sin pred.`);
     } else {
-      const exact = isFinished && hasScore && pred.homeGoals === match.homeScore && pred.awayGoals === match.awayScore ? " ✓" : "";
+      const exact = isFinished && predictionResult(match, pred) === "exact" ? " ✓" : "";
       const pts = isFinished ? ` +${pred.pointsEarned ?? 0} pts` : "";
       lines.push(`${medal} ${member.displayName}: ${pred.homeGoals}-${pred.awayGoals}${mult}${exact}${pts}`);
     }
@@ -75,10 +81,8 @@ function MemberPredictionsPanel({
           member.rank === 3 ? "🥉" :
           `#${member.rank}`;
         const isExact =
-          isFinished &&
-          pred !== undefined &&
-          pred.homeGoals === match.homeScore &&
-          pred.awayGoals === match.awayScore;
+          isFinished && pred !== undefined &&
+          predictionResult(match, pred) === "exact";
         const multiplierLabel =
           pred && pred.multiplier === 5 ? " 💥" :
           pred && pred.multiplier === 3 ? " 🔥" :
@@ -250,6 +254,11 @@ function MatchCard({ match }: { match: Match }) {
               <Flag tla={match.awayTeam.id} size={40} className="w-7 h-auto shrink-0" />
             </div>
           </div>
+          {match.penaltyHome != null && (
+            <div className="mt-1.5 text-center">
+              <PenaltyLine match={match} />
+            </div>
+          )}
           <div className="mt-3 flex items-center justify-between border-t border-white/5 pt-2.5">
             {myPrediction ? (
               <>

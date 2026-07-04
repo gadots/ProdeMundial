@@ -270,6 +270,8 @@ function AppProviderSupabase({ children }: { children: React.ReactNode }) {
                     status: updated.status as Match["status"],
                     homeScore: (updated.home_score as number | null) ?? undefined,
                     awayScore: (updated.away_score as number | null) ?? undefined,
+                    penaltyHome: (updated.penalty_home as number | null) ?? undefined,
+                    penaltyAway: (updated.penalty_away as number | null) ?? undefined,
                   }
                 : m
             )

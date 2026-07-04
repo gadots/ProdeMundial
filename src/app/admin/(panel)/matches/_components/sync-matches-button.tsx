@@ -13,6 +13,10 @@ interface ApiMatch {
   status: unknown;
   home_score: number | null;
   away_score: number | null;
+  duration?: string | null;
+  winner?: string | null;
+  penalty_home?: number | null;
+  penalty_away?: number | null;
 }
 
 interface ApiDebugResult {
@@ -167,6 +171,12 @@ export function SyncMatchesButton() {
                       <span className="flex-1 truncate">{(m.home as string) ?? "TBD"} vs {(m.away as string) ?? "TBD"}</span>
                       <span className="shrink-0">
                         {m.home_score !== null ? `${m.home_score}-${m.away_score}` : "—"}
+                        {m.penalty_home != null && (
+                          <span className="text-amber-400"> (p{m.penalty_home}-{m.penalty_away})</span>
+                        )}
+                        {m.penalty_home == null && m.duration === "PENALTY_SHOOTOUT" && (
+                          <span className="text-amber-400"> (pen {m.winner === "HOME_TEAM" ? "L" : "V"})</span>
+                        )}
                       </span>
                       <span className="shrink-0 text-white/30">{String(m.utcDate).slice(5, 16)}</span>
                     </div>

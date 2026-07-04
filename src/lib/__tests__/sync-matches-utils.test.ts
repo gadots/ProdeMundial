@@ -1,5 +1,38 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { mapStage, mapStatus, syncMatches } from "../sync-matches";
+import { mapStage, mapStatus, syncMatches, parseScore } from "../sync-matches";
+
+// ──────────────────────────────────────────────────────────────────────────────
+// parseScore — separa tiempo regular/ET del shootout de penales
+// ──────────────────────────────────────────────────────────────────────────────
+
+describe("parseScore", () => {
+  it("partido normal: usa fullTime, sin penales", () => {
+    expect(parseScore({ duration: "REGULAR", fullTime: { home: 2, away: 1 } })).toEqual({
+      home: 2, away: 1, penaltyHome: null, penaltyAway: null,
+    });
+  });
+
+  it("shootout con objeto penalties: fullTime es el empate del ET", () => {
+    expect(parseScore({
+      duration: "PENALTY_SHOOTOUT",
+      fullTime: { home: 1, away: 1 },
+      penalties: { home: 5, away: 3 },
+    })).toEqual({ home: 1, away: 1, penaltyHome: 5, penaltyAway: 3 });
+  });
+
+  it("shootout sin objeto penalties: fullTime trae el shootout, ET desconocido", () => {
+    expect(parseScore({
+      duration: "PENALTY_SHOOTOUT",
+      fullTime: { home: 5, away: 3 },
+    })).toEqual({ home: null, away: null, penaltyHome: 5, penaltyAway: 3 });
+  });
+
+  it("empate de grupos no se confunde con penales", () => {
+    expect(parseScore({ duration: "REGULAR", fullTime: { home: 1, away: 1 } })).toEqual({
+      home: 1, away: 1, penaltyHome: null, penaltyAway: null,
+    });
+  });
+});
 
 // ──────────────────────────────────────────────────────────────────────────────
 // mapStage — uses the real implementation, no local duplicate
