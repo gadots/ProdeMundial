@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { RefreshCw, Loader2, CheckCircle, AlertCircle, Bug } from "lucide-react";
+import { RefreshCw, Loader2, CheckCircle, AlertCircle, Bug, Calculator } from "lucide-react";
 
 interface ApiMatch {
   api_id: unknown;
@@ -27,6 +27,7 @@ interface ApiDebugResult {
 export function SyncMatchesButton() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; message: string; detail?: string } | null>(null);
+  const [recalculating, setRecalculating] = useState(false);
   const [debugging, setDebugging] = useState(false);
   const [debugData, setDebugData] = useState<ApiDebugResult | null>(null);
   const [showDebug, setShowDebug] = useState(false);
@@ -49,6 +50,25 @@ export function SyncMatchesButton() {
       setResult({ ok: false, message: "Error de red" });
     }
     setLoading(false);
+  };
+
+  const handleRecalculate = async () => {
+    if (!confirm("Recalcular TODOS los puntos del torneo? Corrige los puntos congelados contra marcadores viejos. Es seguro correrlo varias veces.")) return;
+    setRecalculating(true);
+    setResult(null);
+    try {
+      const res = await fetch("/api/admin/recalculate", { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setResult({ ok: true, message: `✓ ${data.recalculated ?? 0} predicciones recalculadas` });
+        router.refresh();
+      } else {
+        setResult({ ok: false, message: data.error ?? `Error ${res.status}` });
+      }
+    } catch {
+      setResult({ ok: false, message: "Error de red" });
+    }
+    setRecalculating(false);
   };
 
   const handleDebug = async () => {
@@ -82,6 +102,15 @@ export function SyncMatchesButton() {
           >
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
             Sincronizar
+          </button>
+          <button
+            onClick={handleRecalculate}
+            disabled={recalculating}
+            title="Recalcular todos los puntos del torneo (corrige puntos congelados)"
+            className="inline-flex items-center gap-2 rounded-xl bg-amber-600/90 hover:bg-amber-500 disabled:opacity-50 px-3 py-2.5 text-sm font-semibold text-white transition-colors"
+          >
+            {recalculating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Calculator className="h-4 w-4" />}
+            Recalcular todo
           </button>
           <button
             onClick={handleDebug}
