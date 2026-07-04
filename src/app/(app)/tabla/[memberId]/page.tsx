@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { useApp } from "@/components/app-context";
 import { PHASE_LABELS, Phase, Match, Prediction } from "@/lib/types";
+import { predictionResult } from "@/lib/scoring";
 import { getMyPredictions } from "@/lib/supabase/queries";
 import { MOCK_MATCH_PREDICTIONS } from "@/lib/mock-data";
 import { ChevronLeft } from "lucide-react";
@@ -74,11 +75,9 @@ export default function MemberProfilePage() {
     (acc, m) => {
       const pred = predictions[m.id];
       if (!pred) return { ...acc, sinPred: acc.sinPred + 1 };
-      const exacto = pred.homeGoals === m.homeScore && pred.awayGoals === m.awayScore;
-      const ganador =
-        !exacto &&
-        Math.sign((pred.homeGoals ?? 0) - (pred.awayGoals ?? 0)) ===
-          Math.sign((m.homeScore ?? 0) - (m.awayScore ?? 0));
+      const outcome = predictionResult(m, pred);
+      const exacto = outcome === "exact";
+      const ganador = outcome === "correct";
       return {
         ...acc,
         exactos: acc.exactos + (exacto ? 1 : 0),
@@ -252,13 +251,9 @@ export default function MemberProfilePage() {
                 {finishedMatches.map((match, idx) => {
                   const pred = predictions[match.id];
                   const pts = pred?.pointsEarned ?? 0;
-                  const exacto =
-                    pred && pred.homeGoals === match.homeScore && pred.awayGoals === match.awayScore;
-                  const ganador =
-                    !exacto &&
-                    pred &&
-                    Math.sign((pred.homeGoals ?? 0) - (pred.awayGoals ?? 0)) ===
-                      Math.sign((match.homeScore ?? 0) - (match.awayScore ?? 0));
+                  const outcome = pred ? predictionResult(match, pred) : "wrong";
+                  const exacto = outcome === "exact";
+                  const ganador = outcome === "correct";
                   const multiplierLabel =
                     pred?.multiplier === 5 ? " 💥" :
                     pred?.multiplier === 3 ? " 🔥" :
@@ -278,6 +273,9 @@ export default function MemberProfilePage() {
                         )}
                         <span className="text-xs font-black text-white tabular-nums">
                           {match.homeScore}–{match.awayScore}
+                          {match.penaltyHome != null && (
+                            <span className="text-amber-400/80 font-normal"> ({match.penaltyHome}-{match.penaltyAway}p)</span>
+                          )}
                         </span>
                         {match.awayTeam.id && (
                           <Flag tla={match.awayTeam.id} size={20} className="w-4 h-auto shrink-0" />

@@ -68,6 +68,52 @@ export function mapStatus(status: string): string {
   return map[status] ?? "SCHEDULED";
 }
 
+export interface ParsedScore {
+  home: number | null;   // resultado en tiempo regular + suplementario
+  away: number | null;
+  penaltyHome: number | null;
+  penaltyAway: number | null;
+}
+
+/**
+ * Separa el resultado de tiempo regular/suplementario del shootout de penales.
+ *
+ * football-data.org v4 puede venir en dos formas para un partido definido por
+ * penales:
+ *  a) `fullTime` = empate del ET y `penalties` = tanteo del shootout.
+ *  b) sin objeto `penalties`, `duration = PENALTY_SHOOTOUT` y `fullTime` trae
+ *     directamente el tanteo del shootout (ej. 5-3) → en ese caso perdemos el
+ *     marcador exacto del empate (queda null) pero sí sabemos quién ganó.
+ */
+export function parseScore(score: Record<string, unknown> | undefined): ParsedScore {
+  const fullTime = score?.fullTime as Record<string, number | null> | undefined;
+  const penalties = score?.penalties as Record<string, number | null> | undefined;
+  const duration = score?.duration ? String(score.duration) : "";
+
+  let home = fullTime?.home ?? null;
+  let away = fullTime?.away ?? null;
+  let penaltyHome: number | null = null;
+  let penaltyAway: number | null = null;
+
+  const isShootout = duration === "PENALTY_SHOOTOUT" || penalties?.home != null;
+
+  if (isShootout) {
+    if (penalties?.home != null && penalties?.away != null) {
+      // (a) fullTime es el empate del ET; penalties es el shootout.
+      penaltyHome = penalties.home;
+      penaltyAway = penalties.away;
+    } else if (home != null && away != null && home !== away) {
+      // (b) fullTime trae el shootout; no tenemos el marcador del ET.
+      penaltyHome = home;
+      penaltyAway = away;
+      home = null;
+      away = null;
+    }
+  }
+
+  return { home, away, penaltyHome, penaltyAway };
+}
+
 /**
  * Fetch the World Cup matches with retry + exponential backoff on transient
  * failures (429 rate limit, 5xx). The free football-data.org tier rate-limits
@@ -132,7 +178,7 @@ export async function syncMatches(): Promise<SyncResult> {
     const home = m.homeTeam as Record<string, unknown>;
     const away = m.awayTeam as Record<string, unknown>;
     const score = m.score as Record<string, unknown>;
-    const fullTime = score?.fullTime as Record<string, number | null> | undefined;
+    const parsed = parseScore(score);
 
     return {
       api_id: String(m.id),
@@ -144,8 +190,10 @@ export async function syncMatches(): Promise<SyncResult> {
       group_name: m.group ? String(m.group) : null,
       date: m.utcDate as string,
       status: mapStatus(String(m.status ?? "")),
-      home_score: fullTime?.home ?? null,
-      away_score: fullTime?.away ?? null,
+      home_score: parsed.home,
+      away_score: parsed.away,
+      penalty_home: parsed.penaltyHome,
+      penalty_away: parsed.penaltyAway,
       venue: m.venue ? String(m.venue) : null,
       updated_at: new Date().toISOString(),
     };
@@ -156,10 +204,10 @@ export async function syncMatches(): Promise<SyncResult> {
   const apiIds = rows.map((r) => r.api_id);
   const { data: prevRows } = await supabase
     .from("matches")
-    .select("api_id, status, home_score, away_score")
+    .select("api_id, status, home_score, away_score, penalty_home, penalty_away")
     .in("api_id", apiIds);
   const prevMap = new Map(
-    (prevRows ?? []).map((p: { api_id: string; status: string; home_score: number | null; away_score: number | null }) => [p.api_id, p])
+    (prevRows ?? []).map((p: { api_id: string; status: string; home_score: number | null; away_score: number | null; penalty_home: number | null; penalty_away: number | null }) => [p.api_id, p])
   );
 
   // 3. Upsert matches
@@ -190,7 +238,10 @@ export async function syncMatches(): Promise<SyncResult> {
     return (
       !!before &&
       before.status === "FINISHED" &&
-      (before.home_score !== r.home_score || before.away_score !== r.away_score)
+      (before.home_score !== r.home_score ||
+        before.away_score !== r.away_score ||
+        before.penalty_home !== r.penalty_home ||
+        before.penalty_away !== r.penalty_away)
     );
   });
 

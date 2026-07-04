@@ -50,6 +50,7 @@ async function handleDebug() {
     const toRow = (m: Record<string, unknown>) => {
       const score = m.score as Record<string, unknown>;
       const ft = score?.fullTime as Record<string, number | null> | undefined;
+      const pens = score?.penalties as Record<string, number | null> | undefined;
       const home = m.homeTeam as Record<string, unknown>;
       const away = m.awayTeam as Record<string, unknown>;
       return {
@@ -61,6 +62,11 @@ async function handleDebug() {
         status: m.status,
         home_score: ft?.home ?? null,
         away_score: ft?.away ?? null,
+        // Datos crudos de penales para confirmar la forma que manda football-data.
+        duration: (score?.duration as string) ?? null,
+        winner: (score?.winner as string) ?? null,
+        penalty_home: pens?.home ?? null,
+        penalty_away: pens?.away ?? null,
       };
     };
 

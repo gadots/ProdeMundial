@@ -9,7 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useApp } from "@/components/app-context";
 import { PHASE_LABELS, PHASE_POINTS, Phase, Match, Member, MultiplierToken, TokenMultiplier, Prediction } from "@/lib/types";
-import { maxPointsForMatch } from "@/lib/scoring";
+import { maxPointsForMatch, predictionResult, penaltyWinnerOf } from "@/lib/scoring";
+import { PenaltyLine } from "@/components/penalty-line";
 import { formatMatchDay } from "@/lib/utils";
 import { Save, Lock, Check, Flame, HelpCircle, X, ArrowLeft, Share2 } from "lucide-react";
 import { getMatchPredictions } from "@/lib/supabase/queries";
@@ -132,15 +133,9 @@ function HistorialView({
             {byPhase[phase]!.map((match, idx) => {
               const pred = predictions[match.id];
               const pts = pred?.pointsEarned ?? 0;
-              const exacto =
-                pred !== undefined &&
-                pred.homeGoals === match.homeScore &&
-                pred.awayGoals === match.awayScore;
-              const ganador =
-                pred !== undefined &&
-                !exacto &&
-                Math.sign(pred.homeGoals - pred.awayGoals) ===
-                  Math.sign((match.homeScore ?? 0) - (match.awayScore ?? 0));
+              const outcome = pred !== undefined ? predictionResult(match, pred) : "wrong";
+              const exacto = outcome === "exact";
+              const ganador = outcome === "correct";
               const resultIcon = !pred ? "—" : exacto ? "🎯" : ganador ? "✓" : "✗";
               const tokenLabel =
                 pred?.multiplier === 5 ? " 💥" :
@@ -159,6 +154,9 @@ function HistorialView({
                     <Flag tla={match.homeTeam.id} size={20} className="w-4 h-auto shrink-0" />
                     <span className="text-xs font-black text-white tabular-nums">
                       {match.homeScore}–{match.awayScore}
+                      {match.penaltyHome != null && (
+                        <span className="text-amber-400/80 font-normal"> ({match.penaltyHome}-{match.penaltyAway}p)</span>
+                      )}
                     </span>
                     <Flag tla={match.awayTeam.id} size={20} className="w-4 h-auto shrink-0" />
                   </div>
@@ -282,10 +280,12 @@ function MemberPredictionsPanel({
           member.rank === 3 ? "🥉" :
           `#${member.rank}`;
         const isExact =
-          isFinished &&
-          pred !== undefined &&
-          pred.homeGoals === match.homeScore &&
-          pred.awayGoals === match.awayScore;
+          isFinished && pred !== undefined &&
+          predictionResult(match, pred) === "exact";
+        const penLabel =
+          pred && pred.penaltyWinner
+            ? ` · pen ${pred.penaltyWinner === "home" ? match.homeTeam.shortName : match.awayTeam.shortName}`
+            : "";
         const multiplierLabel =
           pred && pred.multiplier === 5 ? " 💥" :
           pred && pred.multiplier === 3 ? " 🔥" :
@@ -301,6 +301,7 @@ function MemberPredictionsPanel({
               <>
                 <span className="font-bold tabular-nums">
                   {pred.homeGoals} - {pred.awayGoals}
+                  <span className="font-normal text-white/40">{penLabel}</span>
                   {multiplierLabel}
                 </span>
                 <span className="w-3 text-center text-green-400">{isExact ? "✓" : ""}</span>
@@ -544,18 +545,23 @@ function MatchPredictionCard({
         )}
 
         {locked && !forceDisabled && (
-          <div className="mb-3 flex items-center justify-center gap-3 rounded-xl bg-white/5 py-2">
-            <span className="text-xs text-white/40">Resultado:</span>
-            {match.homeScore !== undefined && match.awayScore !== undefined ? (
-              <span className="text-sm font-black text-white">{match.homeScore} - {match.awayScore}</span>
-            ) : (
-              <span className="text-sm text-white/40 italic">En curso</span>
-            )}
-            {existing?.pointsEarned !== undefined && (
-              <Badge variant={existing.pointsEarned > 0 ? "default" : "secondary"}>
-                {existing.pointsEarned > 0 ? `+${existing.pointsEarned} pts` : "0 pts"}
-              </Badge>
-            )}
+          <div className="mb-3 flex flex-col items-center gap-1 rounded-xl bg-white/5 py-2">
+            <div className="flex items-center justify-center gap-3">
+              <span className="text-xs text-white/40">Resultado:</span>
+              {match.homeScore !== undefined && match.awayScore !== undefined ? (
+                <span className="text-sm font-black text-white">{match.homeScore} - {match.awayScore}</span>
+              ) : match.penaltyHome != null ? (
+                <span className="text-sm font-black text-white">Empate</span>
+              ) : (
+                <span className="text-sm text-white/40 italic">En curso</span>
+              )}
+              {existing?.pointsEarned !== undefined && (
+                <Badge variant={existing.pointsEarned > 0 ? "default" : "secondary"}>
+                  {existing.pointsEarned > 0 ? `+${existing.pointsEarned} pts` : "0 pts"}
+                </Badge>
+              )}
+            </div>
+            {match.penaltyHome != null && <PenaltyLine match={match} />}
           </div>
         )}
 

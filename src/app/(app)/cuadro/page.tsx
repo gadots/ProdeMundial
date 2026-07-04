@@ -120,6 +120,13 @@ function BracketCard({
       <div className="my-0.5 h-px bg-white/8" />
       <TeamRow tla={match.awayTeam.flag} name={match.awayTeam.shortName} score={awayScore} live={live} />
 
+      {match.penaltyHome != null && match.penaltyAway != null && (
+        <p className="mt-0.5 text-[9px] text-amber-400/90 text-center">
+          pen {Math.max(match.penaltyHome, match.penaltyAway)}-{Math.min(match.penaltyHome, match.penaltyAway)} {" "}
+          {match.penaltyHome > match.penaltyAway ? match.homeTeam.shortName : match.awayTeam.shortName}
+        </p>
+      )}
+
       {!showScore && (
         <p className="mt-0.5 text-[9px] text-white/25 text-center">
           {new Date(match.date).toLocaleDateString("es", { day: "2-digit", month: "2-digit" })}

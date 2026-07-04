@@ -44,8 +44,10 @@ export interface Match {
   group?: string;
   date: string;
   status: MatchStatus;
-  homeScore?: number;
+  homeScore?: number;   // resultado en tiempo regular + suplementario
   awayScore?: number;
+  penaltyHome?: number; // definición por penales (solo llaves que terminaron empatadas)
+  penaltyAway?: number;
   venue?: string;
 }
 
