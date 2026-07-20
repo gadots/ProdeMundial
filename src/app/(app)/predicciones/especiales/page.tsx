@@ -270,6 +270,39 @@ function ProdeSpecialsTable({ prodeId, members, results }: { prodeId: string; me
           })}
         </tbody>
       </table>
+
+      {graded && (
+        <div className="border-t border-white/10 bg-white/[0.02] p-4 space-y-2.5">
+          <p className="text-[11px] font-semibold text-white/40 uppercase tracking-wider">Quién acertó cada especial</p>
+          {SPECIAL_PREDICTIONS.map((pred) => {
+            const actual = results![RESULT_KEY[pred.id]];
+            const hitters = ranked.filter((m) =>
+              isSpecialHit(pred.type, byUser[m.id]?.[PRED_KEY[pred.id]] ?? null, actual)
+            );
+            return (
+              <div key={pred.id} className="flex items-start gap-2 text-xs">
+                <span className="shrink-0" title={pred.label}>{pred.emoji}</span>
+                <div className="flex items-center gap-1 shrink-0 w-24">
+                  {pred.type === "team" && actual && <Flag tla={actual} size={20} className="w-4 h-auto rounded-[1px]" />}
+                  <span className="font-semibold text-white truncate">{actual ? (pred.type === "team" ? getTeamShort(actual) : actual.split(" ").slice(-1)[0]) : "—"}</span>
+                </div>
+                <div className="flex-1 flex flex-wrap gap-1">
+                  {hitters.length === 0 ? (
+                    <span className="text-white/25">Nadie lo acertó</span>
+                  ) : (
+                    hitters.map((m) => (
+                      <span key={m.id} className="rounded-md bg-green-500/15 text-green-300 px-1.5 py-0.5 text-[10px] font-medium">
+                        ✓ {m.displayName}
+                      </span>
+                    ))
+                  )}
+                </div>
+                <span className="shrink-0 text-white/30 text-[10px]">+{pred.points}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
