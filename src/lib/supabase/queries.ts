@@ -137,7 +137,7 @@ export async function getAllMyProdes(userId: string): Promise<ProdeInfo[]> {
 export async function getLeaderboard(prodeId: string): Promise<Member[]> {
   const supabase = createClient();
 
-  const [membersResult, scoresResult, tokensResult, streaksResult] = await Promise.all([
+  const [membersResult, scoresResult, tokensResult, streaksResult, specialsResult] = await Promise.all([
     supabase
       .from("prode_members")
       .select("user_id, profiles(display_name, avatar_url)")
@@ -154,12 +154,17 @@ export async function getLeaderboard(prodeId: string): Promise<Member[]> {
       .from("streaks")
       .select("user_id, current_streak, best_streak")
       .eq("prode_id", prodeId),
+    supabase
+      .from("special_predictions")
+      .select("user_id, points_earned")
+      .eq("prode_id", prodeId),
   ]);
 
   const members = membersResult.data ?? [];
   const scores = scoresResult.data ?? [];
   const tokens = tokensResult.data ?? [];
   const streaks = streaksResult.data ?? [];
+  const specials = specialsResult.data ?? [];
 
   const membersWithPoints = members.map((m) => {
     const profile = (m as DbRow).profiles as DbRow | null;
@@ -172,6 +177,12 @@ export async function getLeaderboard(prodeId: string): Promise<Member[]> {
       pointsPerPhase[s.phase as Phase] = (pointsPerPhase[s.phase as Phase] ?? 0) + s.points;
       totalPoints += s.points;
     });
+
+    // Puntos de predicciones especiales (fuera de las fases de partidos).
+    const specialPoints = specials
+      .filter((s) => s.user_id === m.user_id)
+      .reduce((sum, s) => sum + ((s.points_earned as number) ?? 0), 0);
+    totalPoints += specialPoints;
 
     const memberTokens = tokens.filter((t) => t.user_id === m.user_id).map(dbToToken);
     const memberStreak = streaks.find((s) => s.user_id === m.user_id);
@@ -189,6 +200,7 @@ export async function getLeaderboard(prodeId: string): Promise<Member[]> {
       avatarUrl: (profile?.avatar_url as string | null) ?? undefined,
       totalPoints,
       pointsPerPhase,
+      specialPoints,
       rank: 0, // will be set below
       tokens: memberTokens.length > 0 ? memberTokens : INITIAL_TOKENS.map((t) => ({ ...t, decayed: false })),
       streak,
@@ -471,6 +483,32 @@ export async function getAllSpecialPredictions(prodeId: string): Promise<Special
     topScorer: row.top_scorer as string | null,
     mostGoals: row.most_goals_country as string | null,
   }));
+}
+
+export type SpecialResults = {
+  champion: string | null;
+  finalist: string | null;
+  third: string | null;
+  topScorer: string | null;
+  mostGoals: string | null;
+};
+
+/** Resultados reales de las predicciones especiales (null si todavía no se puntuaron). */
+export async function getSpecialResults(): Promise<SpecialResults | null> {
+  const supabase = createClient();
+  const { data } = await supabase
+    .from("special_results")
+    .select("champion, finalist, third_place, top_scorer, most_goals")
+    .eq("id", true)
+    .single();
+  if (!data) return null;
+  return {
+    champion: (data.champion as string | null) ?? null,
+    finalist: (data.finalist as string | null) ?? null,
+    third: (data.third_place as string | null) ?? null,
+    topScorer: (data.top_scorer as string | null) ?? null,
+    mostGoals: (data.most_goals as string | null) ?? null,
+  };
 }
 
 export async function upsertSpecialPredictions(

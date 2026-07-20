@@ -130,6 +130,7 @@ export interface Member {
   avatarUrl?: string;
   totalPoints: number;
   pointsPerPhase: Record<Phase, number>;
+  specialPoints?: number;   // puntos de predicciones especiales (fuera de fases)
   rank: number;
   previousRank?: number;
   tokens: MultiplierToken[];

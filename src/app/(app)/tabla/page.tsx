@@ -215,11 +215,55 @@ function ProdeStats({
   );
 }
 
+function ChampionPodium({ members }: { members: Member[] }) {
+  const top = members.slice(0, 3);
+  if (top.length === 0) return null;
+  const [first, second, third] = top;
+  return (
+    <div className="px-4 pt-4">
+      <div className="rounded-2xl bg-gradient-to-b from-amber-500/20 via-amber-500/5 to-transparent border border-amber-500/25 p-4">
+        <p className="text-center text-xs font-bold text-amber-300 uppercase tracking-wider mb-1">🏆 Mundial finalizado</p>
+        <p className="text-center text-2xl font-black text-white mb-4">
+          Campeón del prode: {first.displayName}
+        </p>
+        <div className="flex items-end justify-center gap-2">
+          {/* 2do */}
+          {second && (
+            <div className="flex flex-col items-center flex-1 max-w-[110px]">
+              <span className="text-2xl">🥈</span>
+              <p className="text-xs font-semibold text-white truncate w-full text-center">{second.displayName}</p>
+              <p className="text-[10px] text-white/50">{second.totalPoints} pts</p>
+              <div className="mt-1 w-full h-12 rounded-t-lg bg-white/10" />
+            </div>
+          )}
+          {/* 1ro */}
+          <div className="flex flex-col items-center flex-1 max-w-[120px]">
+            <span className="text-4xl">🥇</span>
+            <p className="text-sm font-black text-amber-300 truncate w-full text-center">{first.displayName}</p>
+            <p className="text-xs text-amber-400 font-bold">{first.totalPoints} pts</p>
+            <div className="mt-1 w-full h-20 rounded-t-lg bg-gradient-to-b from-amber-500/40 to-amber-500/10" />
+          </div>
+          {/* 3ro */}
+          {third && (
+            <div className="flex flex-col items-center flex-1 max-w-[110px]">
+              <span className="text-2xl">🥉</span>
+              <p className="text-xs font-semibold text-white truncate w-full text-center">{third.displayName}</p>
+              <p className="text-[10px] text-white/50">{third.totalPoints} pts</p>
+              <div className="mt-1 w-full h-8 rounded-t-lg bg-white/8" />
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function TablaPage() {
-  const { user, prode, pointsToday } = useApp();
+  const { user, prode, pointsToday, matches } = useApp();
   const [view, setView] = useState<ViewMode>("total");
   const [shared, setShared] = useState(false);
 
+  const worldCupOver = matches.some((m) => m.phase === "FINAL" && m.status === "FINISHED");
   const members = [...(prode?.members ?? [])].sort((a, b) => b.totalPoints - a.totalPoints);
 
   const getMemberScore = (member: typeof members[0]) => {
@@ -318,6 +362,9 @@ export default function TablaPage() {
           </button>
         </div>
       </div>
+
+      {/* Podio de cierre (Mundial terminado) */}
+      {worldCupOver && view !== "stats" && <ChampionPodium members={members} />}
 
       {/* Premio */}
       {prode?.prizeDescription && (

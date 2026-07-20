@@ -397,6 +397,11 @@ export const MOCK_PRODE_SPECIAL_PREDICTIONS: Array<{
   { userId: "u5", champion: "FRA", finalist: "ARG", third: "BRA", topScorer: "Kylian Mbappé", mostGoals: "FRA" },
 ];
 
+// Resultados reales de los especiales (para modo mock / demo).
+export const MOCK_SPECIAL_RESULTS = {
+  champion: "ESP", finalist: "ARG", third: "FRA", topScorer: "Kylian Mbappé", mostGoals: "ESP",
+} as const;
+
 // -------------------------------------------------------
 // MATCH PREDICTIONS (all members, for reveal post-partido)
 // -------------------------------------------------------
