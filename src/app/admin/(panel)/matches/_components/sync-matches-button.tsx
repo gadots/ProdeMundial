@@ -64,7 +64,7 @@ export function SyncMatchesButton() {
       const res = await fetch("/api/admin/recalculate", { method: "POST" });
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        setResult({ ok: true, message: `✓ ${data.recalculated ?? 0} predicciones recalculadas` });
+        setResult({ ok: true, message: `✓ ${data.recalculated ?? 0} predicciones · ${data.specials ?? 0} especiales` });
         router.refresh();
       } else {
         setResult({ ok: false, message: data.error ?? `Error ${res.status}` });

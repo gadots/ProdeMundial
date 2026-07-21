@@ -28,7 +28,15 @@ async function handleRecalculate() {
       console.error("recalculate_all_points failed:", error.message);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
-    return NextResponse.json({ recalculated: typeof data === "number" ? data : 0 });
+    // También puntúa las predicciones especiales (deriva campeón/finalista/3ro/
+    // país con más goles de los partidos; goleador hardcodeado). Best-effort:
+    // si la función no existe todavía, no rompe el recálculo de partidos.
+    let specials = 0;
+    const { data: sData, error: sError } = await supabase.rpc("grade_special_predictions");
+    if (sError) console.error("grade_special_predictions failed:", sError.message);
+    else if (typeof sData === "number") specials = sData;
+
+    return NextResponse.json({ recalculated: typeof data === "number" ? data : 0, specials });
   } catch (err) {
     console.error("admin/recalculate exception:", err);
     return NextResponse.json({ error: String(err) }, { status: 500 });

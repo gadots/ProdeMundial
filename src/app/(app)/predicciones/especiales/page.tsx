@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useApp } from "@/components/app-context";
 import * as Q from "@/lib/supabase/queries";
 import { ALL_WC_TEAMS } from "@/lib/mock-data";
-import { MOCK_PRODE_SPECIAL_PREDICTIONS } from "@/lib/mock-data";
+import { MOCK_PRODE_SPECIAL_PREDICTIONS, MOCK_SPECIAL_RESULTS } from "@/lib/mock-data";
 import { Flag } from "@/components/flag";
 import { Lock, Save, Check, Info, Search } from "lucide-react";
 import type { Member } from "@/lib/types";
@@ -37,6 +37,21 @@ const PRED_KEY: Record<SpecialId, keyof Q.SpecialPredRow> = {
   topScorer: "topScorer",
   mostGoals: "mostGoals",
 };
+
+const RESULT_KEY: Record<SpecialId, keyof Q.SpecialResults> = {
+  champion:  "champion",
+  finalist:  "finalist",
+  third:     "third",
+  topScorer: "topScorer",
+  mostGoals: "mostGoals",
+};
+
+// ¿La predicción `val` acierta el resultado real `actual` para este especial?
+function isSpecialHit(type: "team" | "player", val: string | null, actual: string | null): boolean {
+  if (!val || !actual) return false;
+  if (type === "player") return val.trim().toLowerCase() === actual.trim().toLowerCase();
+  return val === actual;
+}
 
 const LOCK_DATE = new Date("2026-06-11T18:00:00Z");
 const LOCKED = new Date() >= LOCK_DATE;
@@ -160,10 +175,11 @@ function PlayerInput({
   );
 }
 
-function ProdeSpecialsTable({ prodeId, members }: { prodeId: string; members: Member[] }) {
+function ProdeSpecialsTable({ prodeId, members, results }: { prodeId: string; members: Member[]; results: Q.SpecialResults | null }) {
   const { isMockMode } = useApp();
   const [rows, setRows] = useState<Q.SpecialPredRow[] | null>(null);
   const [loading, setLoading] = useState(true);
+  const graded = !!results && Object.values(results).some((v) => v);
 
   useEffect(() => {
     if (!IS_SUPABASE || isMockMode) {
@@ -184,6 +200,16 @@ function ProdeSpecialsTable({ prodeId, members }: { prodeId: string; members: Me
   const byUser = Object.fromEntries((rows ?? []).map((r) => [r.userId, r]));
   const ranked = [...members].sort((a, b) => a.rank - b.rank);
   const getTeamShort = (id: string) => ALL_WC_TEAMS.find((t) => t.id === id)?.shortName ?? id;
+  const showCell = (type: "team" | "player", val: string | null) => {
+    if (!val) return <span className="text-white/15">—</span>;
+    if (type === "team") return (
+      <div className="flex flex-col items-center gap-0.5">
+        <Flag tla={val} size={20} className="w-5 h-auto rounded-[1px]" />
+        <span className="text-[9px] text-white/40 leading-none">{getTeamShort(val)}</span>
+      </div>
+    );
+    return <span className="text-white/70 text-[10px] leading-tight block truncate" style={{ maxWidth: 60 }}>{val.split(" ").slice(-1)[0]}</span>;
+  };
 
   return (
     <div className="overflow-x-auto rounded-2xl border border-white/10 -mx-4 sm:mx-0">
@@ -199,11 +225,24 @@ function ProdeSpecialsTable({ prodeId, members }: { prodeId: string; members: Me
                 <p className="text-[9px] text-white/25 mt-0.5 font-normal">{p.points} pts</p>
               </th>
             ))}
+            {graded && <th className="text-center px-2 py-2.5 text-white/40 font-medium" style={{ minWidth: 44 }}>Pts</th>}
           </tr>
         </thead>
         <tbody className="divide-y divide-white/5">
+          {graded && (
+            <tr className="bg-amber-500/10 border-b border-amber-500/20">
+              <td className="pl-4 pr-3 py-2.5 sticky left-0 bg-[#12203c] z-10 text-[11px] font-bold text-amber-300">Resultado</td>
+              {SPECIAL_PREDICTIONS.map((pred) => (
+                <td key={pred.id} className="px-2 py-2.5 text-center align-middle">
+                  {showCell(pred.type, results![RESULT_KEY[pred.id]])}
+                </td>
+              ))}
+              <td className="px-2 py-2.5" />
+            </tr>
+          )}
           {ranked.map((member) => {
             const row = byUser[member.id];
+            let userPts = 0;
             return (
               <tr key={member.id} className="hover:bg-white/[0.03] transition-colors">
                 <td className="pl-4 pr-3 py-2.5 sticky left-0 bg-[#0a1628] z-10">
@@ -214,28 +253,56 @@ function ProdeSpecialsTable({ prodeId, members }: { prodeId: string; members: Me
                 </td>
                 {SPECIAL_PREDICTIONS.map((pred) => {
                   const val = row?.[PRED_KEY[pred.id]] ?? null;
+                  const hit = graded && isSpecialHit(pred.type, val, results![RESULT_KEY[pred.id]]);
+                  if (hit) userPts += pred.points;
                   return (
-                    <td key={pred.id} className="px-2 py-2.5 text-center align-middle">
-                      {pred.type === "team" && val ? (
-                        <div className="flex flex-col items-center gap-0.5">
-                          <Flag tla={val} size={20} className="w-5 h-auto rounded-[1px]" />
-                          <span className="text-[9px] text-white/40 leading-none">{getTeamShort(val)}</span>
-                        </div>
-                      ) : pred.type === "player" && val ? (
-                        <span className="text-white/70 text-[10px] leading-tight block truncate" style={{ maxWidth: 60 }}>
-                          {val.split(" ").slice(-1)[0]}
-                        </span>
-                      ) : (
-                        <span className="text-white/15">—</span>
-                      )}
+                    <td key={pred.id} className={`px-2 py-2.5 text-center align-middle ${hit ? "bg-green-500/10" : ""}`}>
+                      {showCell(pred.type, val)}
+                      {hit && <span className="block text-[9px] text-green-400 leading-none mt-0.5">✓</span>}
                     </td>
                   );
                 })}
+                {graded && (
+                  <td className="px-2 py-2.5 text-center font-black text-amber-400 tabular-nums">{userPts}</td>
+                )}
               </tr>
             );
           })}
         </tbody>
       </table>
+
+      {graded && (
+        <div className="border-t border-white/10 bg-white/[0.02] p-4 space-y-2.5">
+          <p className="text-[11px] font-semibold text-white/40 uppercase tracking-wider">Quién acertó cada especial</p>
+          {SPECIAL_PREDICTIONS.map((pred) => {
+            const actual = results![RESULT_KEY[pred.id]];
+            const hitters = ranked.filter((m) =>
+              isSpecialHit(pred.type, byUser[m.id]?.[PRED_KEY[pred.id]] ?? null, actual)
+            );
+            return (
+              <div key={pred.id} className="flex items-start gap-2 text-xs">
+                <span className="shrink-0" title={pred.label}>{pred.emoji}</span>
+                <div className="flex items-center gap-1 shrink-0 w-24">
+                  {pred.type === "team" && actual && <Flag tla={actual} size={20} className="w-4 h-auto rounded-[1px]" />}
+                  <span className="font-semibold text-white truncate">{actual ? (pred.type === "team" ? getTeamShort(actual) : actual.split(" ").slice(-1)[0]) : "—"}</span>
+                </div>
+                <div className="flex-1 flex flex-wrap gap-1">
+                  {hitters.length === 0 ? (
+                    <span className="text-white/25">Nadie lo acertó</span>
+                  ) : (
+                    hitters.map((m) => (
+                      <span key={m.id} className="rounded-md bg-green-500/15 text-green-300 px-1.5 py-0.5 text-[10px] font-medium">
+                        ✓ {m.displayName}
+                      </span>
+                    ))
+                  )}
+                </div>
+                <span className="shrink-0 text-white/30 text-[10px]">+{pred.points}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -247,6 +314,7 @@ export default function EspecialesPage() {
     champion: "ARG",
     topScorer: "Lionel Messi",
   });
+  const [results, setResults] = useState<Q.SpecialResults | null>(null);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -259,6 +327,20 @@ export default function EspecialesPage() {
       })
       .catch(() => {});
   }, [user?.id, prodeId, isMockMode]);
+
+  useEffect(() => {
+    if (!IS_SUPABASE || isMockMode) { setResults(MOCK_SPECIAL_RESULTS); return; }
+    Q.getSpecialResults().then(setResults).catch(() => setResults(null));
+  }, [isMockMode]);
+
+  // Puntos ya definidos = todos los resultados cargados.
+  const graded = !!results && Object.values(results).some((v) => v);
+  const myPoints = graded
+    ? SPECIAL_PREDICTIONS.reduce((sum, p) => {
+        const actual = results![RESULT_KEY[p.id]];
+        return sum + (isSpecialHit(p.type, predictions[p.id] ?? null, actual) ? p.points : 0);
+      }, 0)
+    : 0;
 
   const totalPotential = SPECIAL_PREDICTIONS.reduce((sum, p) => sum + p.points, 0);
   const filled = SPECIAL_PREDICTIONS.filter((p) => predictions[p.id]).length;
@@ -309,7 +391,18 @@ export default function EspecialesPage() {
       {tab === "mine" && (
         <>
           <div className="mx-auto max-w-lg px-4">
-            {LOCKED ? (
+            {graded ? (
+              <div className="flex items-center justify-between gap-3 rounded-2xl bg-amber-500/10 border border-amber-500/25 p-3 mb-4">
+                <div>
+                  <p className="text-sm font-bold text-amber-300">Resultados finales</p>
+                  <p className="text-xs text-white/50">Así te fue en las predicciones especiales</p>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="text-2xl font-black text-amber-400 leading-none">{myPoints}</p>
+                  <p className="text-[10px] text-white/40">de {totalPotential} pts</p>
+                </div>
+              </div>
+            ) : LOCKED ? (
               <div className="flex items-center gap-3 rounded-2xl bg-red-500/10 border border-red-500/20 p-3 mb-4">
                 <Lock className="h-4 w-4 text-red-400 shrink-0" />
                 <p className="text-sm text-red-300">
@@ -328,21 +421,30 @@ export default function EspecialesPage() {
               </div>
             )}
 
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs text-white/50">{filled} de {SPECIAL_PREDICTIONS.length} completadas</span>
-              <span className="text-xs text-amber-400 font-semibold">{totalPotential} pts disponibles</span>
-            </div>
-            <div className="h-1.5 rounded-full bg-white/10 mb-5">
-              <div
-                className="h-full rounded-full bg-amber-500 transition-all"
-                style={{ width: `${(filled / SPECIAL_PREDICTIONS.length) * 100}%` }}
-              />
-            </div>
+            {!graded && (
+              <>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs text-white/50">{filled} de {SPECIAL_PREDICTIONS.length} completadas</span>
+                  <span className="text-xs text-amber-400 font-semibold">{totalPotential} pts disponibles</span>
+                </div>
+                <div className="h-1.5 rounded-full bg-white/10 mb-5">
+                  <div
+                    className="h-full rounded-full bg-amber-500 transition-all"
+                    style={{ width: `${(filled / SPECIAL_PREDICTIONS.length) * 100}%` }}
+                  />
+                </div>
+              </>
+            )}
           </div>
 
           <div className="mx-auto max-w-lg space-y-3 px-4">
-            {SPECIAL_PREDICTIONS.map((pred) => (
-              <Card key={pred.id} className={LOCKED ? "opacity-70" : ""}>
+            {SPECIAL_PREDICTIONS.map((pred) => {
+              const actual = graded ? results![RESULT_KEY[pred.id]] : null;
+              const myVal = predictions[pred.id] ?? "";
+              const hit = graded && isSpecialHit(pred.type, myVal || null, actual);
+              const showVal = (v: string) => pred.type === "team" ? getTeamName(v) : v;
+              return (
+              <Card key={pred.id} className={!graded && LOCKED ? "opacity-70" : ""}>
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between mb-1">
                     <div className="flex items-center gap-2">
@@ -352,38 +454,60 @@ export default function EspecialesPage() {
                         <p className="text-xs text-white/40">{pred.description}</p>
                       </div>
                     </div>
-                    <Badge variant="default" className="shrink-0 ml-2">
-                      {pred.points} pts
+                    <Badge variant={graded ? (hit ? "default" : "secondary") : "default"} className="shrink-0 ml-2">
+                      {graded ? (hit ? `+${pred.points}` : "0") : `${pred.points} pts`}
                     </Badge>
                   </div>
 
-                  {pred.type === "team" ? (
-                    <TeamSelector
-                      value={predictions[pred.id] ?? ""}
-                      onChange={(v) => { setPredictions((p) => ({ ...p, [pred.id]: v })); setSaved(false); }}
-                      disabled={LOCKED}
-                    />
-                  ) : (
-                    <PlayerInput
-                      value={predictions[pred.id] ?? ""}
-                      onChange={(v) => { setPredictions((p) => ({ ...p, [pred.id]: v })); setSaved(false); }}
-                      disabled={LOCKED}
-                    />
-                  )}
-
-                  {predictions[pred.id] && (
-                    <div className="mt-2.5 flex items-center gap-2">
-                      <Check className="h-3.5 w-3.5 text-amber-400 shrink-0" />
-                      <span className="text-xs text-amber-400">
-                        {pred.type === "team" ? getTeamName(predictions[pred.id]) : predictions[pred.id]}
-                      </span>
+                  {graded ? (
+                    <div className="mt-2 space-y-1.5">
+                      <div className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-2">
+                        <span className="text-[11px] text-white/40">Resultado</span>
+                        <div className="flex items-center gap-1.5">
+                          {pred.type === "team" && actual && <Flag tla={actual} size={20} className="w-5 h-auto rounded-[1px]" />}
+                          <span className="text-xs font-semibold text-white">{actual ? showVal(actual) : "—"}</span>
+                        </div>
+                      </div>
+                      <div className={`flex items-center justify-between rounded-lg px-3 py-2 ${hit ? "bg-green-500/10" : "bg-white/5"}`}>
+                        <span className="text-[11px] text-white/40">Tu predicción</span>
+                        <div className="flex items-center gap-1.5">
+                          {pred.type === "team" && myVal && <Flag tla={myVal} size={20} className="w-5 h-auto rounded-[1px]" />}
+                          <span className={`text-xs font-semibold ${hit ? "text-green-400" : "text-white/60"}`}>
+                            {myVal ? showVal(myVal) : "sin predicción"}
+                          </span>
+                          <span className="text-xs">{hit ? "✓" : "✗"}</span>
+                        </div>
+                      </div>
                     </div>
+                  ) : (
+                    <>
+                      {pred.type === "team" ? (
+                        <TeamSelector
+                          value={myVal}
+                          onChange={(v) => { setPredictions((p) => ({ ...p, [pred.id]: v })); setSaved(false); }}
+                          disabled={LOCKED}
+                        />
+                      ) : (
+                        <PlayerInput
+                          value={myVal}
+                          onChange={(v) => { setPredictions((p) => ({ ...p, [pred.id]: v })); setSaved(false); }}
+                          disabled={LOCKED}
+                        />
+                      )}
+                      {myVal && (
+                        <div className="mt-2.5 flex items-center gap-2">
+                          <Check className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+                          <span className="text-xs text-amber-400">{showVal(myVal)}</span>
+                        </div>
+                      )}
+                    </>
                   )}
                 </CardContent>
               </Card>
-            ))}
+              );
+            })}
 
-            {!LOCKED && (
+            {!LOCKED && !graded && (
               <Button type="button" onClick={handleSave} className="w-full" disabled={filled === 0 || saving} size="lg">
                 {saving ? (
                   <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
@@ -403,10 +527,12 @@ export default function EspecialesPage() {
       {tab === "prode" && (
         <div className="mx-auto max-w-lg px-4">
           <p className="text-xs text-white/40 mb-3">
-            Lo que predijo cada jugador del prode. Los puntos aparecen al finalizar el torneo.
+            {graded
+              ? "Resultados finales. Los aciertos están marcados en verde con sus puntos."
+              : "Lo que predijo cada jugador del prode. Los puntos aparecen al finalizar el torneo."}
           </p>
           {prode && prodeId ? (
-            <ProdeSpecialsTable prodeId={prodeId} members={prode.members} />
+            <ProdeSpecialsTable prodeId={prodeId} members={prode.members} results={results} />
           ) : (
             <p className="text-center text-white/30 text-sm py-10">Sin prode activo</p>
           )}

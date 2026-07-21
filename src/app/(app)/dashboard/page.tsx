@@ -322,6 +322,7 @@ export default function DashboardPage() {
   const now = useNow(60_000);
   const me = prode?.members.find((m) => m.id === user?.id) ?? prode?.members[0];
   const leader = prode?.members[0];
+  const worldCupOver = matches.some((m) => m.phase === "FINAL" && m.status === "FINISHED");
   const kickedOff = (m: Match) => new Date(m.date).getTime() <= now;
   // En vivo: arrancó y todavía no está finalizado (status LIVE real o SCHEDULED ya pasado de hora)
   const live = matches.filter((m) => m.status !== "FINISHED" && (m.status === "LIVE" || kickedOff(m)));
@@ -343,6 +344,20 @@ export default function DashboardPage() {
       />
 
       <PwaInstallBanner />
+
+      {worldCupOver && leader && (
+        <Link href="/tabla" className="block px-4 pt-4">
+          <div className="rounded-2xl bg-gradient-to-r from-amber-500/25 to-orange-500/10 border border-amber-500/30 p-4 flex items-center gap-3">
+            <span className="text-4xl">🏆</span>
+            <div className="flex-1 min-w-0">
+              <p className="text-[11px] font-bold text-amber-300 uppercase tracking-wider">Mundial finalizado · Campeón del prode</p>
+              <p className="text-lg font-black text-white truncate">{leader.displayName}</p>
+              <p className="text-xs text-white/50">{leader.totalPoints} pts · ver podio completo</p>
+            </div>
+            <ChevronRight className="h-5 w-5 text-amber-400/60 shrink-0" />
+          </div>
+        </Link>
+      )}
 
       <div className="px-4 py-5 lg:grid lg:grid-cols-[2fr_3fr] lg:gap-6 lg:items-start lg:max-w-5xl lg:mx-auto">
 
